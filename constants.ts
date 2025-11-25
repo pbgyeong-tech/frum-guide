@@ -52,7 +52,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "3. 스페이스 마케팅 사업부",
             "4. 마케팅 & 캠페인 사업부",
             "5. 플랫폼 운영 사업부",
-            "6. 크리에이티브 솔루션 센터 `UX팀 소속`",
+            "6. 크리에이티브 솔루션 센터 `UX 소속`",
             "7. 콘텐츠 솔루션 센터",
             "[프럼 웹사이트에서 자세히 알아보기 >](https://www.frum.co.kr/ko/services)"
         ]
@@ -351,9 +351,9 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         content: [
           "👉 해당 계정으로 구독 중인 앱: `midjourney`",
           "- ID: appfrum.test@gmail.com",
-          "- PW: Frum123$"
+          "- PW: 팀원에게 문의"
         ],
-        codeBlock: "ID: appfrum.test@gmail.com\nPW: Frum123$"
+        codeBlock: "ID: appfrum.test@gmail.com\nPW: 팀원에게 문의"
       }
     ]
   },
