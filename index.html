@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FRUM Onboarding</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react": "https://aistudiocdn.com/react@^19.2.0"
+      }
+    }
+    </script>
+    <style>
+      :root {
+        --bg-main: #000000; /* Pure black for max contrast */
+        --bg-card: #090909;
+        --bg-card-hover: #121212;
+        --border-color: rgba(255, 255, 255, 0.15);
+        --text-primary: #ffffff;
+        --text-secondary: #B0B0B0; /* Increased brightness from #888 */
+        --accent-color: #E70012;
+        --glass-bg: rgba(20, 20, 20, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.05);
+        --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        --easing: cubic-bezier(0.22, 1, 0.36, 1);
+        --sidebar-width: 280px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-main);
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        /* Rich deep gradient: Black with very subtle violet/blue hints at top */
+        background-image: radial-gradient(circle at 50% -20%, #0c0014 0%, #000000 70%);
+      }
+
+      /* Typography */
+      h1, h2, h3, h4, h5, h6 {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        color: inherit;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #666;
+      }
+
+      /* Animations */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      /* Hero Motion Animations */
+      @keyframes fluidMotion {
+        0% { transform: scale(1.05) translate(0, 0); filter: brightness(1); }
+        50% { transform: scale(1.15) translate(-1%, -2%); filter: brightness(1.1); }
+        100% { transform: scale(1.05) translate(0, 0); filter: brightness(1); }
+      }
+
+      @keyframes slashPulse {
+        0% { opacity: 0.6; box-shadow: 0 0 10px rgba(231,0,18,0.3); }
+        50% { opacity: 1; box-shadow: 0 0 25px rgba(231,0,18,0.8); }
+        100% { opacity: 0.6; box-shadow: 0 0 10px rgba(231,0,18,0.3); }
+      }
+
+      @keyframes scanline {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 0% 100%; }
+      }
+
+      .animate-enter {
+        animation: fadeInUp 1s var(--easing) forwards;
+      }
+
+      .animate-fade {
+        animation: fadeIn 0.8s var(--easing) forwards;
+      }
+
+      .delay-1 { animation-delay: 0.1s; }
+      .delay-2 { animation-delay: 0.2s; }
+      .delay-3 { animation-delay: 0.3s; }
+
+      /* Layout Utilities */
+      .app-container {
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      .main-content {
+        flex: 1;
+        overflow-y: auto;
+        position: relative;
+        padding-bottom: 100px;
+      }
+
+      .content-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 80px 40px;
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        .content-wrapper {
+          padding: 80px 20px 40px 20px;
+        }
+      }
+
+      /* Global Classes for Components */
+      .section-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 24px;
+        background: transparent;
+        padding: 6px 12px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+      }
+
+      .hero-title {
+        font-size: 4.5rem;
+        font-weight: 600;
+        margin-bottom: 24px;
+        color: #fff;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        text-shadow: 0 0 40px rgba(255,255,255,0.1);
+      }
+
+      @media (max-width: 768px) {
+        .hero-title { font-size: 2.5rem; }
+      }
+
+      .hero-desc {
+        font-size: 1.35rem;
+        color: #E0E0E0; /* Brighter for readability */
+        max-width: 600px;
+        line-height: 1.6;
+        font-weight: 400; /* Regular weight instead of light */
+        border-left: 2px solid var(--accent-color);
+        padding-left: 28px;
+      }
+
+      /* Hero Image Container */
+      .hero-image-container {
+        width: 100%;
+        height: 600px; /* Increased height */
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 20px 80px -20px rgba(0,0,0,1);
+        background: #000;
+      }
+      
+      .hero-img-anim {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        animation: fluidMotion 18s ease-in-out infinite alternate;
+        transform-origin: center center;
+        opacity: 0.9;
+      }
+
+      .hero-overlay-gradient {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 120%, rgba(0,0,0,0.8), transparent 70%),
+                    linear-gradient(to top, #000000 0%, transparent 40%);
+        z-index: 5;
+      }
+      
+      /* Red diagonal slash effect - The Brand Motif */
+      .brand-slash-container {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 6;
+        overflow: hidden;
+      }
+
+      .brand-slash-line {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1px; /* Super thin, precise */
+        height: 60%; /* Shorter than video height as requested */
+        background: var(--accent-color);
+        /* Backslash angle: top-left to bottom-right is negative rotation in CSS if 0 is vertical up */
+        transform: translate(-50%, -50%) rotate(-22deg); 
+        box-shadow: 0 0 20px var(--accent-color);
+        opacity: 0.9;
+        mix-blend-mode: screen;
+        animation: slashPulse 5s ease-in-out infinite;
+      }
+
+      /* Horizontal light scan line for extra tech feel */
+      .tech-scan-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, transparent 50%, rgba(255,255,255,0.02) 50%, transparent 51%);
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 4;
+        opacity: 0.5;
+      }
+
+      .grid-layout {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-top: 60px;
+      }
+
+      @media (max-width: 900px) {
+        .grid-layout { grid-template-columns: 1fr; }
+      }
+
+      .bento-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 40px;
+        transition: all 0.4s var(--easing);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .bento-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(231,0,18,0.5), transparent);
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+
+      .bento-card:hover {
+        background: var(--bg-card-hover);
+        border-color: rgba(255,255,255,0.25);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      }
+      
+      .bento-card:hover::before {
+        opacity: 1;
+      }
+      
+      .bento-card.full-width {
+        grid-column: span 2;
+      }
+      @media (max-width: 900px) {
+        .bento-card.full-width { grid-column: span 1; }
+      }
+
+      .card-title {
+        font-size: 1.25rem;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #fff;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      
+      .card-marker {
+        width: 2px;
+        height: 14px;
+        background: var(--accent-color);
+        display: inline-block;
+        box-shadow: 0 0 8px var(--accent-color);
+      }
+
+      .card-content {
+        color: #EAEAEA; /* Much brighter text */
+        font-size: 1.05rem; /* Slightly larger */
+        line-height: 1.7;
+        font-weight: 400; /* Regular weight */
+        white-space: pre-wrap; /* Preserve whitespace and newlines for text blocks */
+      }
+
+      .list-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .dot {
+        width: 3px;
+        height: 3px;
+        border-radius: 0; /* Square dots for tech feel */
+        background: var(--accent-color);
+        margin-top: 11px;
+        flex-shrink: 0;
+      }
+
+      /* Code Block */
+      .code-block {
+        background: #050505;
+        border: 1px solid #2a2a2a;
+        border-radius: 6px;
+        padding: 24px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+        color: #E0E0E0; /* Brighter code text */
+        margin-top: 24px;
+        position: relative;
+        overflow-x: auto;
+      }
+
+      .link-button {
+        margin-top: 32px; 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 8px; 
+        color: #fff; 
+        font-size: 12px; 
+        font-weight: 700;
+        border-bottom: 1px solid #444;
+        padding-bottom: 6px;
+        transition: all 0.2s;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      
+      .link-button:hover {
+        border-bottom-color: var(--accent-color);
+        color: var(--accent-color);
+      }
+
+      /* Chat Styles */
+      .chat-fab {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--accent-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 30px rgba(231, 0, 18, 0.4);
+        transition: transform 0.3s var(--easing);
+        z-index: 100;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+      
+      .chat-fab:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 50px rgba(231, 0, 18, 0.6);
+      }
+
+      .chat-window {
+        position: fixed;
+        bottom: 120px;
+        right: 40px;
+        width: 400px;
+        height: 700px;
+        background: #0a0a0a;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column !important;
+        overflow: hidden;
+        box-shadow: 0 50px 100px -20px rgba(0,0,0,0.9);
+        z-index: 100;
+        transform-origin: bottom right;
+        transition: all 0.5s var(--easing);
+      }
+      
+      .chat-window.closed {
+        opacity: 0;
+        transform: scale(0.95) translateY(40px);
+        pointer-events: none;
+      }
+
+      @media (max-width: 480px) {
+        .chat-window {
+          right: 0;
+          left: 0;
+          bottom: 0;
+          width: 100%;
+          height: 100vh;
+          border-radius: 0;
+        }
+        .chat-fab {
+          right: 20px;
+          bottom: 20px;
+        }
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
