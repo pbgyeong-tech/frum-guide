@@ -375,6 +375,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE].includes(data.id);
   
   return (
     <div key={data.id} className="animate-enter">
@@ -458,17 +459,20 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
           </div>
         )}
 
-        <div style={{ 
-          position: 'absolute', 
-          right: '-50px', 
-          top: '-60px', 
-          opacity: '0.02', 
-          pointerEvents: 'none',
-          transform: 'rotate(-10deg)',
-          filter: 'blur(2px)'
-        }} className="hidden-on-mobile">
-          <Icon size={500} color="white" strokeWidth={0.5} />
-        </div>
+        {/* Decorative large icon in background - Subtle Watermark - Only if NO hero media */}
+        {!hasHeroMedia && (
+          <div style={{ 
+            position: 'absolute', 
+            right: '-50px', 
+            top: '-60px', 
+            opacity: '0.02', 
+            pointerEvents: 'none',
+            transform: 'rotate(-10deg)',
+            filter: 'blur(2px)'
+          }} className="hidden-on-mobile">
+            <Icon size={500} color="white" strokeWidth={0.5} />
+          </div>
+        )}
         <style>{`@media (max-width: 768px) { .hidden-on-mobile { display: none; } }`}</style>
       </header>
 
@@ -549,12 +553,14 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
       ) : (
         <div className="grid-layout">
           {data.subSections.map((sub, index) => {
-             // Logic for grid sizing: Default to half width unless explicitly complex or long content
+             // Logic for grid sizing
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
              const hasTable = typeof sub.content === 'string' && sub.content.trim().startsWith('|');
              const hasCode = !!sub.codeBlock;
-             // Use full width for tables, code blocks, or very long text
-             const isFullWidth = hasTable || hasCode || textLength > 300;
+             const hasImage = !!sub.imagePlaceholder;
+             
+             // Complex layouts often benefit from full width for readability
+             const isFullWidth = isComplexLayout || hasTable || hasCode || hasImage || textLength > 300;
 
              return (
                <article 
@@ -565,8 +571,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
                  <h3 className="card-title" style={{
                    borderBottom: '1px solid rgba(255,255,255,0.1)',
                    paddingBottom: '12px',
-                   width: '100%'
+                   width: '100%',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '12px'
                  }}>
+                   {!isComplexLayout && <span className="card-marker"></span>}
                    {sub.title}
                  </h3>
 
@@ -611,18 +621,27 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
                            );
                          }
 
-                         // 4. Default List Item - Cleaned up (No red dot)
+                         // 4. Default List Item
                          return (
                            <li key={i} className="list-item" style={{ alignItems: 'flex-start' }}>
-                             {item.trim().startsWith('-') ? (
+                             {!isComplexLayout && item.trim().startsWith('-') ? (
                                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                   <span style={{ color: '#444', flexShrink: 0, marginTop: '2px' }}>•</span>
+                                   <span className="dot" style={{ marginTop: '10px' }}></span>
                                    <div style={{ flex: 1 }}>
                                       {parseFormattedText(item.replace(/^-/, '').trim(), `text-${i}`)}
                                    </div>
                                </div>
                              ) : (
-                               <div style={{ paddingLeft: '0', width: '100%' }}>{parseFormattedText(item, `text-${i}`)}</div>
+                               <div style={{ paddingLeft: '0', width: '100%' }}>
+                                  {item.trim().startsWith('-') ? (
+                                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                      <span style={{ color: '#444', flexShrink: 0, marginTop: '2px' }}>•</span>
+                                      <div style={{ flex: 1 }}>{parseFormattedText(item.replace(/^-/, '').trim(), `text-${i}`)}</div>
+                                    </div>
+                                  ) : (
+                                    parseFormattedText(item, `text-${i}`)
+                                  )}
+                               </div>
                              )}
                            </li>
                          );
