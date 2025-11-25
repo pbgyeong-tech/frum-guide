@@ -45,7 +45,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
       {
         title: "프럼의 사업부와 구성원을 소개할게요.",
         content: `| 사업부 | 이름 | 직급 | 이메일 |
-|---|---|---|
+|---|---|---|---|
 | CEO | 김명진 | 대표 | mjkim@frum.co.kr |
 | Business Administrationg | 오한샘 | 수석 | hs.oh@frum.co.kr |
 | Creative Development | 홍채빈 | 수석 | cb.hong@frum.co.kr |
@@ -97,7 +97,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.IT_SETUP,
-    title: "Security & Access",
+    title: "네트워크 및 이메일",
     icon: Wifi,
     description: "무선네트워크 연결과 이메일 설정하기",
     subSections: [
