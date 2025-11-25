@@ -45,17 +45,25 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         ]
       },
       {
-        title: "프럼의 사업부를 소개할게요.",
-        content: [
-            "1. 경영 관리 그룹",
-            "2. 크리에이티브 컨설팅 사업부",
-            "3. 스페이스 마케팅 사업부",
-            "4. 마케팅 & 캠페인 사업부",
-            "5. 플랫폼 운영 사업부",
-            "6. 크리에이티브 솔루션 센터 `UX 소속`",
-            "7. 콘텐츠 솔루션 센터",
-            "[프럼 웹사이트에서 자세히 알아보기 >](https://www.frum.co.kr/ko/services)"
-        ]
+        title: "프럼의 사업부와 구성원을 소개할게요.",
+        content: `| 부서 | 이름 | 직급 | 이메일 |
+|---|---|---|
+| CEO | 김명진 | 대표 | mjkim@frum.co.kr |
+| Business Administrationg | 오한샘 | 수석 | hs.oh@frum.co.kr |
+| Creative Development | 홍채빈 | 수석 | cb.hong@frum.co.kr |
+| Creative Solution Center | 박영하 | 이사 | yh.park@frum.co.kr |
+| Creative Solution Center | 최영진 | 책임 | yj.choi@frum.co.kr |
+| Creative Solution Center | 유도예 | 책임 | dy.yu@frum.co.kr |
+| Creative Solution Center | 박보경 | 책임 | bg.park@frum.co.kr |
+| Creative Solution Center | 김초은 | 선임 | ce.kim@frum.co.kr |
+| Creative Solution Center | 정지명 | 선임 | jm.jung@frum.co.kr |
+| Creative Solution Center | 허가람 | 선임 | gr.heo@frum.co.kr |
+| Creative Solution Center | 경유진 | 선임 | yj.kyoung@frum.co.kr |
+| Creative Solution Center | 김혜진 | 사원 | hj.kim@frum.co.kr |
+| Creative Solution Center | 박세이 | 사원 | sy.park@frum.co.kr |
+| Creative Solution Center | 장우조 | 사원 | wj.jang@frum.co.kr |
+| Creative Solution Center | 노유진 | 사원 | yj.noh@frum.co.kr |
+| Creative Solution Center | 최인화 | 사원 | ih.choi@frum.co.kr |`
       },
       {
         title: "사무실은 이렇게 구성되어 있어요.",
