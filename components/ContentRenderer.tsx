@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { SectionData, ContentType } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon } from 'lucide-react';
+import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -31,21 +31,211 @@ const CodeBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+// Accordion Component for Grouped Tables
+const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div style={{ marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 20px',
+          background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent',
+          border: 'none',
+          color: '#fff',
+          cursor: 'pointer',
+          textAlign: 'left',
+          fontSize: '1rem',
+          fontWeight: 600,
+          transition: 'background 0.2s'
+        }}
+      >
+        <span>{title}</span>
+        {isOpen ? <ChevronDown size={18} color="#888" /> : <ChevronRight size={18} color="#888" />}
+      </button>
+      
+      {isOpen && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const rows = text.trim().split('\n').filter(row => row.trim() !== '');
-  const headers = rows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+  const rawHeaders = rows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
   
   // Detect separator line (e.g. |---|---|)
   const isSeparator = (row: string) => row.includes('---');
   const dataRows = rows.slice(1).filter(r => !isSeparator(r));
 
+  // Check if this table should be grouped (Look for "사업부" column)
+  const groupColumnIndex = rawHeaders.findIndex(h => h === '사업부');
+  const isGroupedTable = groupColumnIndex !== -1;
+
   const getBadgeStyle = (role: string) => {
+    // Executive / Leadership
+    if (role.includes('대표')) return { bg: 'rgba(241, 196, 15, 0.15)', color: '#F4D03F', border: '1px solid rgba(241, 196, 15, 0.3)' }; // Gold
+    if (role.includes('이사')) return { bg: 'rgba(155, 89, 182, 0.15)', color: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.3)' }; // Purple
+    
+    // Senior Management
+    if (role.includes('수석')) return { bg: 'rgba(26, 188, 156, 0.15)', color: '#76D7C4', border: '1px solid rgba(26, 188, 156, 0.3)' }; // Teal/Cyan
     if (role.includes('책임')) return { bg: 'rgba(231,0,18,0.15)', color: '#FF8A8A', border: '1px solid rgba(231,0,18,0.3)' }; // Reddish
+    
+    // Staff
     if (role.includes('선임')) return { bg: 'rgba(52, 152, 219, 0.15)', color: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.3)' }; // Blueish
     if (role.includes('사원')) return { bg: 'rgba(46, 204, 113, 0.15)', color: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.3)' }; // Greenish
+    
+    // Default
     return { bg: 'rgba(255,255,255,0.1)', color: '#ddd', border: '1px solid rgba(255,255,255,0.1)' };
   };
 
+  const renderCellContent = (cell: string, header: string, rowIndex: number, colIndex: number) => {
+    // Badge Logic for Job Titles
+    if (header.includes('직급')) {
+      const style = getBadgeStyle(cell);
+      return (
+        <span style={{
+          backgroundColor: style.bg,
+          color: style.color,
+          border: style.border,
+          padding: '4px 12px',
+          borderRadius: '999px',
+          fontSize: '11px',
+          fontWeight: 600,
+          display: 'inline-block',
+          letterSpacing: '0.02em',
+          whiteSpace: 'nowrap'
+        }}>
+          {cell}
+        </span>
+      );
+    } 
+    // Badge Logic for Tool Types
+    else if (header.includes('Type')) {
+      let badgeColor = { bg: 'rgba(255,255,255,0.1)', text: '#ccc', border: 'transparent' };
+      if (cell === 'UX') badgeColor = { bg: 'rgba(231,0,18,0.2)', text: '#ff6666', border: '1px solid rgba(231,0,18,0.4)' };
+      else if (cell === 'Zip') badgeColor = { bg: 'rgba(52, 152, 219, 0.2)', text: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.4)' };
+      else if (cell === '소통') badgeColor = { bg: 'rgba(155, 89, 182, 0.2)', text: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.4)' };
+      else if (cell === '비용관리') badgeColor = { bg: 'rgba(46, 204, 113, 0.2)', text: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.4)' };
+
+      return (
+        <span style={{
+          backgroundColor: badgeColor.bg,
+          color: badgeColor.text,
+          border: badgeColor.border,
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          fontWeight: 600,
+          display: 'inline-block',
+          whiteSpace: 'nowrap'
+        }}>
+          {cell}
+        </span>
+      );
+    }
+    // Link Logic for Emails
+    else if (header.includes('이메일')) {
+      return (
+        <a href={`mailto:${cell}`} style={{ 
+          color: '#aaa', 
+          textDecoration: 'none', 
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'color 0.2s',
+          fontSize: '0.9rem'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#aaa'}
+        >
+          <Mail size={14} strokeWidth={1.5} />
+          {cell}
+        </a>
+      );
+    } 
+    // Link Logic for Download
+    else if (header.includes('Download') || cell.includes('[Download]')) {
+       return parseInlineMarkdown(cell, `dl-${rowIndex}-${colIndex}`);
+    }
+    // Formatting for Name (Bold)
+    else if (header.includes('이름') || header.includes('Name')) {
+       return <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>{cell}</span>;
+    }
+
+    return cell;
+  };
+
+  // --- RENDER MODE: GROUPED ACCORDION ---
+  if (isGroupedTable) {
+    // 1. Group data by the grouping column
+    const groupedData: Record<string, string[][]> = {};
+    
+    dataRows.forEach(row => {
+      const cells = row.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+      const groupKey = cells[groupColumnIndex];
+      if (!groupedData[groupKey]) {
+        groupedData[groupKey] = [];
+      }
+      groupedData[groupKey].push(cells);
+    });
+
+    // Filter out the grouping column from display headers
+    const displayHeaders = rawHeaders.filter((_, idx) => idx !== groupColumnIndex);
+
+    return (
+      <div style={{ margin: '24px 0' }}>
+        {Object.entries(groupedData).map(([groupName, groupRows], gIdx) => (
+          <AccordionItem key={gIdx} title={groupName} defaultOpen={gIdx === 0}>
+             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    {displayHeaders.map((h, i) => (
+                      <th key={i} style={{ 
+                        textAlign: 'left', 
+                        padding: '12px 20px', 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                        color: '#666', 
+                        fontSize: '11px',
+                        textTransform: 'uppercase'
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupRows.map((rowCells, rIdx) => {
+                    // Filter out the grouping column cell
+                    const displayCells = rowCells.filter((_, idx) => idx !== groupColumnIndex);
+                    
+                    return (
+                      <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        {displayCells.map((cell, cIdx) => (
+                          <td key={cIdx} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle' }}>
+                            {renderCellContent(cell, displayHeaders[cIdx], rIdx, cIdx)}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+             </table>
+          </AccordionItem>
+        ))}
+      </div>
+    );
+  }
+
+  // --- RENDER MODE: STANDARD TABLE ---
   return (
     <div style={{ 
       overflowX: 'auto', 
@@ -58,7 +248,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '500px' }}>
         <thead>
           <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-            {headers.map((h, i) => (
+            {rawHeaders.map((h, i) => (
               <th key={i} style={{ 
                 textAlign: 'left', 
                 padding: '16px 20px', 
@@ -82,82 +272,9 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                 {cells.map((cell, j) => {
-                   const header = headers[j] || '';
-                   let content: React.ReactNode = parseFormattedText(cell, `table-${i}-${j}`);
-
-                   // Badge Logic for Job Titles
-                   if (header.includes('직급')) {
-                     const style = getBadgeStyle(cell);
-                     content = (
-                       <span style={{
-                         backgroundColor: style.bg,
-                         color: style.color,
-                         border: style.border,
-                         padding: '4px 12px',
-                         borderRadius: '999px',
-                         fontSize: '11px',
-                         fontWeight: 600,
-                         display: 'inline-block',
-                         letterSpacing: '0.02em',
-                         whiteSpace: 'nowrap'
-                       }}>
-                         {cell}
-                       </span>
-                     );
-                   } 
-                   // Badge Logic for Tool Types
-                   else if (header.includes('Type')) {
-                     let badgeColor = { bg: 'rgba(255,255,255,0.1)', text: '#ccc', border: 'transparent' };
-                     // Matching colors roughly to the image description/standard
-                     if (cell === 'UX') badgeColor = { bg: 'rgba(231,0,18,0.2)', text: '#ff6666', border: '1px solid rgba(231,0,18,0.4)' }; // Reddish
-                     else if (cell === 'Zip') badgeColor = { bg: 'rgba(52, 152, 219, 0.2)', text: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.4)' }; // Blueish
-                     else if (cell === '소통') badgeColor = { bg: 'rgba(155, 89, 182, 0.2)', text: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.4)' }; // Purple
-                     else if (cell === '비용관리') badgeColor = { bg: 'rgba(46, 204, 113, 0.2)', text: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.4)' }; // Green
-
-                     content = (
-                       <span style={{
-                         backgroundColor: badgeColor.bg,
-                         color: badgeColor.text,
-                         border: badgeColor.border,
-                         padding: '4px 8px',
-                         borderRadius: '4px',
-                         fontSize: '11px',
-                         fontWeight: 600,
-                         display: 'inline-block',
-                         whiteSpace: 'nowrap'
-                       }}>
-                         {cell}
-                       </span>
-                     );
-                   }
-                   // Link Logic for Emails
-                   else if (header.includes('이메일')) {
-                     content = (
-                       <a href={`mailto:${cell}`} style={{ 
-                         color: '#aaa', 
-                         textDecoration: 'none', 
-                         display: 'inline-flex',
-                         alignItems: 'center',
-                         gap: '8px',
-                         transition: 'color 0.2s',
-                         fontSize: '0.9rem'
-                       }}
-                       onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                       onMouseLeave={(e) => e.currentTarget.style.color = '#aaa'}
-                       >
-                         <Mail size={14} strokeWidth={1.5} />
-                         {cell}
-                       </a>
-                     );
-                   } 
-                   // Formatting for Name (Bold)
-                   else if (header.includes('이름') || header.includes('Name')) {
-                      content = <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>{cell}</span>;
-                   }
-
                    return (
                      <td key={j} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle' }}>
-                       {content}
+                       {renderCellContent(cell, rawHeaders[j], i, j)}
                      </td>
                    );
                 })}

@@ -35,18 +35,16 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "프럼의 비즈니스 영역과 사무실 안내",
     subSections: [
       {
-        title: "회사 소개",
+        title: "안녕하세요.👋",
         imagePlaceholder: "https://www.frum.co.kr/_next/image?url=%2Fimages%2Fabout-frum.jpg&w=3840&q=75",
         content: [
-            "안녕하세요. 👋",
             "프럼은 디지털 에이전시로 UX 컨설팅 및 마케팅, 콘텐츠 발행, 사이트 운영 작업을 진행합니다. 주요 클라이언트는 현대자동차그룹, 삼성, LG등이 있으며 모빌리티 관련 프로젝트가 많습니다.",
-            "결과물은 반응형 웹으로 제작(PC, Tablet, Mobile)되는 경우가 많아 디바이스별 해상도에 대한 이해가 필요합니다.",
             "[프럼 웹사이트에서 자세히 알아보기 >](https://www.frum.co.kr/ko/about)"
         ]
       },
       {
         title: "프럼의 사업부와 구성원을 소개할게요.",
-        content: `| 부서 | 이름 | 직급 | 이메일 |
+        content: `| 사업부 | 이름 | 직급 | 이메일 |
 |---|---|---|
 | CEO | 김명진 | 대표 | mjkim@frum.co.kr |
 | Business Administrationg | 오한샘 | 수석 | hs.oh@frum.co.kr |
@@ -63,13 +61,32 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Creative Solution Center | 박세이 | 사원 | sy.park@frum.co.kr |
 | Creative Solution Center | 장우조 | 사원 | wj.jang@frum.co.kr |
 | Creative Solution Center | 노유진 | 사원 | yj.noh@frum.co.kr |
-| Creative Solution Center | 최인화 | 사원 | ih.choi@frum.co.kr |`
+| Creative Solution Center | 최인화 | 사원 | ih.choi@frum.co.kr |
+| Creative Consulting | 권예훈 | 이사 | kwon@frum.co.kr |
+| Creative Consulting | 정지훈 | 선임 | jh.jeong@frum.co.kr |
+| Creative Consulting | 박도원 | 선임 | dw.park@frum.co.kr |
+| Creative Consulting | 정하영 | 사원 | hy.jung@frum.co.kr |
+| Marketing & Campain | 이재훈 | 이사 | jeff@frum.co.kr |
+| Marketing & Campain | 공주연 | 책임 | jy.kong@frum.co.kr |
+| Marketing & Campain | 진초원 | 선임 | cw.jin@frum.co.kr |
+| Platform Operation | 민준기 | 이사 | jk.min@frum.co.kr |
+| Platform Operation | 안나현 | 책임 | nh.ahn@frum.co.kr |
+| Platform Operation | 이수인 | 사원 | si.lee@frum.co.kr |
+| Contents Solution Center | 이기원 | 수석 | kw.lee@frum.co.kr |
+| Contents Solution Center | 류민 | 수석 | m.ryu@frum.co.kr |
+| Contents Solution Center | 김장원 | 수석 | jw.kim@frum.co.kr |
+| Contents Solution Center | 이세환 | 수석 | sh.lee@frum.co.kr |
+| Contents Solution Center | 황은비 | 책임 | eb.hwang@frum.co.kr |
+| Contents Solution Center | 이인주 | 책임 | ij.lee@frum.co.kr |
+| Contents Solution Center | 윤현수 | 책임 | hs.yoon@frum.co.kr |
+| Contents Solution Center | 남도연 | 선임 | dy.nam@frum.co.kr |
+| Contents Solution Center | 최현진 | 선임 | hj.choi@frum.co.kr |
+| Contents Solution Center | 신화섭 | 선임 | hs.shin@frum.co.kr |`
       },
       {
         title: "사무실은 이렇게 구성되어 있어요.",
+        imagePlaceholder: "https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/297f7ed436ba3b244718eb7afc34ca2e13960a7d97f310d59a8aa8f7f1203108.jpg",
         content: [
-            "- 2층: 마케팅 & 캠페인 사업부, 플랫폼 운영 사업부, 크리에이티브 솔루션 센터, 콘텐츠 솔루션 센터",
-            "- 3층: 경영 관리 그룹, 크리에이티브 컨설팅 사업부, 스페이스 마케팅 사업부, 크리에이티브 솔루션 센터, 콘텐츠 솔루션 센터",
             "- 회의실: 층별 회의실에서 자유롭게 회의를 진행하며, 점심시간에는 회의실에서 식사를 합니다.",
             "- 탕비실: 커피머신, 정수기, 전자레인지, 비상약을 이용할 수 있으며 2층 탕비실에 매달 간식이 들어옵니다.",
             "- 화장실: 세면대 아래에 양치도구 및 파우치를 보관할 수 있는 공간이 있습니다.",
@@ -115,7 +132,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "![Settings Icon](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/fc08a6a80f435207881c1679fac997f83388525c2bc5bc4e57b31db3d3f6b51f.png)",
             "3. 서명 항목 텍스트필드에 아래 내용을 복사해 입력해주세요.",
             "[`서명 템플릿 문서 바로가기`](https://docs.google.com/document/d/1nFBXteCI4ZUzkaKYsMgZ5dKH2QgMb-G34xoHjhtgc0g/edit?tab=t.0)",
-            "![Signature Template](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/b1d6838badd161abe8c5e10a1cc28f423047a6deeee85849631c6092374911ec.png)",
             "직급/직책, 영문 이름, 휴대폰 번호는 변경하여 입력해주세요.",
             "👉 **직급별 영문 표기법**\n사원: Associate UX Consultant\n선임: UX Consultant\n책임: Sr. UX Consultant\n수석: Chief UX Consultant",
             "![Signature Example](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/b5c191d2a7647ce4bcef2bd40dc2d624434bf5776f0ca1e244074aca7c76175c.png)",
