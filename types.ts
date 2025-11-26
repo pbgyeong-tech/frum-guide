@@ -2,13 +2,16 @@ import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
   WELCOME = 'welcome',
-  IT_SETUP = 'it_setup',
   COMPANY = 'company',
+  WORK_INTRO = 'work_intro',
   UX_PART = 'ux_part',
+  IT_SETUP = 'it_setup',
   WELFARE = 'welfare',
   COMMUTE = 'commute',
   TOOLS = 'tools',
   OFFICE_GUIDE = 'office_guide',
+  FAQ = 'faq',
+  GUIDE_EDIT = 'guide_edit',
 }
 
 export interface SubSection {
@@ -27,6 +30,7 @@ export interface SectionData {
   subSections: SubSection[];
   heroImage?: string;
   heroVideo?: string;
+  children?: SectionData[];
 }
 
 export interface ChatMessage {

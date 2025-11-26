@@ -7,7 +7,10 @@ import {
   Laptop, 
   Building2,
   Clock,
-  KeyRound
+  KeyRound,
+  HelpCircle,
+  Briefcase,
+  Settings
 } from 'lucide-react';
 import { SectionData, ContentType } from './types';
 
@@ -19,7 +22,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     title: "Welcome",
     icon: Home,
     description: "",
-    // Premium abstract dark neon fluid motion style (Futuristic/Tech/Luxury)
     heroVideo: "https://cdn.midjourney.com/video/efa8c7dd-863a-49ed-95b7-a04d94a5bd87/3.mp4",
     subSections: [
       {
@@ -96,6 +98,65 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     ]
   },
   {
+    id: ContentType.WORK_INTRO,
+    title: "업무 프로세스 소개",
+    icon: Briefcase,
+    description: "각 파트별 업무 및 프로세스 소개",
+    subSections: [],
+    children: [
+      {
+        id: ContentType.UX_PART,
+        title: "UX 파트",
+        icon: Users,
+        description: "Creative Solution Center UX Team & Process",
+        subSections: [
+          {
+            title: "UX파트 소개",
+            content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!"
+          },
+          {
+            title: "저희 파트는 이렇게 구성되어 있어요",
+            content: `| 이름 | 직급 | 이메일 |
+|---|---|---|
+| 최영진 | 책임 | yj.choi@frum.co.kr |
+| 박보경 | 책임 | bg.park@frum.co.kr |
+| 김초은 | 선임 | ce.kim@frum.co.kr |
+| 허가람 | 선임 | gr.heo@frum.co.kr |
+| 경유진 | 선임 | yj.kyoung@frum.co.kr |
+| 김혜진 | 사원 | hj.kim@frum.co.kr |
+| 장우조 | 사원 | wj.jang@frum.co.kr |`
+          },
+          {
+            title: "1. 프로젝트 진행 프로세스 (Workflow)",
+            content: [
+                "**① RFP 분석**\n클라이언트 요구사항을 정제하고 프로젝트 범위·목표·리스크를 파악합니다.",
+                "**② WBS 작성**\n전체 일정을 세부 업무 단위로 분할하여 협업팀(클라이언트/기획/디자인/개발/운영)과 공유합니다.",
+                "**③ 벤치마킹**\nGlobal Top 100 기업 중심으로 동종·이종 시장을 분석해 프로젝트 방향성을 도출합니다.",
+                "**④ User Flow 설계**\n전체 페이지 구조와 기능 흐름을 작성하여 디자인/개발 공수를 가늠합니다.",
+                "**⑤ 화면 설계 (IA & Wireframe)**\n핵심 화면부터 우선 설계하며 디바이스별(PC/Tablet/Mobile) 구조를 결정합니다.",
+                "**⑥ 디자인**\n메인 페이지와 핵심 Feature 중심으로 컨셉을 확정하고 폰트·그리드·UI 컴포넌트·가이드를 포함한 전체 UI를 완성합니다.",
+                "**⑦ 개발 전달**\nAnnotation 포함된 화면 설계서/디자인 파일을 개발팀에 전달하고 공통 규칙(반응형·상태별·예외 처리)을 명확히 정의합니다.",
+                "**⑧ QA & QC**\n디바이스/브라우저 기반 전체 플로우를 테스트하며 오류, 인터랙션, 예외 지점, UX 불일치를 점검합니다.",
+                "**⑨ 최종 산출물 전달**\n요구사항 정의서, 회의록, 디자인 파일, 완료보고서 등 모든 산출물을 정리하여 클라이언트에게 제공하고 프로젝트를 마무리합니다."
+            ]
+          },
+          {
+            title: "2. 주요 산출물 (Deliverables)",
+            content: [
+                "**① WBS (Work Breakdown Structure)**\n프로젝트 전체 작업 구조를 세분화한 문서\n일정 공유, 리소스 산정, 우선순위 관리의 기준",
+                "**② 요구사항 정의서 (Requirement Document)**\n프로젝트 목적, 기능 범위, 비기능 요구사항 포함\n모든 단계에서 “합의된 기준점” 역할",
+                "**③ 화면명세서 (Screen Specification)**\n화면 구성, 기능 설명, 예외 처리, 동작 흐름을 상세히 기재",
+                "**④ 회의록 (Meeting Minutes)**\n논의 내용, 결정 사항, 후속 조치를 명확히 기록\n변경 이력 및 책임 소재를 추적하는 공식 문서",
+                "**⑤ 화면 디자인 (Figma Original + PNG)**\n메뉴별 최종 화면 디자인\n레이아웃, 스타일, 컴포넌트가 반영된 원본 산출물",
+                "**⑥ 화면 설계서 (Wireframe + Annotation)**\n화면 단위 기능·위치·행동을 기획 관점에서 정리\n개발·QA 기준 문서로 활용",
+                "**⑦ 디자인 가이드**\n브랜드·UI 시스템·반응형 기준 등 시각적 명세"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
     id: ContentType.IT_SETUP,
     title: "네트워크 및 이메일",
     icon: Wifi,
@@ -136,66 +197,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "👉 **직급별 영문 표기법**\n사원: Associate UX Consultant\n선임: UX Consultant\n책임: Sr. UX Consultant\n수석: Chief UX Consultant",
             "![Signature Example](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/b5c191d2a7647ce4bcef2bd40dc2d624434bf5776f0ca1e244074aca7c76175c.png)",
             "4. **변경사항 저장** 버튼을 눌러 저장해주세요."
-        ]
-      }
-    ]
-  },
-  {
-    id: ContentType.UX_PART,
-    title: "UX 파트소개",
-    icon: Users,
-    description: "Creative Solution Center UX Team & Process",
-    subSections: [
-      {
-        title: "팀 소개",
-        content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!"
-      },
-      {
-        title: "팀은 이렇게 구성되어 있어요",
-        content: `| 이름 | 직급 | 이메일 |
-|---|---|---|
-| 최영진 | 책임 | yj.choi@frum.co.kr |
-| 박보경 | 책임 | bg.park@frum.co.kr |
-| 김초은 | 선임 | ce.kim@frum.co.kr |
-| 허가람 | 선임 | gr.heo@frum.co.kr |
-| 경유진 | 선임 | yj.kyoung@frum.co.kr |
-| 김혜진 | 사원 | hj.kim@frum.co.kr |
-| 장우조 | 사원 | wj.jang@frum.co.kr |`
-      },
-      {
-        title: "1. 일하는 원칙 (Work Principles)",
-        content: [
-            "모든 프로젝트는 아래 네 가지 기준을 중심으로 운영됩니다.",
-            "**① 문제를 정확히 정의하는 것부터 시작합니다.**\n무조건 디자인부터 하지 않습니다. RFP와 요구사항 분석 → 벤치마킹 → User Flow로 문제와 목표를 명확히 구조화한 후 다음 단계로 이동합니다.",
-            "**② 근거 기반의 의사결정을 합니다.**\n벤치마킹은 Global Top 100을 중심으로 심층 분석하며, 기획·디자인·개발 모든 단계에서 “왜 이렇게 결정했는가”를 명확히 설명할 수 있도록 자료화합니다.",
-            "**③ 팀 간 협업을 우선합니다.**\n기획–디자인–개발 전 과정이 분리되지 않도록 WBS, 화면 설계서, Annotation을 기준으로 동일한 정보를 공유하며 진행합니다.",
-            "**④ 완성도와 일관성을 중요하게 생각합니다.**\n디자인 시스템, UI 에셋, QA/QC 체크리스트를 기반으로 최종 산출물의 일관성, 정확성, 브랜드 정합성을 가장 중요하게 봅니다."
-        ]
-      },
-      {
-        title: "2. 프로젝트 진행 프로세스 (Workflow)",
-        content: [
-            "**① RFP 분석**\n클라이언트 요구사항을 정제하고 프로젝트 범위·목표·리스크를 파악합니다.",
-            "**② WBS 작성**\n전체 일정을 세부 업무 단위로 분할하여 협업팀(클라이언트/기획/디자인/개발/운영)과 공유합니다.",
-            "**③ 벤치마킹**\nGlobal Top 100 기업 중심으로 동종·이종 시장을 분석해 프로젝트 방향성을 도출합니다.",
-            "**④ User Flow 설계**\n전체 페이지 구조와 기능 흐름을 작성하여 디자인/개발 공수를 가늠합니다.",
-            "**⑤ 화면 설계 (IA & Wireframe)**\n핵심 화면부터 우선 설계하며 디바이스별(PC/Tablet/Mobile) 구조를 결정합니다.",
-            "**⑥ 디자인**\n메인 페이지와 핵심 Feature 중심으로 컨셉을 확정하고 폰트·그리드·UI 컴포넌트·가이드를 포함한 전체 UI를 완성합니다.",
-            "**⑦ 개발 전달**\nAnnotation 포함된 화면 설계서/디자인 파일을 개발팀에 전달하고 공통 규칙(반응형·상태별·예외 처리)을 명확히 정의합니다.",
-            "**⑧ QA & QC**\n디바이스/브라우저 기반 전체 플로우를 테스트하며 오류, 인터랙션, 예외 지점, UX 불일치를 점검합니다.",
-            "**⑨ 최종 산출물 전달**\n요구사항 정의서, 회의록, 디자인 파일, 완료보고서 등 모든 산출물을 정리하여 클라이언트에게 제공하고 프로젝트를 마무리합니다."
-        ]
-      },
-      {
-        title: "3. 주요 산출물 (Deliverables)",
-        content: [
-            "**① WBS (Work Breakdown Structure)**\n프로젝트 전체 작업 구조를 세분화한 문서\n일정 공유, 리소스 산정, 우선순위 관리의 기준",
-            "**② 요구사항 정의서 (Requirement Document)**\n프로젝트 목적, 기능 범위, 비기능 요구사항 포함\n모든 단계에서 “합의된 기준점” 역할",
-            "**③ 화면명세서 (Screen Specification)**\n화면 구성, 기능 설명, 예외 처리, 동작 흐름을 상세히 기재",
-            "**④ 회의록 (Meeting Minutes)**\n논의 내용, 결정 사항, 후속 조치를 명확히 기록\n변경 이력 및 책임 소재를 추적하는 공식 문서",
-            "**⑤ 화면 디자인 (Figma Original + PNG)**\n메뉴별 최종 화면 디자인\n레이아웃, 스타일, 컴포넌트가 반영된 원본 산출물",
-            "**⑥ 화면 설계서 (Wireframe + Annotation)**\n화면 단위 기능·위치·행동을 기획 관점에서 정리\n개발·QA 기준 문서로 활용",
-            "**⑦ 디자인 가이드**\n브랜드·UI 시스템·반응형 기준 등 시각적 명세"
         ]
       }
     ]
@@ -397,6 +398,97 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 주소",
             "- 수신자 성함",
             "- 수신자 전화번호"
+        ]
+      }
+    ]
+  },
+  {
+    id: ContentType.FAQ,
+    title: "FAQ",
+    icon: HelpCircle,
+    description: "자주 묻는 질문",
+    subSections: [
+      {
+        title: "IT 및 계정",
+        content: [
+            "**Q. 와이파이 비밀번호를 잊어버렸어요.**\nA. '네트워크 및 이메일' 메뉴에서 확인 가능합니다. (PW: imagination_composer_2018)",
+            "**Q. 서버 접속 주소가 어떻게 되나요?**\nA. Finder에서 `afp://air.frum.co.kr`로 접속하실 수 있습니다."
+        ]
+      },
+      {
+        title: "업무 및 생활",
+        content: [
+            "**Q. 휴가 신청은 어디서 하나요?**\nA. '시프티(Shiftee)' 모바일 앱 또는 웹사이트를 통해 신청해 주시면 됩니다.",
+            "**Q. 야근 식대는 얼마까지 지원되나요?**\nA. 1인당 15,000원까지 지원되며, Spendit 앱으로 청구하시면 됩니다."
+        ]
+      }
+    ]
+  },
+  {
+    id: ContentType.GUIDE_EDIT,
+    title: "온보딩 가이드 수정 방법",
+    icon: Settings,
+    description: "온보딩 가이드 수정 및 배포 가이드",
+    subSections: [
+      {
+        title: "① 레포지토리 클론",
+        content: [
+            "아래 절차를 따라 하면 누구나 온보딩 가이드를 수정하고 자동으로 배포할 수 있습니다.",
+            "**터미널에서 아래 명령어 실행:**",
+            "```\ngit clone https://github.com/pbgyoeng-tech/frum-guide\ncd frum-guide\nnpm install\nnpm run dev\n```",
+            "웹 브라우저에서 `http://localhost:5173` (또는 표시된 URL) 로 접속하면 로컬 개발 화면을 확인할 수 있습니다."
+        ]
+      },
+      {
+        title: "② 수정할 파일 편집",
+        content: [
+            "주로 수정하는 위치는 아래와 같습니다:",
+            "- `App.tsx`",
+            "- `components/`",
+            "- `constants.ts`",
+            "- `index.html`",
+            "원하는 문구, 이미지, 스타일을 자유롭게 수정하면 됩니다."
+        ]
+      },
+      {
+        title: "③ 브랜치 생성",
+        content: [
+            "새 기능 또는 내용 수정을 위한 브랜치를 만듭니다:",
+            "```\ngit checkout -b feat/update-content\n```",
+            "브랜치 이름은 자유롭게 변경 가능합니다."
+        ]
+      },
+      {
+        title: "④ 변경사항 커밋 & 푸시",
+        content: [
+            "변경 사항을 저장하고 원격 저장소에 올립니다.",
+            "```\ngit add .\ngit commit -m \"Update onboarding content\"\ngit push origin feat/update-content\n```",
+            "푸시(Push) 후 GitHub에서 자동으로 Pull Request(PR) 생성 안내 버튼이 보입니다."
+        ]
+      },
+      {
+        title: "⑤ Pull Request(PR) 생성",
+        content: [
+            "GitHub에서 PR을 생성하고 내용을 확인합니다.",
+            "- 제목 예: Update onboarding guide content",
+            "- 설명 예: “온보딩 가이드의 Welcome 문구 개선”"
+        ]
+      },
+      {
+        title: "⑥ PR을 main 브랜치에 Merge",
+        content: [
+            "**main 브랜치에 보호 규칙이 있는 경우**\n→ 리뷰(Approve)를 받은 뒤 merge 가능합니다.",
+            "**보호 규칙이 없다면**\n→ 바로 merge 가능합니다.",
+            "merge가 완료되면 코드가 main 브랜치에 반영됩니다."
+        ]
+      },
+      {
+        title: "⑦ Vercel 자동 배포",
+        content: [
+            "main 브랜치가 업데이트되면 Vercel이 자동으로 새 버전을 배포합니다.",
+            "- 배포 완료 상태: **Ready** 로 표시",
+            "- 실제 반영 URL: https://frum-guide.vercel.app",
+            "배포 완료 후 새로고침하면 변경된 온보딩 가이드를 확인할 수 있습니다."
         ]
       }
     ]

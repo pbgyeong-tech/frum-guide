@@ -492,8 +492,11 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE].includes(data.id);
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.UX_PART, ContentType.GUIDE_EDIT].includes(data.id);
   
+  // Quick Link Logic: Show 1-depth items, link to first child if exists
+  const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.GUIDE_EDIT);
+
   return (
     <div key={data.id} className="animate-enter">
       {/* Header */}
@@ -624,12 +627,20 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
 
            <div className="animate-fade delay-5">
               <div className="grid-layout">
-                {HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME).map((section, index) => {
+                {quickLinkSections.map((section, index) => {
                   const SectionIcon = section.icon;
+                  
+                  // Determine navigation target: 
+                  // If it has children, navigate to the first child.
+                  // Otherwise, navigate to the section itself.
+                  const targetId = (section.children && section.children.length > 0) 
+                    ? section.children[0].id 
+                    : section.id;
+
                   return (
                     <button 
                       key={section.id} 
-                      onClick={() => onNavigate(section.id)}
+                      onClick={() => onNavigate(targetId)}
                       className="bento-card"
                       style={{ 
                         textAlign: 'left', 
@@ -709,19 +720,25 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
                        {sub.content.map((item, i) => {
                          // Logic to determine List Item Type
                          
-                         // 1. Info / Warning Box (starts with 👉)
+                         // 1. Check for Code Block (Wrapped in ```)
+                         if (item.trim().startsWith('```') && item.trim().endsWith('```')) {
+                            const codeText = item.replace(/^```/, '').replace(/```$/, '').trim();
+                            return <CodeBlock key={i} text={codeText} />;
+                         }
+
+                         // 2. Info / Warning Box (starts with 👉)
                          if (item.trim().startsWith('👉')) {
                             const cleanText = item.replace(/^👉\s*/, '');
                             return <InfoBlock key={i}>{parseFormattedText(cleanText, `info-${i}`)}</InfoBlock>;
                          }
 
-                         // 2. Link Card (standalone link [Text](url))
+                         // 3. Link Card (standalone link [Text](url))
                          const linkOnlyMatch = item.trim().match(/^\[(.*?)\]\((.*?)\)$/);
                          if (linkOnlyMatch) {
                            return <LinkCardBlock key={i} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />;
                          }
 
-                         // 3. Step Process (Starts with ① or 1. or 01.)
+                         // 4. Step Process (Starts with ① or 1. or 01.)
                          const stepMatch = item.match(/^(\*\*)?([①-⑮]|\d+\.)\s*(.*)/s);
                          if (stepMatch) {
                            const rawNum = stepMatch[2];
@@ -738,7 +755,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
                            );
                          }
 
-                         // 4. Default List Item
+                         // 5. Default List Item
                          return (
                            <li key={i} className="list-item" style={{ alignItems: 'flex-start' }}>
                              {!isComplexLayout && item.trim().startsWith('-') ? (

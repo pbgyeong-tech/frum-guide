@@ -18,24 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileOpen
 }) => {
   
-  const sidebarStyles = {
-    wrapper: `
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: var(--sidebar-width);
-      background: var(--bg-main);
-      border-right: 1px solid var(--border-color);
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      transition: transform 0.5s var(--easing);
-    `,
-    // In CSS file we would handle media queries, here we do inline for dynamic state
-    transform: isMobileOpen ? 'translateX(0)' : 'translateX(-100%)',
-    // We'll override the transform for desktop in the style tag below
-  };
+  const guideEditSection = HANDBOOK_CONTENT.find(s => s.id === ContentType.GUIDE_EDIT);
 
   return (
     <>
@@ -111,6 +94,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           width: 3px;
           background: var(--accent-color);
         }
+
+        .nav-group-title {
+          padding: 24px 32px 12px 32px;
+          color: #666;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
       `}</style>
 
       {/* Mobile Overlay */}
@@ -140,8 +135,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {HANDBOOK_CONTENT.filter(section => section.id !== ContentType.WELCOME).map((section) => {
+          {HANDBOOK_CONTENT
+            .filter(section => section.id !== ContentType.WELCOME && section.id !== ContentType.GUIDE_EDIT)
+            .map((section) => {
             const Icon = section.icon;
+            
+            // Check for nested children
+            if (section.children && section.children.length > 0) {
+              return (
+                <div key={section.id}>
+                  <div className="nav-group-title">
+                    <Icon size={14} />
+                    <span>{section.title}</span>
+                  </div>
+                  {section.children.map(child => {
+                    const ChildIcon = child.icon;
+                    const isChildActive = activeSection === child.id;
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => {
+                          setActiveSection(child.id);
+                          setIsMobileOpen(false);
+                        }}
+                        className={`nav-button ${isChildActive ? 'active' : ''}`}
+                        style={{ paddingLeft: '56px' }}
+                      >
+                         {/* Optional child icon, or just text */}
+                         <span>{child.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            }
+
             const isActive = activeSection === section.id;
             
             return (
@@ -161,8 +189,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: '32px', borderTop: '1px solid var(--border-color)' }}>
-           <div style={{ fontSize: '10px', color: '#888', lineHeight: '1.5' }}>
+        <div style={{ borderTop: '1px solid var(--border-color)' }}>
+           {/* Guide Edit Link */}
+           {guideEditSection && (
+             <button
+               onClick={() => {
+                 setActiveSection(guideEditSection.id);
+                 setIsMobileOpen(false);
+               }}
+               className={`nav-button ${activeSection === guideEditSection.id ? 'active' : ''}`}
+               style={{ color: '#666', fontSize: '12px', padding: '16px 32px' }}
+             >
+               <guideEditSection.icon size={16} />
+               <span>{guideEditSection.title}</span>
+             </button>
+           )}
+           
+           <div style={{ padding: '20px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
              FRUM<br/>CREATIVE SOLUTION CENTER
            </div>
         </div>
