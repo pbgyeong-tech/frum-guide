@@ -3,12 +3,12 @@ import { Sidebar } from './components/Sidebar';
 import { ContentRenderer } from './components/ContentRenderer';
 import { ContentType, SectionData } from './types';
 import { Menu } from 'lucide-react';
-import { useData } from './context/DataContext'; // 변경됨
+import { useData } from './context/DataContext';
 
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { data } = useData(); // 변경됨: 이제 데이터를 Context에서 가져옴
+  const { data } = useData();
 
   // Helper to find data recursively
   const findSection = (sections: SectionData[], id: ContentType): SectionData | undefined => {
@@ -53,7 +53,20 @@ const App: React.FC = () => {
           <style>{`
             @media (min-width: 769px) { .mobile-header { display: none !important; } }
           `}</style>
-          <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" height="20" />
+          
+          {/* 🟢 [수정됨] 모바일 로고 클릭 시 홈으로 이동 */}
+          <button 
+            onClick={() => {
+              setActiveSectionId(ContentType.WELCOME);
+              setIsMobileMenuOpen(false);
+            }}
+            style={{ background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" height="20" />
+            {/* 모바일에서도 뱃지를 보여주고 싶다면 아래 주석 해제 */}
+            {/* <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)', color: '#aaa', padding: '2px 6px', borderRadius: '4px', fontWeight: 500 }}>Guide</span> */}
+          </button>
+
           <button onClick={() => setIsMobileMenuOpen(true)}>
             <Menu color="white" />
           </button>

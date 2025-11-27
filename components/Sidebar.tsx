@@ -1,6 +1,6 @@
 import React from 'react';
 import { ContentType, SectionData } from '../types';
-import { X } from 'lucide-react';
+import { X, ExternalLink, Utensils } from 'lucide-react'; // 🟢 아이콘 추가
 
 interface SidebarProps {
   data: SectionData[];
@@ -19,8 +19,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   
   const guideEditSection = data.find(s => s.id === ContentType.GUIDE_EDIT);
-  
-  // [수정된 부분] 아이콘을 미리 안전한 변수(GuideIcon)에 담아둡니다.
   const GuideIcon = guideEditSection ? guideEditSection.icon : null;
 
   return (
@@ -76,6 +74,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           font-weight: 500;
           transition: all 0.2s;
           position: relative;
+          text-decoration: none; /* 링크용 */
+          border: none;
+          background: none;
+          cursor: pointer;
+          text-align: left;
         }
 
         .nav-button:hover {
@@ -122,14 +125,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setActiveSection(ContentType.WELCOME);
               setIsMobileOpen(false);
             }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}
           >
             <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" width="100" />
+            
+            {/* 🟢 [수정됨] Onboarding Guide 뱃지 추가 */}
+            <span style={{ 
+              fontSize: '10px', 
+              color: '#888', 
+              background: 'rgba(255,255,255,0.08)', 
+              padding: '2px 6px', 
+              borderRadius: '4px', 
+              letterSpacing: '0.05em',
+              border: '1px solid rgba(255,255,255,0.05)'
+            }}>
+              Onboarding Guide
+            </span>
           </button>
           
           <button 
-            onClick={() => setIsMobileMenuOpen(false)} 
-            style={{ color: 'white', display: isMobileOpen ? 'block' : 'none' }}
+            onClick={() => setIsMobileOpen(false)} 
+            style={{ color: 'white', display: isMobileOpen ? 'block' : 'none', background: 'none', border: 'none' }}
             className="md-hidden"
           >
             <X size={24} />
@@ -143,7 +159,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             .map((section) => {
             const Icon = section.icon;
             
-            // Check for nested children
             if (section.children && section.children.length > 0) {
               return (
                 <div key={section.id}>
@@ -187,11 +202,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+
+          {/* 🟢 [수정됨] Lunch Solution 외부 링크 추가 */}
+          <div style={{ margin: '20px 0', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
+            <a 
+              href="https://lunch-solution-center.vercel.app/" 
+              target="_blank" 
+              rel="noreferrer"
+              className="nav-button"
+              style={{ color: '#aaa' }} // 약간 다른 색상으로 구분
+            >
+              <Utensils size={18} />
+              <span style={{ flex: 1 }}>Lunch Solution</span>
+              <ExternalLink size={14} style={{ opacity: 0.5 }} />
+            </a>
+          </div>
+
         </nav>
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--border-color)' }}>
-           {/* [수정된 부분] 안전하게 변수로 렌더링 */}
            {guideEditSection && GuideIcon && (
              <button
                onClick={() => {
