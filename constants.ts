@@ -110,7 +110,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     ]
   },
   {
-    id: ContentType.WORK_INTRO,
+    id: ContentType.WORK_WAY,   // 🔴 WORK_INTRO → 🟢 WORK_WAY
     title: "일하는 방식",
     icon: Briefcase,
     description: "각 파트별 업무 및 프로세스 소개",
@@ -127,19 +127,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!",
             keywords: ["ux", "기획", "팀소개", "솔루션"]
           },
-          {
-            title: "저희 파트는 이렇게 구성되어 있어요",
-            content: `| 이름 | 직급 | 이메일 |
-|---|---|---|
-| 최영진 | 책임 | yj.choi@frum.co.kr |
-| 박보경 | 책임 | bg.park@frum.co.kr |
-| 김초은 | 선임 | ce.kim@frum.co.kr |
-| 허가람 | 선임 | gr.heo@frum.co.kr |
-| 경유진 | 선임 | yj.kyoung@frum.co.kr |
-| 김혜진 | 사원 | hj.kim@frum.co.kr |
-| 장우조 | 사원 | wj.jang@frum.co.kr |`,
-            keywords: ["ux팀", "기획팀", "구성원", "동료", "파트원"]
-          },
+
           {
             title: "1. 프로젝트 진행 프로세스 (Workflow)",
             content: [
