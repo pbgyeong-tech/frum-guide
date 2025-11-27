@@ -8,7 +8,7 @@ import {
   Building2,
   Clock,
   KeyRound,
-  HelpCircle,
+  Search, // Changed HelpCircle to Search
   Briefcase,
   Settings
 } from 'lucide-react';
@@ -26,13 +26,47 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     subSections: [
       {
         title: "Onboarding Strategy",
-        content: "Frum의 여정에 합류하신 것을 환영합니다. 본 가이드는 새로운 구성원이 조직의 문화·업무 방식·협업 구조를 빠르게 이해하도록 돕는 Roadmap입니다."
+        content: "Frum의 여정에 합류하신 것을 환영합니다. 본 가이드는 새로운 구성원이 조직의 문화·업무 방식·협업 구조를 빠르게 이해하도록 돕는 Roadmap입니다.",
+        keywords: ["환영", "입사", "시작", "가이드", "로드맵", "ot", "오리엔테이션", "전략", "비전"]
+      }
+    ]
+  },
+  {
+    id: ContentType.SEARCH, // Changed from FAQ
+    title: "검색", // Renamed
+    icon: Search, // Changed Icon
+    description: "궁금한 내용을 검색해보세요",
+    subSections: [
+      {
+        title: "와이파이 비밀번호 확인",
+        content: "사내 와이파이 비밀번호는 `imagination_composer_2018` 입니다. 보안을 위해 외부 유출에 주의해 주세요.",
+        keywords: ["와이파이", "wifi", "비밀번호", "무선", "인터넷", "비번", "pw", "password"]
+      },
+      {
+        title: "서버 접속 방법 (NAS)",
+        content: "Finder에서 `Command + K`를 누른 후 `afp://air.frum.co.kr` 주소를 입력하여 접속합니다. 아카이빙은 Project_Archive, 진행 중인 프로젝트는 Project_Ongoing 폴더를 이용하세요.",
+        keywords: ["서버", "nas", "접속", "주소", "파일", "공유", "아카이브", "폴더"]
+      },
+      {
+        title: "휴가 신청 방법",
+        content: "'시프티(Shiftee)' 모바일 앱 또는 웹사이트의 [휴가] 메뉴에서 (+) 버튼을 눌러 신청할 수 있습니다. 사유 작성 후 승인 요청을 보내주세요.",
+        keywords: ["휴가", "연차", "반차", "시프티", "shiftee", "신청", "결재"]
+      },
+      {
+        title: "야근 식대 및 택시비 지원",
+        content: "야근 식대는 1인당 15,000원까지 지원되며, 택시비는 오후 11시 이후 퇴근 시 거리 제한 없이 지원됩니다. Spendit 앱으로 청구하세요.",
+        keywords: ["야근", "식대", "택시비", "교통비", "저녁", "지원", "비용", "청구", "스펜딧"]
+      },
+      {
+        title: "지출 결의 및 영수증 처리",
+        content: "법인카드 사용 후 Spendit 앱에서 [지출] > [셀프] 메뉴를 통해 영수증을 첨부하고 내역을 입력하여 결재를 올립니다. 폴리시는 담당자에게 문의하세요.",
+        keywords: ["지출", "결의", "영수증", "법인카드", "비용", "청구", "spendit", "카드", "결제"]
       }
     ]
   },
   {
     id: ContentType.COMPANY,
-    title: "회사소개",
+    title: "회사 & 조직",
     icon: Building2,
     description: "프럼의 비즈니스 영역과 사무실 안내",
     subSections: [
@@ -42,7 +76,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         content: [
             "프럼은 디지털 에이전시로 UX 컨설팅 및 마케팅, 콘텐츠 발행, 사이트 운영 작업을 진행합니다. 주요 클라이언트는 현대자동차그룹, 삼성, LG등이 있으며 모빌리티 관련 프로젝트가 많습니다.",
             "[프럼 웹사이트에서 자세히 알아보기 >](https://www.frum.co.kr/ko/about)"
-        ]
+        ],
+        keywords: ["비전", "사업", "클라이언트", "고객사", "하는일", "에이전시", "업종", "현대", "삼성"]
       },
       {
         title: "프럼의 사업부와 구성원을 소개할게요.",
@@ -83,7 +118,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Contents Solution Center | 윤현수 | 책임 | hs.yoon@frum.co.kr |
 | Contents Solution Center | 남도연 | 선임 | dy.nam@frum.co.kr |
 | Contents Solution Center | 최현진 | 선임 | hj.choi@frum.co.kr |
-| Contents Solution Center | 신화섭 | 선임 | hs.shin@frum.co.kr |`
+| Contents Solution Center | 신화섭 | 선임 | hs.shin@frum.co.kr |`,
+        keywords: ["조직도", "구성원", "팀원", "연락처", "이메일", "전화번호", "담당자", "누구", "직급", "부서"]
       },
       {
         title: "사무실은 이렇게 구성되어 있어요.",
@@ -93,26 +129,28 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 탕비실: 커피머신, 정수기, 전자레인지, 비상약을 이용할 수 있으며 2층 탕비실에 매달 간식이 들어옵니다.",
             "- 화장실: 세면대 아래에 양치도구 및 파우치를 보관할 수 있는 공간이 있습니다.",
             "- 인쇄실: 인쇄, 파쇄 및 노트, 펜, 테이프, 칼 등의 사무용품을 이용할 수 있는 공간입니다."
-        ]
+        ],
+        keywords: ["회의실", "화장실", "탕비실", "간식", "커피", "프린트", "인쇄", "위치", "자리", "약", "비상약", "전자레인지"]
       }
     ]
   },
   {
     id: ContentType.WORK_INTRO,
-    title: "업무 프로세스 소개",
+    title: "일하는 방식",
     icon: Briefcase,
     description: "각 파트별 업무 및 프로세스 소개",
     subSections: [],
     children: [
       {
         id: ContentType.UX_PART,
-        title: "UX 파트",
+        title: "UX 업무 프로세스",
         icon: Users,
         description: "Creative Solution Center UX Team & Process",
         subSections: [
           {
             title: "UX파트 소개",
-            content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!"
+            content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!",
+            keywords: ["ux", "기획", "팀소개", "솔루션"]
           },
           {
             title: "저희 파트는 이렇게 구성되어 있어요",
@@ -124,7 +162,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | 허가람 | 선임 | gr.heo@frum.co.kr |
 | 경유진 | 선임 | yj.kyoung@frum.co.kr |
 | 김혜진 | 사원 | hj.kim@frum.co.kr |
-| 장우조 | 사원 | wj.jang@frum.co.kr |`
+| 장우조 | 사원 | wj.jang@frum.co.kr |`,
+            keywords: ["ux팀", "기획팀", "구성원", "동료", "파트원"]
           },
           {
             title: "1. 프로젝트 진행 프로세스 (Workflow)",
@@ -138,7 +177,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
                 "**⑦ 개발 전달**\nAnnotation 포함된 화면 설계서/디자인 파일을 개발팀에 전달하고 공통 규칙(반응형·상태별·예외 처리)을 명확히 정의합니다.",
                 "**⑧ QA & QC**\n디바이스/브라우저 기반 전체 플로우를 테스트하며 오류, 인터랙션, 예외 지점, UX 불일치를 점검합니다.",
                 "**⑨ 최종 산출물 전달**\n요구사항 정의서, 회의록, 디자인 파일, 완료보고서 등 모든 산출물을 정리하여 클라이언트에게 제공하고 프로젝트를 마무리합니다."
-            ]
+            ],
+            keywords: ["일하는법", "프로세스", "절차", "순서", "워크플로우", "기획서", "스토리보드", "sb", "ia", "벤치마킹", "qa", "rfp", "개발전달"]
           },
           {
             title: "2. 주요 산출물 (Deliverables)",
@@ -150,7 +190,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
                 "**⑤ 화면 디자인 (Figma Original + PNG)**\n메뉴별 최종 화면 디자인\n레이아웃, 스타일, 컴포넌트가 반영된 원본 산출물",
                 "**⑥ 화면 설계서 (Wireframe + Annotation)**\n화면 단위 기능·위치·행동을 기획 관점에서 정리\n개발·QA 기준 문서로 활용",
                 "**⑦ 디자인 가이드**\n브랜드·UI 시스템·반응형 기준 등 시각적 명세"
-            ]
+            ],
+            keywords: ["문서", "산출물", "결과물", "파일", "피그마", "figma", "wbs", "일정표", "명세서", "화면설계서"]
           }
         ]
       }
@@ -158,7 +199,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.IT_SETUP,
-    title: "네트워크 및 이메일",
+    title: "업무 시작 세팅",
     icon: Wifi,
     description: "무선네트워크 연결과 이메일 설정하기",
     subSections: [
@@ -170,7 +211,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "2. 암호 입력: imagination_composer_2018"
         ],
         codeBlock: "imagination_composer_2018",
-        imagePlaceholder: "https://s.mj.run/_p_io4VsXxk"
+        imagePlaceholder: "https://s.mj.run/_p_io4VsXxk",
+        keywords: ["와이파이", "wifi", "비밀번호", "무선", "인터넷", "비번", "pw", "password", "연결", "접속"]
       },
       {
         title: "프럼 서버 접속하기",
@@ -182,7 +224,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "![Folder Access](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/07dd9d1f7844a58b39b6c94038d3e4fd94f75928c78bf5a3ea4c2ac4ecf4f103.png)",
             "프로젝트에 사용되는 폴더는 종료된 프로젝트를 아카이빙하는 Project_Archive, 진행 중인 프로젝트 자료를 정리하는 Project_Ongoing 입니다."
         ],
-        codeBlock: "afp://air.frum.co.kr"
+        codeBlock: "afp://air.frum.co.kr",
+        keywords: ["서버", "nas", "접속", "주소", "파일", "공유", "아카이브", "폴더", "백업", "자료", "저장소"]
       },
       {
         title: "메일 서명 만들기",
@@ -197,7 +240,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "👉 **직급별 영문 표기법**\n사원: Associate UX Consultant\n선임: UX Consultant\n책임: Sr. UX Consultant\n수석: Chief UX Consultant",
             "![Signature Example](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/b5c191d2a7647ce4bcef2bd40dc2d624434bf5776f0ca1e244074aca7c76175c.png)",
             "4. **변경사항 저장** 버튼을 눌러 저장해주세요."
-        ]
+        ],
+        keywords: ["서명", "이메일", "메일", "sign", "명함", "직급", "영문", "지메일", "gmail"]
       }
     ]
   },
@@ -226,7 +270,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 본인 결혼: 100만원",
             "- 본인 부모, 처부모, 배우자, 자녀 사망: 100만원",
             "- 조부모 사망: 30만원"
-        ]
+        ],
+        keywords: ["경조사", "결혼", "장례", "사망", "휴가", "지원금", "돈", "부조", "화환", "경조금"]
       },
       {
         title: "2. 장기근속 보상",
@@ -237,7 +282,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 5년: 200만원 + 유급휴가 2주",
             "- 10년: 500만원 + 유급휴가 4주",
             "- 15년: 700만원 + 유급휴가 4주"
-        ]
+        ],
+        keywords: ["장기근속", "근속", "포상", "보너스", "안식월", "리프레시", "3년", "5년", "10년"]
       },
       {
         title: "3. 추천 채용 리워드",
@@ -248,7 +294,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 책임·수석: 70만원",
             "- 임원: 100만원",
             "👉 ※ 추천자가 신규 입사자의 입사일 기준 6개월 이내 퇴사 시 지급되지 않습니다."
-        ]
+        ],
+        keywords: ["채용", "추천", "인재", "보상금", "리워드", "소개"]
       },
       {
         title: "4. 조직 문화 프로그램",
@@ -267,7 +314,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "1. 사원·선임 주도 준비",
             "2. 2층 레인보우룸에서 전직원이 함께 참여",
             "3. 간식, 네트워킹, 가벼운 휴식 시간"
-        ]
+        ],
+        keywords: ["회식", "점심", "다이닝", "밥", "식사", "해피아워", "간식", "금요일", "문화", "친목"]
       },
       {
         title: "5. 근무 지원 제도",
@@ -289,7 +337,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "[`지출 등록 방법(셀프 등록)`](https://help.spendit.kr/hc/ko)",
             "[`참석자 등록 방법`](https://help.spendit.kr/hc/ko)",
             "[`보고서 작성 및 제출`](https://help.spendit.kr/hc/ko)"
-        ]
+        ],
+        keywords: ["야근", "식대", "저녁", "택시", "교통비", "스펜딧", "spendit", "영수증", "청구", "지출", "법인카드", "비용"]
       }
     ]
   },
@@ -304,14 +353,16 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         content: [
             "오전 9:00 - 오후 6:00",
             "업무시간은 프로젝트에 따라 유동적으로 변경되기도 합니다."
-        ]
+        ],
+        keywords: ["출근", "퇴근", "시간", "근무", "9시", "6시", "유연"]
       },
       {
         title: "점심 시간",
         content: [
             "오후 12:00 - 오후 1:00",
             "불가피한 업무 및 개인 일정이 있다면 자율적으로 점심 시간을 가질 수 있습니다."
-        ]
+        ],
+        keywords: ["점심", "식사", "휴게", "밥", "12시"]
       },
       {
         title: "첫 출근자일때",
@@ -322,7 +373,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "4. 출입단말기 지문 인식하여 출근",
             "5. 유리문 옆 스위치 중 가장 위에 있는 스위치 눌러 전체 조명 켜기",
             "6. 탕비실 뒤쪽 에어컨/보일러 스위치 ON"
-        ]
+        ],
+        keywords: ["문열기", "오픈", "보안", "지문", "경비", "해제", "도어락", "비밀번호"]
       },
       {
         title: "마지막 퇴근자일때",
@@ -333,7 +385,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "4. 이중문 고정장치 잠금\n* 이중문 왼쪽, 짧은 고정문 측면의 은색 레버 위/아래로 움직여 잠금",
             "5. 이중문 도어락 잠금\n* 이중문을 닫으면 자동 잠김",
             "6. 출입단말기 [세트/해제] > 지문 인식 눌러 세트"
-        ]
+        ],
+        keywords: ["문잠그기", "마감", "퇴근", "소등", "잠금", "보안", "세트"]
       },
       {
         title: "연차쓰기",
@@ -349,7 +402,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "1. 시프티 앱 접속",
             "2. 휴가 메뉴 > 화면 우측 하단 종이비행기 버튼 선택 > 휴가 생성 > 휴가 유형 선택",
             "3. 휴가 사용일자 선택 > 다음 버튼 선택 > 사유 작성 > 보내기 버튼 선택\n* 사유 예시) 건강검진, 예비군, 여름휴가, 겨울휴가, 휴가, 개인사유, 병가 등"
-        ]
+        ],
+        keywords: ["휴가", "연차", "반차", "병가", "공가", "예비군", "건강검진", "시프티", "shiftee", "신청", "결재"]
       }
     ]
   },
@@ -369,7 +423,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Slack | 소통 | UX파트의 모든 커뮤니케이션은 Slack을 통해 진행합니다. | [Download](https://slack.com/download) |
 | Spendit | 비용관리 | 프럼의 비용 및 지출 관리는 Spendit을 사용합니다. | [Download](https://www.spendit.kr/) |
 | Microsoft | 소통 | 클라이언트와의 온라인 미팅 시 사용되는 툴입니다. | [Download](https://www.microsoft.com/ko-kr/microsoft-teams/download-app) |
-| Midjourney | UX | 생성형 AI로 에셋을 만들어 시안에 활용합니다. | [Login](https://www.midjourney.com/) |`
+| Midjourney | UX | 생성형 AI로 에셋을 만들어 시안에 활용합니다. | [Login](https://www.midjourney.com/) |`,
+        keywords: ["툴", "앱", "프로그램", "소프트웨어", "설치", "다운로드", "피그마", "슬랙", "어도비", "스펜딧"]
       },
       {
         title: "팀단위로 구독하는 모든 프로그램은 아래 계정으로 로그인 가능합니다. (Figma 제외)",
@@ -378,7 +433,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
           "- ID: appfrum.test@gmail.com",
           "- PW: 팀원에게 문의"
         ],
-        codeBlock: "ID: appfrum.test@gmail.com\nPW: 팀원에게 문의"
+        codeBlock: "ID: appfrum.test@gmail.com\nPW: 팀원에게 문의",
+        keywords: ["계정", "아이디", "비밀번호", "구독", "공용", "로그인", "미드저니"]
       }
     ]
   },
@@ -398,29 +454,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 주소",
             "- 수신자 성함",
             "- 수신자 전화번호"
-        ]
-      }
-    ]
-  },
-  {
-    id: ContentType.FAQ,
-    title: "FAQ",
-    icon: HelpCircle,
-    description: "자주 묻는 질문",
-    subSections: [
-      {
-        title: "IT 및 계정",
-        content: [
-            "**Q. 와이파이 비밀번호를 잊어버렸어요.**\nA. '네트워크 및 이메일' 메뉴에서 확인 가능합니다. (PW: imagination_composer_2018)",
-            "**Q. 서버 접속 주소가 어떻게 되나요?**\nA. Finder에서 `afp://air.frum.co.kr`로 접속하실 수 있습니다."
-        ]
-      },
-      {
-        title: "업무 및 생활",
-        content: [
-            "**Q. 휴가 신청은 어디서 하나요?**\nA. '시프티(Shiftee)' 모바일 앱 또는 웹사이트를 통해 신청해 주시면 됩니다.",
-            "**Q. 야근 식대는 얼마까지 지원되나요?**\nA. 1인당 15,000원까지 지원되며, Spendit 앱으로 청구하시면 됩니다."
-        ]
+        ],
+        keywords: ["퀵", "배송", "택배", "우편", "다마스", "오토바이", "운송"]
       }
     ]
   },

@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { SectionData, ContentType } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { FaqSearch } from './FaqSearch';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -492,10 +492,30 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, onNaviga
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.UX_PART, ContentType.GUIDE_EDIT].includes(data.id);
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.SEARCH, ContentType.FAQ, ContentType.UX_PART, ContentType.GUIDE_EDIT].includes(data.id);
   
   // Quick Link Logic: Show 1-depth items, link to first child if exists
-  const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.GUIDE_EDIT);
+  // EXCLUDE SEARCH from main page quick links
+  const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.GUIDE_EDIT && s.id !== ContentType.SEARCH);
+
+  // --- RENDER MODE: FAQ SEARCH ---
+  if (data.id === ContentType.SEARCH) {
+    return (
+      <div key={data.id} className="animate-enter">
+        <header style={{ marginBottom: '60px', position: 'relative' }}>
+          <h1 className="hero-title animate-fade delay-2">
+            {data.title}
+          </h1>
+          <p className="hero-desc animate-fade delay-3">
+            {data.description}
+          </p>
+        </header>
+        <div className="animate-fade delay-4">
+          <FaqSearch onNavigate={onNavigate} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div key={data.id} className="animate-enter">

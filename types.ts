@@ -1,7 +1,9 @@
+
 import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
   WELCOME = 'welcome',
+  SEARCH = 'search', // Renamed from FAQ to SEARCH
   COMPANY = 'company',
   WORK_INTRO = 'work_intro',
   UX_PART = 'ux_part',
@@ -10,7 +12,6 @@ export enum ContentType {
   COMMUTE = 'commute',
   TOOLS = 'tools',
   OFFICE_GUIDE = 'office_guide',
-  FAQ = 'faq',
   GUIDE_EDIT = 'guide_edit',
 }
 
@@ -20,6 +21,7 @@ export interface SubSection {
   codeBlock?: string; // For things like signatures or wifi passwords
   imagePlaceholder?: string;
   link?: string;
+  keywords?: string[]; // Added for natural language search scoring
 }
 
 export interface SectionData {
