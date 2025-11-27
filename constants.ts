@@ -10,6 +10,7 @@ import {
   KeyRound,
   Search, // Changed HelpCircle to Search
   Briefcase,
+  HelpCircle,
   Settings
 } from 'lucide-react';
 import { SectionData, ContentType } from './types';
@@ -32,37 +33,11 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     ]
   },
   {
-    id: ContentType.SEARCH, // Changed from FAQ
-    title: "검색", // Renamed
-    icon: Search, // Changed Icon
-    description: "궁금한 내용을 검색해보세요",
-    subSections: [
-      {
-        title: "와이파이 비밀번호 확인",
-        content: "사내 와이파이 비밀번호는 `imagination_composer_2018` 입니다. 보안을 위해 외부 유출에 주의해 주세요.",
-        keywords: ["와이파이", "wifi", "비밀번호", "무선", "인터넷", "비번", "pw", "password"]
-      },
-      {
-        title: "서버 접속 방법 (NAS)",
-        content: "Finder에서 `Command + K`를 누른 후 `afp://air.frum.co.kr` 주소를 입력하여 접속합니다. 아카이빙은 Project_Archive, 진행 중인 프로젝트는 Project_Ongoing 폴더를 이용하세요.",
-        keywords: ["서버", "nas", "접속", "주소", "파일", "공유", "아카이브", "폴더"]
-      },
-      {
-        title: "휴가 신청 방법",
-        content: "'시프티(Shiftee)' 모바일 앱 또는 웹사이트의 [휴가] 메뉴에서 (+) 버튼을 눌러 신청할 수 있습니다. 사유 작성 후 승인 요청을 보내주세요.",
-        keywords: ["휴가", "연차", "반차", "시프티", "shiftee", "신청", "결재"]
-      },
-      {
-        title: "야근 식대 및 택시비 지원",
-        content: "야근 식대는 1인당 15,000원까지 지원되며, 택시비는 오후 11시 이후 퇴근 시 거리 제한 없이 지원됩니다. Spendit 앱으로 청구하세요.",
-        keywords: ["야근", "식대", "택시비", "교통비", "저녁", "지원", "비용", "청구", "스펜딧"]
-      },
-      {
-        title: "지출 결의 및 영수증 처리",
-        content: "법인카드 사용 후 Spendit 앱에서 [지출] > [셀프] 메뉴를 통해 영수증을 첨부하고 내역을 입력하여 결재를 올립니다. 폴리시는 담당자에게 문의하세요.",
-        keywords: ["지출", "결의", "영수증", "법인카드", "비용", "청구", "spendit", "카드", "결제"]
-      }
-    ]
+    id: ContentType.SEARCH,
+    title: "통합 검색",
+    icon: Search, // 위에서 import에 Search가 있어야 합니다.
+    description: "가이드 전체 내용을 검색해보세요",
+    subSections: [] // <--- 대괄호만 남기고 내용은 싹 지웁니다.
   },
   {
     id: ContentType.COMPANY,
@@ -456,6 +431,39 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 수신자 전화번호"
         ],
         keywords: ["퀵", "배송", "택배", "우편", "다마스", "오토바이", "운송"]
+      }
+    ]
+  },
+  {
+    id: ContentType.FAQ,
+    title: "FAQ",
+    icon: HelpCircle, // 위에서 import에 HelpCircle을 추가했는지 확인하세요!
+    description: "자주 묻는 질문과 답변",
+    subSections: [
+      {
+        title: "와이파이 비밀번호 확인",
+        content: "사내 와이파이 비밀번호는 `imagination_composer_2018` 입니다. 보안을 위해 외부 유출에 주의해 주세요.",
+        keywords: ["와이파이", "wifi", "비밀번호", "무선", "인터넷", "비번", "pw", "password"]
+      },
+      {
+        title: "서버 접속 방법 (NAS)",
+        content: "Finder에서 `Command + K`를 누른 후 `afp://air.frum.co.kr` 주소를 입력하여 접속합니다. 아카이빙은 Project_Archive, 진행 중인 프로젝트는 Project_Ongoing 폴더를 이용하세요.",
+        keywords: ["서버", "nas", "접속", "주소", "파일", "공유", "아카이브", "폴더"]
+      },
+      {
+        title: "휴가 신청 방법",
+        content: "'시프티(Shiftee)' 모바일 앱 또는 웹사이트의 [휴가] 메뉴에서 (+) 버튼을 눌러 신청할 수 있습니다. 사유 작성 후 승인 요청을 보내주세요.",
+        keywords: ["휴가", "연차", "반차", "시프티", "shiftee", "신청", "결재"]
+      },
+      {
+        title: "야근 식대 및 택시비 지원",
+        content: "야근 식대는 1인당 15,000원까지 지원되며, 택시비는 오후 11시 이후 퇴근 시 거리 제한 없이 지원됩니다. Spendit 앱으로 청구하세요.",
+        keywords: ["야근", "식대", "택시비", "교통비", "저녁", "지원", "비용", "청구", "스펜딧"]
+      },
+      {
+        title: "지출 결의 및 영수증 처리",
+        content: "법인카드 사용 후 Spendit 앱에서 [지출] > [셀프] 메뉴를 통해 영수증을 첨부하고 내역을 입력하여 결재를 올립니다. 폴리시는 담당자에게 문의하세요.",
+        keywords: ["지출", "결의", "영수증", "법인카드", "비용", "청구", "spendit", "카드", "결제"]
       }
     ]
   },

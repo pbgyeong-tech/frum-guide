@@ -1,10 +1,9 @@
-
 import React from 'react';
-import { HANDBOOK_CONTENT } from '../constants';
-import { ContentType } from '../types';
+import { ContentType, SectionData } from '../types';
 import { X } from 'lucide-react';
 
 interface SidebarProps {
+  data: SectionData[];
   activeSection: ContentType;
   setActiveSection: (id: ContentType) => void;
   isMobileOpen: boolean;
@@ -12,13 +11,17 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
+  data, 
   activeSection, 
   setActiveSection,
   isMobileOpen,
   setIsMobileOpen
 }) => {
   
-  const guideEditSection = HANDBOOK_CONTENT.find(s => s.id === ContentType.GUIDE_EDIT);
+  const guideEditSection = data.find(s => s.id === ContentType.GUIDE_EDIT);
+  
+  // [수정된 부분] 아이콘을 미리 안전한 변수(GuideIcon)에 담아둡니다.
+  const GuideIcon = guideEditSection ? guideEditSection.icon : null;
 
   return (
     <>
@@ -125,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           
           <button 
-            onClick={() => setIsMobileOpen(false)} 
+            onClick={() => setIsMobileMenuOpen(false)} 
             style={{ color: 'white', display: isMobileOpen ? 'block' : 'none' }}
             className="md-hidden"
           >
@@ -135,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {HANDBOOK_CONTENT
+          {data
             .filter(section => section.id !== ContentType.WELCOME && section.id !== ContentType.GUIDE_EDIT)
             .map((section) => {
             const Icon = section.icon;
@@ -149,7 +152,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>{section.title}</span>
                   </div>
                   {section.children.map(child => {
-                    const ChildIcon = child.icon;
                     const isChildActive = activeSection === child.id;
                     return (
                       <button
@@ -161,7 +163,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className={`nav-button ${isChildActive ? 'active' : ''}`}
                         style={{ paddingLeft: '56px' }}
                       >
-                         {/* Optional child icon, or just text */}
                          <span>{child.title}</span>
                       </button>
                     );
@@ -190,8 +191,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--border-color)' }}>
-           {/* Guide Edit Link */}
-           {guideEditSection && (
+           {/* [수정된 부분] 안전하게 변수로 렌더링 */}
+           {guideEditSection && GuideIcon && (
              <button
                onClick={() => {
                  setActiveSection(guideEditSection.id);
@@ -200,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                className={`nav-button ${activeSection === guideEditSection.id ? 'active' : ''}`}
                style={{ color: '#666', fontSize: '12px', padding: '16px 32px' }}
              >
-               <guideEditSection.icon size={16} />
+               <GuideIcon size={16} />
                <span>{guideEditSection.title}</span>
              </button>
            )}

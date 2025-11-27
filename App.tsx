@@ -1,15 +1,14 @@
-
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ContentRenderer } from './components/ContentRenderer';
-import { GeminiAssistant } from './components/GeminiAssistant';
-import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData } from './types';
 import { Menu } from 'lucide-react';
+import { useData } from './context/DataContext'; // 변경됨
 
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data } = useData(); // 변경됨: 이제 데이터를 Context에서 가져옴
 
   // Helper to find data recursively
   const findSection = (sections: SectionData[], id: ContentType): SectionData | undefined => {
@@ -24,12 +23,13 @@ const App: React.FC = () => {
   };
 
   // Find data for active section
-  const activeData = findSection(HANDBOOK_CONTENT, activeSectionId) || HANDBOOK_CONTENT[0];
+  const activeData = findSection(data, activeSectionId) || data[0];
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
+      {/* Sidebar - data prop 전달 */}
       <Sidebar
+        data={data} 
         activeSection={activeSectionId}
         setActiveSection={setActiveSectionId}
         isMobileOpen={isMobileMenuOpen}
@@ -38,7 +38,6 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Mobile Header */}
         <div style={{
           position: 'sticky',
           top: 0,
@@ -67,8 +66,6 @@ const App: React.FC = () => {
           />
         </div>
       </main>
-
-      <GeminiAssistant />
     </div>
   );
 };

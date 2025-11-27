@@ -3,7 +3,7 @@ import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
   WELCOME = 'welcome',
-  SEARCH = 'search', // Renamed from FAQ to SEARCH
+  SEARCH = 'search', // 
   COMPANY = 'company',
   WORK_INTRO = 'work_intro',
   UX_PART = 'ux_part',
@@ -12,6 +12,7 @@ export enum ContentType {
   COMMUTE = 'commute',
   TOOLS = 'tools',
   OFFICE_GUIDE = 'office_guide',
+  FAQ = 'faq', 
   GUIDE_EDIT = 'guide_edit',
 }
 
