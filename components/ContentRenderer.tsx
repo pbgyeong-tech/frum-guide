@@ -6,6 +6,7 @@ import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIco
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
+import { trackMenuClick } from '../utils/firebase';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -799,7 +800,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                  <h1 className="hero-title" style={{ 
                    marginBottom: '24px',
                    fontSize: 'clamp(3rem, 5vw, 5rem)', 
-                   fontWeight: 700, // Reduced from 900 for a lighter look
+                   fontWeight: 500, // Reduced from 900 for a lighter look
                    letterSpacing: '-0.03em',
                    
                    // Reverted to Clean White
@@ -889,7 +890,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                   return (
                     <button 
                       key={section.id} 
-                      onClick={() => onNavigate(targetId)}
+                      onClick={() => {
+                        trackMenuClick(`QuickLink: ${section.title}`);
+                        onNavigate(targetId);
+                      }}
                       className="bento-card"
                       style={{ 
                         textAlign: 'left', 

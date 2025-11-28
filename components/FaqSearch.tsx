@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronRight, ChevronDown, ArrowUpRight } from 'lucide-react';
 import { SectionData, ContentType } from '../types';
+import { trackMenuClick } from '../utils/firebase';
 
 interface FaqSearchProps {
   onNavigate: (id: ContentType) => void;
@@ -266,7 +267,10 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                     {/* Navigate Button - Only show if not already on that section */}
                     {item.sectionId !== ContentType.FAQ && (
                       <button 
-                          onClick={() => onNavigate(item.sectionId)}
+                          onClick={() => {
+                            trackMenuClick(`GoToMenu: ${item.sectionTitle}`);
+                            onNavigate(item.sectionId);
+                          }}
                           style={{
                               display: 'flex',
                               alignItems: 'center',

@@ -3,6 +3,7 @@ import React from 'react';
 import { HANDBOOK_CONTENT } from '../constants';
 import { ContentType } from '../types';
 import { X, ExternalLink } from 'lucide-react';
+import { trackMenuClick } from '../utils/firebase';
 
 interface SidebarProps {
   activeSection: ContentType;
@@ -114,6 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div style={{ padding: '0 32px 40px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button 
             onClick={() => {
+              trackMenuClick('Logo (Sidebar)');
               setActiveSection(ContentType.WELCOME);
               setIsMobileOpen(false);
             }}
@@ -153,6 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         key={child.id}
                         onClick={() => {
+                          trackMenuClick(child.title);
                           setActiveSection(child.id);
                           setIsMobileOpen(false);
                         }}
@@ -174,6 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={section.id}
                 onClick={() => {
+                  trackMenuClick(section.title);
                   setActiveSection(section.id);
                   setIsMobileOpen(false);
                 }}
@@ -199,6 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                borderBottom: '1px solid rgba(255,255,255,0.05)',
                marginTop: '8px'
              }}
+             onClick={() => trackMenuClick('Lunch Solution Center (External)')}
            >
              <ExternalLink size={18} />
              <span>Lunch Solution Center</span>

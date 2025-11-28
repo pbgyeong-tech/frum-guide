@@ -6,6 +6,7 @@ import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
+import { trackMenuClick } from './utils/firebase';
 
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
@@ -99,7 +100,10 @@ const App: React.FC = () => {
           `}</style>
           
           <button 
-            onClick={() => setActiveSectionId(ContentType.WELCOME)} 
+            onClick={() => {
+              trackMenuClick('Logo (Mobile)');
+              setActiveSectionId(ContentType.WELCOME);
+            }}
             style={{ 
               background: 'none', 
               border: 'none', 

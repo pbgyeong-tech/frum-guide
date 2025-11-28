@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, logEvent } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -16,3 +16,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 export const db = getFirestore(app);
+
+// Helper to track menu clicks
+export const trackMenuClick = (menuName: string) => {
+  try {
+    logEvent(analytics, 'select_content', {
+      content_type: 'menu',
+      item_id: menuName
+    });
+    console.log(`[Analytics] Tracked click: ${menuName}`);
+  } catch (e) {
+    console.warn("[Analytics] Failed to log event", e);
+  }
+};
