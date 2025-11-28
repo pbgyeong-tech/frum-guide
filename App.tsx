@@ -97,7 +97,21 @@ const App: React.FC = () => {
           <style>{`
             @media (min-width: 769px) { .mobile-header { display: none !important; } }
           `}</style>
-          <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" height="20" />
+          
+          <button 
+            onClick={() => setActiveSectionId(ContentType.WELCOME)} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              padding: 0, 
+              cursor: 'pointer', 
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" height="20" />
+          </button>
+
           <button onClick={() => setIsMobileMenuOpen(true)}>
             <Menu color="white" />
           </button>

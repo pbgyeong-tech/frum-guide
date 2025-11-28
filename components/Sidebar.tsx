@@ -2,7 +2,7 @@
 import React from 'react';
 import { HANDBOOK_CONTENT } from '../constants';
 import { ContentType } from '../types';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: ContentType;
@@ -188,6 +188,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--border-color)' }}>
+           {/* External Link */}
+           <a 
+             href="https://lunch-solution-center.vercel.app/" 
+             target="_blank" 
+             rel="noreferrer"
+             className="nav-button"
+             style={{ 
+               color: '#999', 
+               borderBottom: '1px solid rgba(255,255,255,0.05)',
+               marginTop: '8px'
+             }}
+           >
+             <ExternalLink size={18} />
+             <span>Lunch Solution Center</span>
+           </a>
+
            <div style={{ padding: '20px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
              FRUM<br/>CREATIVE SOLUTION CENTER
            </div>

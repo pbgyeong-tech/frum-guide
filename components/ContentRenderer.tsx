@@ -5,6 +5,7 @@ import { HANDBOOK_CONTENT } from '../constants';
 import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2 } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
+import { ConfirmModal } from './ConfirmModal';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -501,39 +502,65 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
   // Editing Logic
-  // Allowed for everything except Welcome and Company
   const canEdit = !isWelcome && !isCompany;
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleEdit = (e: React.MouseEvent, index: number) => {
+  // Deletion Logic
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const handleEdit = (e: React.MouseEvent, id: string | undefined) => {
     e.stopPropagation();
-    setEditingItemIndex(index);
+    e.preventDefault();
+    if (!id) return;
+    setEditingItemId(id);
     setIsModalOpen(true);
   };
 
   const handleAddNew = () => {
-    setEditingItemIndex(null);
+    setEditingItemId(null);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation(); // Stop event bubbling
-    e.preventDefault();  // Prevent default action
+  // Step 1: Open Confirmation Modal
+  const handleDelete = (e: React.MouseEvent, id: string | undefined) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!id) return;
+
+    setDeleteTargetId(id);
+    setDeleteModalOpen(true);
+  };
+
+  // Step 2: Execute actual deletion
+  const executeDelete = async () => {
+    if (!deleteTargetId) return;
+
+    console.log("삭제 실행: ", deleteTargetId);
     
-    if (window.confirm('선택한 콘텐츠 블록을 삭제하시겠습니까? (복구할 수 없습니다)')) {
-      const newSubSections = [...data.subSections];
-      newSubSections.splice(index, 1);
-      onUpdateContent(newSubSections);
+    // Filter out by UUID
+    const newSubSections = data.subSections.filter(s => s.uuid !== deleteTargetId);
+    
+    try {
+      await onUpdateContent(newSubSections);
+      console.log("삭제 성공");
+    } catch (error) {
+      console.error("Deletion failed:", error);
+      alert("삭제 중 오류가 발생했습니다.");
+    } finally {
+      setDeleteTargetId(null);
     }
   };
 
   const handleSaveModal = (newData: SubSection) => {
-    const newSubSections = [...data.subSections];
-    if (editingItemIndex !== null) {
-      newSubSections[editingItemIndex] = newData;
+    let newSubSections = [...data.subSections];
+    if (editingItemId) {
+      // Update existing by UUID
+      newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? newData : sub);
     } else {
+      // Add new
       newSubSections.push(newData);
     }
     onUpdateContent(newSubSections);
@@ -610,18 +637,46 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
             
             <div className="grid-layout">
               {data.subSections.map((sub, index) => (
-                <div key={index} className="bento-card" style={{ position: 'relative', border: '1px solid #E70012' }}>
+                <div key={sub.uuid || index} className="bento-card" style={{ position: 'relative', border: '1px solid #E70012' }}>
                   <div style={{ 
                     position: 'absolute', 
-                    top: '10px', 
-                    right: '10px', 
+                    top: '12px', 
+                    right: '12px', 
                     display: 'flex', 
                     gap: '8px', 
-                    zIndex: 100, // High z-index for FAQ items too
+                    zIndex: 1000, 
                     pointerEvents: 'auto'
                   }}>
-                    <button type="button" onClick={(e) => handleEdit(e, index)} style={{ padding: '6px', background: '#333', borderRadius: '4px', color: '#fff', border: '1px solid #555', cursor: 'pointer' }}><Edit3 size={14}/></button>
-                    <button type="button" onClick={(e) => handleDelete(e, index)} style={{ padding: '6px', background: '#333', borderRadius: '4px', color: '#ff5555', border: '1px solid #555', cursor: 'pointer' }}><Trash2 size={14}/></button>
+                    <button 
+                      type="button" 
+                      onClick={(e) => handleEdit(e, sub.uuid)} 
+                      style={{ 
+                        padding: '6px', 
+                        background: '#333', 
+                        borderRadius: '4px', 
+                        color: '#fff', 
+                        border: '1px solid #555', 
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      }}
+                    >
+                      <Edit3 size={14} style={{ pointerEvents: 'none' }}/>
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={(e) => handleDelete(e, sub.uuid)} 
+                      style={{ 
+                        padding: '6px', 
+                        background: '#333', 
+                        borderRadius: '4px', 
+                        color: '#ff5555', 
+                        border: '1px solid #555', 
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      }}
+                    >
+                      <Trash2 size={14} style={{ pointerEvents: 'none' }}/>
+                    </button>
                   </div>
                   <h3 className="card-title" style={{ fontSize: '1rem', marginBottom: '12px' }}>{sub.title}</h3>
                   <div className="card-content" style={{ fontSize: '0.9rem', color: '#999', maxHeight: '60px', overflow: 'hidden' }}>
@@ -637,7 +692,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveModal}
-          initialData={editingItemIndex !== null ? data.subSections[editingItemIndex] : undefined}
+          initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined}
+        />
+        <ConfirmModal 
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={executeDelete}
         />
       </div>
     );
@@ -855,18 +915,16 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
       ) : (
         <div className="grid-layout">
           {data.subSections.map((sub, index) => {
-             // Logic for grid sizing
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
              const hasTable = typeof sub.content === 'string' && sub.content.trim().startsWith('|');
              const hasCode = !!sub.codeBlock;
              const hasImage = !!sub.imagePlaceholder;
              
-             // Complex layouts often benefit from full width for readability
              const isFullWidth = isComplexLayout || hasTable || hasCode || hasImage || textLength > 300;
 
              return (
                <article 
-                key={index} 
+                key={sub.uuid || index} 
                 className={`bento-card ${isFullWidth ? 'full-width' : ''}`}
                 style={{ 
                     animationDelay: `${0.1 * index}s`,
@@ -881,24 +939,42 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                      right: '12px', 
                      display: 'flex', 
                      gap: '8px', 
-                     zIndex: 100, // Increased z-index
-                     pointerEvents: 'auto' // Explicitly enable pointer events
+                     zIndex: 1000, 
+                     pointerEvents: 'auto' 
                    }}>
                      <button 
                         type="button"
-                        onClick={(e) => handleEdit(e, index)}
-                        style={{ padding: '8px', background: '#333', borderRadius: '4px', color: '#fff', border: '1px solid #555', cursor: 'pointer' }}
+                        onClick={(e) => handleEdit(e, sub.uuid)}
+                        style={{ 
+                          padding: '8px', 
+                          background: '#333', 
+                          borderRadius: '4px', 
+                          color: '#fff', 
+                          border: '1px solid #555', 
+                          cursor: 'pointer',
+                          pointerEvents: 'auto',
+                          zIndex: 1001
+                        }}
                         title="Edit"
                      >
-                       <Edit3 size={16}/>
+                       <Edit3 size={16} style={{ pointerEvents: 'none' }}/>
                      </button>
                      <button 
                         type="button"
-                        onClick={(e) => handleDelete(e, index)}
-                        style={{ padding: '8px', background: '#333', borderRadius: '4px', color: '#ff5555', border: '1px solid #555', cursor: 'pointer' }}
+                        onClick={(e) => handleDelete(e, sub.uuid)}
+                        style={{ 
+                          padding: '8px', 
+                          background: '#333', 
+                          borderRadius: '4px', 
+                          color: '#ff5555', 
+                          border: '1px solid #555', 
+                          cursor: 'pointer',
+                          pointerEvents: 'auto',
+                          zIndex: 1001
+                        }}
                         title="Delete"
                      >
-                       <Trash2 size={16}/>
+                       <Trash2 size={16} style={{ pointerEvents: 'none' }}/>
                      </button>
                    </div>
                  )}
@@ -925,27 +1001,18 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                    {Array.isArray(sub.content) ? (
                      <ul style={{ listStyle: 'none', padding: 0 }}>
                        {sub.content.map((item, i) => {
-                         // Logic to determine List Item Type
-                         
-                         // 1. Check for Code Block (Wrapped in ```)
                          if (item.trim().startsWith('```') && item.trim().endsWith('```')) {
                             const codeText = item.replace(/^```/, '').replace(/```$/, '').trim();
                             return <CodeBlock key={i} text={codeText} />;
                          }
-
-                         // 2. Info / Warning Box (starts with 👉)
                          if (item.trim().startsWith('👉')) {
                             const cleanText = item.replace(/^👉\s*/, '');
                             return <InfoBlock key={i}>{parseFormattedText(cleanText, `info-${i}`)}</InfoBlock>;
                          }
-
-                         // 3. Link Card (standalone link [Text](url))
                          const linkOnlyMatch = item.trim().match(/^\[(.*?)\]\((.*?)\)$/);
                          if (linkOnlyMatch) {
                            return <LinkCardBlock key={i} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />;
                          }
-
-                         // 4. Step Process (Starts with ① or 1. or 01.)
                          const stepMatch = item.match(/^(\*\*)?([①-⑮]|\d+\.)\s*(.*)/s);
                          if (stepMatch) {
                            const rawNum = stepMatch[2];
@@ -954,15 +1021,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                            if (stepMatch[1] === '**') {
                              contentPart = '**' + contentPart;
                            }
-
                            return (
                              <StepBlock key={i} number={number}>
                                {parseFormattedText(contentPart, `step-${i}`)}
                              </StepBlock>
                            );
                          }
-
-                         // 5. Default List Item
                          return (
                            <li key={i} className="list-item" style={{ alignItems: 'flex-start' }}>
                              {!isComplexLayout && item.trim().startsWith('-') ? (
@@ -1050,7 +1114,13 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveModal}
-        initialData={editingItemIndex !== null ? data.subSections[editingItemIndex] : undefined}
+        initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined}
+      />
+      
+      <ConfirmModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={executeDelete}
       />
     </div>
   );

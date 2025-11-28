@@ -13,6 +13,7 @@ export enum ContentType {
 }
 
 export interface SubSection {
+  uuid?: string; // Unique ID for deletion/editing stability
   title: string;
   content: string | string[]; // Can be a paragraph or a list
   codeBlock?: string; // For things like signatures or wifi passwords

@@ -1,28 +1,86 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { SectionData } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 
 const COLLECTION_NAME = 'content';
 
+// Simple UUID generator fallback
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// Helper: Ensure every subsection has a UUID
+const ensureUUID = (data: any): any => {
+  if (Array.isArray(data)) {
+    return data.map(item => ensureUUID(item));
+  }
+  if (data !== null && typeof data === 'object') {
+    const newData = { ...data };
+    
+    // If it's a subsection object (has title/content), ensure UUID
+    if ('title' in newData && 'content' in newData && !newData.uuid) {
+      newData.uuid = generateUUID();
+    }
+
+    // Recursively check properties
+    Object.keys(newData).forEach(key => {
+       if (typeof newData[key] === 'object') {
+         newData[key] = ensureUUID(newData[key]);
+       }
+    });
+    return newData;
+  }
+  return data;
+};
+
+// Helper: 객체에서 undefined 값을 재귀적으로 제거 (Firestore 에러 방지)
+const removeUndefined = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(v => removeUndefined(v));
+  }
+  if (obj !== null && typeof obj === 'object') {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = removeUndefined(value);
+      }
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+};
+
 // Firestore는 함수(아이콘 컴포넌트 등)를 저장할 수 없으므로 제거 후 저장
 const sanitizeForDB = (section: SectionData): any => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { icon, ...rest } = section;
+  
   // 하위 항목이 있다면 재귀적으로 아이콘 제거
   if (rest.children) {
     rest.children = rest.children.map(child => sanitizeForDB(child));
   }
-  return rest;
+  
+  // UUID 보장 및 undefined 제거
+  const withUUID = ensureUUID(rest);
+  return removeUndefined(withUUID);
 };
 
 // Firestore에서 불러온 데이터에 로컬 아이콘을 다시 연결
 const restoreFromDB = (data: any): SectionData => {
   const localSection = findLocalSection(data.id, HANDBOOK_CONTENT);
-  const icon = localSection?.icon || HANDBOOK_CONTENT[0].icon; // 아이콘이 없으면 기본값 사용
+  const icon = localSection?.icon || HANDBOOK_CONTENT[0].icon;
 
-  const restored: SectionData = { ...data, icon };
+  // 데이터 로드 시에도 UUID가 혹시 없으면 부여 (방어 코드)
+  const dataWithUUID = ensureUUID(data);
+
+  const restored: SectionData = { ...dataWithUUID, icon };
   
   if (restored.children) {
     restored.children = restored.children.map((child: any) => restoreFromDB(child));
@@ -57,12 +115,10 @@ export const getAllContent = async (): Promise<SectionData[]> => {
   }
 };
 
-// [UPDATE/CREATE/DELETE] 특정 섹션의 콘텐츠 저장하기
-// 삭제나 수정도 결국 배열 전체를 다시 저장하는 방식(setDoc)을 사용합니다.
+// [UPDATE/CREATE] 특정 섹션의 콘텐츠 저장하기
 export const saveContent = async (content: SectionData): Promise<void> => {
   try {
     const dataToSave = sanitizeForDB(content);
-    // 문서를 덮어씁니다 (ID 기준)
     await setDoc(doc(db, COLLECTION_NAME, content.id), dataToSave);
     console.log(`Content saved for ${content.id}`);
   } catch (error) {
@@ -71,7 +127,18 @@ export const saveContent = async (content: SectionData): Promise<void> => {
   }
 };
 
-// [INIT] 초기 데이터 시딩 (DB가 비어있을 경우에만 실행)
+// [DELETE] 전체 섹션 문서 삭제하기
+export const deleteDocument = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, COLLECTION_NAME, id));
+    console.log(`Document ${id} successfully deleted!`);
+  } catch (error) {
+    console.error("Error removing document: ", error);
+    throw error;
+  }
+};
+
+// [INIT] 초기 데이터 시딩
 export const seedDB = async (): Promise<SectionData[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
@@ -82,13 +149,20 @@ export const seedDB = async (): Promise<SectionData[]> => {
       
       for (const section of HANDBOOK_CONTENT) {
         const docRef = doc(db, COLLECTION_NAME, section.id);
-        batch.set(docRef, sanitizeForDB(section));
+        const cleanData = sanitizeForDB(section); // UUID injected here
+        batch.set(docRef, cleanData);
       }
       
       await batch.commit();
-      return HANDBOOK_CONTENT;
+      
+      // DB에 저장된 UUID 포함된 데이터를 다시 반환 (상태 동기화 위해)
+      return HANDBOOK_CONTENT.map(section => {
+        const withUUID = ensureUUID(section);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { icon, ...rest } = withUUID;
+        return { ...section, ...rest };
+      });
     } else {
-      // 이미 데이터가 있으면 DB 데이터 반환
       const data: SectionData[] = [];
       querySnapshot.forEach((doc) => {
         data.push(restoreFromDB(doc.data()));
@@ -97,7 +171,12 @@ export const seedDB = async (): Promise<SectionData[]> => {
     }
   } catch (error) {
     console.error("DB Connection Failed (Check Firestore Rules):", error);
-    // 에러 발생 시 로컬 데이터 반환하여 앱이 멈추지 않게 함
-    return HANDBOOK_CONTENT;
+    // 폴백 시에도 UUID 부여
+    return HANDBOOK_CONTENT.map(s => {
+       const withUUID = ensureUUID(s);
+       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       const { icon, ...rest } = withUUID;
+       return { ...s, ...rest };
+    });
   }
 };

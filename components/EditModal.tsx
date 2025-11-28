@@ -61,8 +61,12 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     if (disclaimer.trim()) {
       contentArray.push(`👉 ${disclaimer.trim()}`);
     }
+    
+    // Generate UUID if creating new, preserve if editing
+    const uuid = initialData?.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
 
     const newData: SubSection = {
+      uuid,
       title,
       content: contentArray,
       imagePlaceholder: mediaUrl.trim() || undefined,
