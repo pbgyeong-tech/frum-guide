@@ -157,7 +157,8 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
           alignItems: 'center',
           gap: '8px',
           transition: 'color 0.2s',
-          fontSize: '0.9rem'
+          fontSize: '0.9rem',
+          whiteSpace: 'nowrap'
         }}
         onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
         onMouseLeave={(e) => e.currentTarget.style.color = '#aaa'}
@@ -173,7 +174,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     }
     // Formatting for Name (Bold)
     else if (header.includes('이름') || header.includes('Name')) {
-       return <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>{cell}</span>;
+       return <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{cell}</span>;
     }
 
     return cell;
@@ -200,40 +201,44 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       <div style={{ margin: '24px 0' }}>
         {Object.entries(groupedData).map(([groupName, groupRows], gIdx) => (
           <AccordionItem key={gIdx} title={groupName} defaultOpen={gIdx === 0}>
-             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(0,0,0,0.2)' }}>
-                    {displayHeaders.map((h, i) => (
-                      <th key={i} style={{ 
-                        textAlign: 'left', 
-                        padding: '12px 20px', 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                        color: '#666', 
-                        fontSize: '11px', 
-                        textTransform: 'uppercase'
-                      }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupRows.map((rowCells, rIdx) => {
-                    // Filter out the grouping column cell
-                    const displayCells = rowCells.filter((_, idx) => idx !== groupColumnIndex);
-                    
-                    return (
-                      <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        {displayCells.map((cell, cIdx) => (
-                          <td key={cIdx} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle' }}>
-                            {renderCellContent(cell, displayHeaders[cIdx], rIdx, cIdx)}
-                          </td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-                </tbody>
-             </table>
+             {/* Added wrapper with overflow-x: auto and minWidth on table to allow scrolling on mobile */}
+             <div style={{ overflowX: 'auto', width: '100%' }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '600px' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(0,0,0,0.2)' }}>
+                      {displayHeaders.map((h, i) => (
+                        <th key={i} style={{ 
+                          textAlign: 'left', 
+                          padding: '12px 20px', 
+                          borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                          color: '#666', 
+                          fontSize: '11px', 
+                          textTransform: 'uppercase',
+                          whiteSpace: 'nowrap' // Prevent header wrapping
+                        }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupRows.map((rowCells, rIdx) => {
+                      // Filter out the grouping column cell
+                      const displayCells = rowCells.filter((_, idx) => idx !== groupColumnIndex);
+                      
+                      return (
+                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                          {displayCells.map((cell, cIdx) => (
+                            <td key={cIdx} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              {renderCellContent(cell, displayHeaders[cIdx], rIdx, cIdx)}
+                            </td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+               </table>
+             </div>
           </AccordionItem>
         ))}
       </div>
@@ -246,7 +251,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       overflowX: 'auto', 
       margin: '24px 0', 
       border: '1px solid rgba(255,255,255,0.08)', 
-      borderRadius: '12px',
+      borderRadius: '12px', 
       background: 'rgba(20,20,20,0.4)',
       boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
     }}>
@@ -262,7 +267,8 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 fontWeight: 600,
                 fontSize: '12px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.05em',
+                whiteSpace: 'nowrap' // Prevent header wrapping
               }}>
                 {h}
               </th>
@@ -278,7 +284,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                 {cells.map((cell, j) => {
                    return (
-                     <td key={j} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle' }}>
+                     <td key={j} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                        {renderCellContent(cell, rawHeaders[j], i, j)}
                      </td>
                    );
@@ -791,9 +797,18 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                  padding: '0 40px'
                }}>
                  <h1 className="hero-title" style={{ 
-                   marginBottom: '16px', 
-                   textShadow: '0 10px 40px rgba(0,0,0,0.8)',
-                   fontSize: 'clamp(3rem, 5vw, 5rem)' 
+                   marginBottom: '24px',
+                   fontSize: 'clamp(3rem, 5vw, 5rem)', 
+                   fontWeight: 700, // Reduced from 900 for a lighter look
+                   letterSpacing: '-0.03em',
+                   
+                   // Reverted to Clean White
+                   color: '#FFFFFF',
+                   textShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                   
+                   display: 'inline-block',
+                   zIndex: 20,
+                   position: 'relative'
                  }}>
                    {data.title}
                  </h1>
@@ -901,7 +916,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                       <p style={{ 
                         fontSize: '0.95rem', 
                         color: '#999', 
-                        lineHeight: '1.5',
+                        lineHeight: '1.5', 
                         margin: 0
                       }}>
                         {section.description}
