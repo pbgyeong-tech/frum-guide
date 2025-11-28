@@ -11,27 +11,28 @@ const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Lift content to state to allow editing
+  // DB에서 불러온 데이터를 관리하는 State
   const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
 
-  // Load data from DB on mount
+  // 앱 시작 시 DB에서 데이터 로드
   useEffect(() => {
     const loadData = async () => {
       try {
         const data = await seedDB();
-        // Restore original sort order based on constants
+        // constants.ts의 순서대로 정렬 (DB는 순서를 보장하지 않으므로)
         const orderMap = HANDBOOK_CONTENT.map(c => c.id);
         const sortedData = data.sort((a, b) => orderMap.indexOf(a.id) - orderMap.indexOf(b.id));
         setContentData(sortedData);
       } catch (e) {
         console.error("DB Load Error", e);
+        // DB 연결 실패 시 로컬 상수로 폴백
         setContentData(HANDBOOK_CONTENT);
       }
     };
     loadData();
   }, []);
 
-  // Helper to find data recursively
+  // 재귀적으로 섹션 데이터를 찾는 헬퍼 함수
   const findSection = (sections: SectionData[], id: ContentType): SectionData | undefined => {
     for (const section of sections) {
       if (section.id === id) return section;
@@ -43,29 +44,27 @@ const App: React.FC = () => {
     return undefined;
   };
 
-  // Find data for active section
   const activeData = findSection(contentData, activeSectionId) || contentData[0];
 
-  // Handler for content updates
+  // ContentRenderer에서 수정/삭제/추가 발생 시 호출되는 핸들러
   const handleContentUpdate = async (newSubSections: SubSection[]) => {
+    // 1. React State 업데이트 (화면에 즉시 반영)
     const updatedContent = contentData.map(section => {
       if (section.id === activeSectionId) {
         return { ...section, subSections: newSubSections };
       }
       return section;
     });
-
-    // Optimistic UI update
     setContentData(updatedContent);
 
-    // Save to DB
+    // 2. Firestore DB에 저장
     const sectionToUpdate = updatedContent.find(s => s.id === activeSectionId);
     if (sectionToUpdate) {
       try {
         await saveContent(sectionToUpdate);
       } catch (e) {
         console.error("Failed to save to DB", e);
-        alert("저장에 실패했습니다.");
+        alert("저장에 실패했습니다. 네트워크 상태나 권한을 확인해주세요.");
       }
     }
   };
