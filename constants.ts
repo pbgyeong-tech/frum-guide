@@ -8,9 +8,8 @@ import {
   Building2,
   Clock,
   KeyRound,
-  Search, // Changed HelpCircle to Search
-  Briefcase,
   HelpCircle,
+  Briefcase,
   Settings
 } from 'lucide-react';
 import { SectionData, ContentType } from './types';
@@ -31,13 +30,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["환영", "입사", "시작", "가이드", "로드맵", "ot", "오리엔테이션", "전략", "비전"]
       }
     ]
-  },
-  {
-    id: ContentType.SEARCH,
-    title: "통합 검색",
-    icon: Search, // 위에서 import에 Search가 있어야 합니다.
-    description: "가이드 전체 내용을 검색해보세요",
-    subSections: [] // <--- 대괄호만 남기고 내용은 싹 지웁니다.
   },
   {
     id: ContentType.COMPANY,
@@ -106,57 +98,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "- 인쇄실: 인쇄, 파쇄 및 노트, 펜, 테이프, 칼 등의 사무용품을 이용할 수 있는 공간입니다."
         ],
         keywords: ["회의실", "화장실", "탕비실", "간식", "커피", "프린트", "인쇄", "위치", "자리", "약", "비상약", "전자레인지"]
-      }
-    ]
-  },
-  {
-    id: ContentType.WORK_WAY,   // 🔴 WORK_INTRO → 🟢 WORK_WAY
-    title: "일하는 방식",
-    icon: Briefcase,
-    description: "각 파트별 업무 및 프로세스 소개",
-    subSections: [],
-    children: [
-      {
-        id: ContentType.UX_PART,
-        title: "UX 업무 프로세스",
-        icon: Users,
-        description: "Creative Solution Center UX Team & Process",
-        subSections: [
-          {
-            title: "UX파트 소개",
-            content: "저희는 크리에이티브 솔루션 센터 소속으로 UX의 혁신을 이끌고 있습니다!",
-            keywords: ["ux", "기획", "팀소개", "솔루션"]
-          },
-
-          {
-            title: "1. 프로젝트 진행 프로세스 (Workflow)",
-            content: [
-                "**① RFP 분석**\n클라이언트 요구사항을 정제하고 프로젝트 범위·목표·리스크를 파악합니다.",
-                "**② WBS 작성**\n전체 일정을 세부 업무 단위로 분할하여 협업팀(클라이언트/기획/디자인/개발/운영)과 공유합니다.",
-                "**③ 벤치마킹**\nGlobal Top 100 기업 중심으로 동종·이종 시장을 분석해 프로젝트 방향성을 도출합니다.",
-                "**④ User Flow 설계**\n전체 페이지 구조와 기능 흐름을 작성하여 디자인/개발 공수를 가늠합니다.",
-                "**⑤ 화면 설계 (IA & Wireframe)**\n핵심 화면부터 우선 설계하며 디바이스별(PC/Tablet/Mobile) 구조를 결정합니다.",
-                "**⑥ 디자인**\n메인 페이지와 핵심 Feature 중심으로 컨셉을 확정하고 폰트·그리드·UI 컴포넌트·가이드를 포함한 전체 UI를 완성합니다.",
-                "**⑦ 개발 전달**\nAnnotation 포함된 화면 설계서/디자인 파일을 개발팀에 전달하고 공통 규칙(반응형·상태별·예외 처리)을 명확히 정의합니다.",
-                "**⑧ QA & QC**\n디바이스/브라우저 기반 전체 플로우를 테스트하며 오류, 인터랙션, 예외 지점, UX 불일치를 점검합니다.",
-                "**⑨ 최종 산출물 전달**\n요구사항 정의서, 회의록, 디자인 파일, 완료보고서 등 모든 산출물을 정리하여 클라이언트에게 제공하고 프로젝트를 마무리합니다."
-            ],
-            keywords: ["일하는법", "프로세스", "절차", "순서", "워크플로우", "기획서", "스토리보드", "sb", "ia", "벤치마킹", "qa", "rfp", "개발전달"]
-          },
-          {
-            title: "2. 주요 산출물 (Deliverables)",
-            content: [
-                "**① WBS (Work Breakdown Structure)**\n프로젝트 전체 작업 구조를 세분화한 문서\n일정 공유, 리소스 산정, 우선순위 관리의 기준",
-                "**② 요구사항 정의서 (Requirement Document)**\n프로젝트 목적, 기능 범위, 비기능 요구사항 포함\n모든 단계에서 “합의된 기준점” 역할",
-                "**③ 화면명세서 (Screen Specification)**\n화면 구성, 기능 설명, 예외 처리, 동작 흐름을 상세히 기재",
-                "**④ 회의록 (Meeting Minutes)**\n논의 내용, 결정 사항, 후속 조치를 명확히 기록\n변경 이력 및 책임 소재를 추적하는 공식 문서",
-                "**⑤ 화면 디자인 (Figma Original + PNG)**\n메뉴별 최종 화면 디자인\n레이아웃, 스타일, 컴포넌트가 반영된 원본 산출물",
-                "**⑥ 화면 설계서 (Wireframe + Annotation)**\n화면 단위 기능·위치·행동을 기획 관점에서 정리\n개발·QA 기준 문서로 활용",
-                "**⑦ 디자인 가이드**\n브랜드·UI 시스템·반응형 기준 등 시각적 명세"
-            ],
-            keywords: ["문서", "산출물", "결과물", "파일", "피그마", "figma", "wbs", "일정표", "명세서", "화면설계서"]
-          }
-        ]
       }
     ]
   },
@@ -425,8 +366,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   {
     id: ContentType.FAQ,
     title: "FAQ",
-    icon: HelpCircle, // 위에서 import에 HelpCircle을 추가했는지 확인하세요!
-    description: "자주 묻는 질문과 답변",
+    icon: HelpCircle,
+    description: "자주 묻는 질문을 확인해보세요",
     subSections: [
       {
         title: "와이파이 비밀번호 확인",
@@ -452,75 +393,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         title: "지출 결의 및 영수증 처리",
         content: "법인카드 사용 후 Spendit 앱에서 [지출] > [셀프] 메뉴를 통해 영수증을 첨부하고 내역을 입력하여 결재를 올립니다. 폴리시는 담당자에게 문의하세요.",
         keywords: ["지출", "결의", "영수증", "법인카드", "비용", "청구", "spendit", "카드", "결제"]
-      }
-    ]
-  },
-  {
-    id: ContentType.GUIDE_EDIT,
-    title: "온보딩 가이드 수정 방법",
-    icon: Settings,
-    description: "온보딩 가이드 수정 및 배포 가이드",
-    subSections: [
-      {
-        title: "① 레포지토리 클론",
-        content: [
-            "아래 절차를 따라 하면 누구나 온보딩 가이드를 수정하고 자동으로 배포할 수 있습니다.",
-            "**터미널에서 아래 명령어 실행:**",
-            "```\ngit clone https://github.com/pbgyoeng-tech/frum-guide\ncd frum-guide\nnpm install\nnpm run dev\n```",
-            "웹 브라우저에서 `http://localhost:5173` (또는 표시된 URL) 로 접속하면 로컬 개발 화면을 확인할 수 있습니다."
-        ]
-      },
-      {
-        title: "② 수정할 파일 편집",
-        content: [
-            "주로 수정하는 위치는 아래와 같습니다:",
-            "- `App.tsx`",
-            "- `components/`",
-            "- `constants.ts`",
-            "- `index.html`",
-            "원하는 문구, 이미지, 스타일을 자유롭게 수정하면 됩니다."
-        ]
-      },
-      {
-        title: "③ 브랜치 생성",
-        content: [
-            "새 기능 또는 내용 수정을 위한 브랜치를 만듭니다:",
-            "```\ngit checkout -b feat/update-content\n```",
-            "브랜치 이름은 자유롭게 변경 가능합니다."
-        ]
-      },
-      {
-        title: "④ 변경사항 커밋 & 푸시",
-        content: [
-            "변경 사항을 저장하고 원격 저장소에 올립니다.",
-            "```\ngit add .\ngit commit -m \"Update onboarding content\"\ngit push origin feat/update-content\n```",
-            "푸시(Push) 후 GitHub에서 자동으로 Pull Request(PR) 생성 안내 버튼이 보입니다."
-        ]
-      },
-      {
-        title: "⑤ Pull Request(PR) 생성",
-        content: [
-            "GitHub에서 PR을 생성하고 내용을 확인합니다.",
-            "- 제목 예: Update onboarding guide content",
-            "- 설명 예: “온보딩 가이드의 Welcome 문구 개선”"
-        ]
-      },
-      {
-        title: "⑥ PR을 main 브랜치에 Merge",
-        content: [
-            "**main 브랜치에 보호 규칙이 있는 경우**\n→ 리뷰(Approve)를 받은 뒤 merge 가능합니다.",
-            "**보호 규칙이 없다면**\n→ 바로 merge 가능합니다.",
-            "merge가 완료되면 코드가 main 브랜치에 반영됩니다."
-        ]
-      },
-      {
-        title: "⑦ Vercel 자동 배포",
-        content: [
-            "main 브랜치가 업데이트되면 Vercel이 자동으로 새 버전을 배포합니다.",
-            "- 배포 완료 상태: **Ready** 로 표시",
-            "- 실제 반영 URL: https://frum-guide.vercel.app",
-            "배포 완료 후 새로고침하면 변경된 온보딩 가이드를 확인할 수 있습니다."
-        ]
       }
     ]
   }

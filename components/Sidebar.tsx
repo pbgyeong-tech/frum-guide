@@ -1,9 +1,10 @@
+
 import React from 'react';
-import { ContentType, SectionData } from '../types';
-import { X, ExternalLink, Utensils } from 'lucide-react'; // 🟢 아이콘 추가
+import { HANDBOOK_CONTENT } from '../constants';
+import { ContentType } from '../types';
+import { X } from 'lucide-react';
 
 interface SidebarProps {
-  data: SectionData[];
   activeSection: ContentType;
   setActiveSection: (id: ContentType) => void;
   isMobileOpen: boolean;
@@ -11,16 +12,12 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-  data, 
   activeSection, 
   setActiveSection,
   isMobileOpen,
   setIsMobileOpen
 }) => {
   
-  const guideEditSection = data.find(s => s.id === ContentType.GUIDE_EDIT);
-  const GuideIcon = guideEditSection ? guideEditSection.icon : null;
-
   return (
     <>
       <style>{`
@@ -74,11 +71,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           font-weight: 500;
           transition: all 0.2s;
           position: relative;
-          text-decoration: none; /* 링크용 */
-          border: none;
-          background: none;
-          cursor: pointer;
-          text-align: left;
         }
 
         .nav-button:hover {
@@ -125,27 +117,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setActiveSection(ContentType.WELCOME);
               setIsMobileOpen(false);
             }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
           >
             <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" width="100" />
-            
-            {/* 🟢 [수정됨] Onboarding Guide 뱃지 추가 */}
-            <span style={{ 
-              fontSize: '10px', 
-              color: '#888', 
-              background: 'rgba(255,255,255,0.08)', 
-              padding: '2px 6px', 
-              borderRadius: '4px', 
-              letterSpacing: '0.05em',
-              border: '1px solid rgba(255,255,255,0.05)'
-            }}>
-              Onboarding Guide
-            </span>
           </button>
           
           <button 
             onClick={() => setIsMobileOpen(false)} 
-            style={{ color: 'white', display: isMobileOpen ? 'block' : 'none', background: 'none', border: 'none' }}
+            style={{ color: 'white', display: isMobileOpen ? 'block' : 'none' }}
             className="md-hidden"
           >
             <X size={24} />
@@ -154,11 +133,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation */}
         <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {data
-            .filter(section => section.id !== ContentType.WELCOME && section.id !== ContentType.GUIDE_EDIT)
+          {HANDBOOK_CONTENT
+            .filter(section => section.id !== ContentType.WELCOME)
             .map((section) => {
             const Icon = section.icon;
             
+            // Check for nested children
             if (section.children && section.children.length > 0) {
               return (
                 <div key={section.id}>
@@ -167,6 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>{section.title}</span>
                   </div>
                   {section.children.map(child => {
+                    const ChildIcon = child.icon;
                     const isChildActive = activeSection === child.id;
                     return (
                       <button
@@ -178,6 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className={`nav-button ${isChildActive ? 'active' : ''}`}
                         style={{ paddingLeft: '56px' }}
                       >
+                         {/* Optional child icon, or just text */}
                          <span>{child.title}</span>
                       </button>
                     );
@@ -202,40 +184,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-
-          {/* 🟢 [수정됨] Lunch Solution 외부 링크 추가 */}
-          <div style={{ margin: '20px 0', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
-            <a 
-              href="https://lunch-solution-center.vercel.app/" 
-              target="_blank" 
-              rel="noreferrer"
-              className="nav-button"
-              style={{ color: '#aaa' }} // 약간 다른 색상으로 구분
-            >
-              <Utensils size={18} />
-              <span style={{ flex: 1 }}>Lunch Solution</span>
-              <ExternalLink size={14} style={{ opacity: 0.5 }} />
-            </a>
-          </div>
-
         </nav>
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--border-color)' }}>
-           {guideEditSection && GuideIcon && (
-             <button
-               onClick={() => {
-                 setActiveSection(guideEditSection.id);
-                 setIsMobileOpen(false);
-               }}
-               className={`nav-button ${activeSection === guideEditSection.id ? 'active' : ''}`}
-               style={{ color: '#666', fontSize: '12px', padding: '16px 32px' }}
-             >
-               <GuideIcon size={16} />
-               <span>{guideEditSection.title}</span>
-             </button>
-           )}
-           
            <div style={{ padding: '20px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
              FRUM<br/>CREATIVE SOLUTION CENTER
            </div>

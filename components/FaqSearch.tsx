@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronRight, ChevronDown, ArrowUpRight } from 'lucide-react';
-import { HANDBOOK_CONTENT } from '../constants';
-import { SectionData, SubSection, ContentType } from '../types';
+import { SectionData, ContentType } from '../types';
 
 interface FaqSearchProps {
   onNavigate: (id: ContentType) => void;
+  content: SectionData[];
 }
 
 interface SearchResultItem {
@@ -27,7 +27,7 @@ const normalize = (text: string) => {
   return text.toLowerCase().replace(/[\s\p{P}]/gu, "");
 };
 
-export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate }) => {
+export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -51,21 +51,24 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate }) => {
             });
           });
         }
-        // Recurse if it has children (e.g., Work Intro -> UX Part)
+        // Recurse if it has children
         if (section.children) {
           traverse(section.children);
         }
       });
     };
 
-    traverse(HANDBOOK_CONTENT);
+    traverse(content);
     return index;
-  }, []);
+  }, [content]);
 
   // 2. Search Algorithm
   useEffect(() => {
+    // If query is empty, show default FAQ items (ContentType.FAQ sections)
     if (!query.trim()) {
-      setResults([]); // Show nothing if empty query
+      const defaultFaqItems = searchIndex.filter(item => item.sectionId === ContentType.FAQ);
+      setResults(defaultFaqItems);
+      setOpenIndex(null); // Collapse all by default when showing full list
       return;
     }
 
@@ -220,7 +223,9 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate }) => {
                     textAlign: 'left',
                     color: isOpen ? '#fff' : '#ccc',
                     fontWeight: isOpen ? 700 : 500,
-                    fontSize: '1.05rem'
+                    fontSize: '1.05rem',
+                    background: 'none',
+                    border: 'none'
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -258,27 +263,31 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate }) => {
                         {Array.isArray(item.content) ? item.content.join('\n') : item.content}
                     </div>
                     
-                    {/* Navigate Button */}
-                    <button 
-                        onClick={() => onNavigate(item.sectionId)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            color: '#E70012',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            padding: '8px 16px',
-                            background: 'rgba(231,0,18,0.1)',
-                            borderRadius: '8px',
-                            marginLeft: 'auto',
-                            transition: 'background 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.1)'}
-                    >
-                        해당 메뉴로 이동하기 <ArrowUpRight size={16} />
-                    </button>
+                    {/* Navigate Button - Only show if not already on that section */}
+                    {item.sectionId !== ContentType.FAQ && (
+                      <button 
+                          onClick={() => onNavigate(item.sectionId)}
+                          style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              color: '#E70012',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                              padding: '8px 16px',
+                              background: 'rgba(231,0,18,0.1)',
+                              borderRadius: '8px',
+                              marginLeft: 'auto',
+                              transition: 'background 0.2s',
+                              border: 'none',
+                              cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.1)'}
+                      >
+                          해당 메뉴로 이동하기 <ArrowUpRight size={16} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
