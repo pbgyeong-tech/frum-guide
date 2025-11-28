@@ -162,20 +162,7 @@ export const seedDB = async (): Promise<SectionData[]> => {
         return { ...section, ...rest };
       });
     } else {
-      // FORCE UPDATE logic for COMPANY section (as requested)
-      // This ensures the new nested list structure in constants.ts is reflected in DB
-      const companyLocal = HANDBOOK_CONTENT.find(c => c.id === ContentType.COMPANY);
-      if (companyLocal) {
-        try {
-          const companyDocRef = doc(db, COLLECTION_NAME, ContentType.COMPANY);
-          const cleanData = sanitizeForDB(companyLocal);
-          await setDoc(companyDocRef, cleanData);
-          console.log("Force updated COMPANY section from constants to sync new structure");
-        } catch(e) {
-          console.error("Failed to force update company section", e);
-        }
-      }
-
+      // Data exists, return it
       const data: SectionData[] = [];
       const updatedSnapshot = await getDocs(collection(db, COLLECTION_NAME));
       updatedSnapshot.forEach((doc) => {

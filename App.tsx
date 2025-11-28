@@ -34,6 +34,18 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
+  // Prevent browser close/refresh if dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = ''; // Standard for Chrome/modern browsers to trigger alert
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
   // Safe Navigation Handler
   const handleNavigate = (id: ContentType) => {
     if (activeSectionId === id) return;

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2 } from 'lucide-react';
@@ -494,12 +494,21 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const isCompany = data.id === ContentType.COMPANY;
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
-  const canEdit = !isWelcome && !isCompany;
+  // Allow editing for all pages except Welcome
+  const canEdit = !isWelcome;
+  
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // Explicitly reset edit mode when navigating to a new section
+  useEffect(() => {
+    setIsEditMode(false);
+    setEditingItemId(null);
+    setIsModalOpen(false);
+  }, [data.id]);
 
   const handleEdit = (e: React.MouseEvent, id: string | undefined) => {
     e.stopPropagation();
