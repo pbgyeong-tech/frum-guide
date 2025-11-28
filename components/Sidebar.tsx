@@ -14,7 +14,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeSection, 
-  setActiveSection,
+  setActiveSection, // This is actually handleNavigate from App.tsx
   isMobileOpen,
   setIsMobileOpen
 }) => {
@@ -117,7 +117,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               trackMenuClick('Logo (Sidebar)');
               setActiveSection(ContentType.WELCOME);
-              setIsMobileOpen(false);
             }}
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
           >
@@ -157,7 +156,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => {
                           trackMenuClick(child.title);
                           setActiveSection(child.id);
-                          setIsMobileOpen(false);
                         }}
                         className={`nav-button ${isChildActive ? 'active' : ''}`}
                         style={{ paddingLeft: '56px' }}
@@ -179,7 +177,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => {
                   trackMenuClick(section.title);
                   setActiveSection(section.id);
-                  setIsMobileOpen(false);
                 }}
                 className={`nav-button ${isActive ? 'active' : ''}`}
               >

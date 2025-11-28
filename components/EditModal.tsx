@@ -9,26 +9,28 @@ interface EditModalProps {
   onClose: () => void;
   onSave: (data: SubSection) => void;
   initialData?: SubSection;
+  onDirty?: (dirty: boolean) => void;
 }
 
-export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, initialData, onDirty }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [link, setLink] = useState('');
   const [disclaimer, setDisclaimer] = useState('');
 
+  // Track if initial load is done to avoid setting dirty on open
+  const [loaded, setLoaded] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setTitle(initialData.title);
         
-        // Handle content extraction
         let contentArr = Array.isArray(initialData.content) 
           ? [...initialData.content] 
           : [initialData.content];
         
-        // Extract Disclaimer (starts with 👉)
         const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
         if (disclaimerIdx !== -1) {
           setDisclaimer(contentArr[disclaimerIdx].replace(/^👉\s*/, ''));
@@ -41,28 +43,37 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setMediaUrl(initialData.imagePlaceholder || '');
         setLink(initialData.link || '');
       } else {
-        // Reset for new item
         setTitle('');
         setContent('');
         setMediaUrl('');
         setLink('');
         setDisclaimer('');
       }
+      setLoaded(true);
+      // Reset dirty status on open
+      onDirty?.(false);
+    } else {
+      setLoaded(false);
     }
   }, [isOpen, initialData]);
+
+  // Handle Input Changes
+  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
+    setter(value);
+    if (loaded && onDirty) {
+      onDirty(true);
+    }
+  };
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    // Process content into array by newlines
     const contentArray = content.split('\n').filter(line => line.trim() !== '');
     
-    // Add disclaimer if exists
     if (disclaimer.trim()) {
       contentArray.push(`👉 ${disclaimer.trim()}`);
     }
     
-    // Generate UUID if creating new, preserve if editing
     const uuid = initialData?.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
 
     const newData: SubSection = {
@@ -71,10 +82,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
       content: contentArray,
       imagePlaceholder: mediaUrl.trim() || undefined,
       link: link.trim() || undefined,
-      keywords: title.split(' ') // Simple keyword generation
+      keywords: title.split(' ') 
     };
 
     onSave(newData);
+    onDirty?.(false); // Clear dirty on save
+    onClose();
+  };
+
+  const handleClose = () => {
+    onDirty?.(false); // Clear dirty on close/cancel
     onClose();
   };
 
@@ -89,7 +106,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
       padding: '20px'
     }}>
       <div 
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: 'absolute',
           inset: 0,
@@ -121,7 +138,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 700 }}>
             {initialData ? 'Edit Content Block' : 'Add Content Block'}
           </h3>
-          <button onClick={onClose} style={{ color: '#666' }}><X size={24} /></button>
+          <button onClick={handleClose} style={{ color: '#666' }}><X size={24} /></button>
         </div>
 
         {/* Body */}
@@ -133,7 +150,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <input 
               type="text" 
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => handleInputChange(setTitle, e.target.value)}
               placeholder="Enter section title"
               style={{
                 width: '100%',
@@ -152,8 +169,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <label style={{ display: 'block', color: '#888', marginBottom: '8px', fontSize: '0.9rem' }}>Body Content</label>
             <textarea 
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter main text content..."
+              onChange={(e) => handleInputChange(setContent, e.target.value)}
+              placeholder="Enter main text content... (Use • for bullets, - for sub-bullets)"
               rows={6}
               style={{
                 width: '100%',
@@ -175,7 +192,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <input 
               type="text" 
               value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
+              onChange={(e) => handleInputChange(setMediaUrl, e.target.value)}
               placeholder="https://example.com/image.jpg"
               style={{
                 width: '100%',
@@ -187,9 +204,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                 outline: 'none'
               }}
             />
-            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '6px' }}>
-              * Direct file upload is not supported. Please use an image URL.
-            </div>
           </div>
 
           {/* External Link */}
@@ -198,7 +212,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <input 
               type="text" 
               value={link}
-              onChange={(e) => setLink(e.target.value)}
+              onChange={(e) => handleInputChange(setLink, e.target.value)}
               placeholder="https://..."
               style={{
                 width: '100%',
@@ -220,7 +234,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <input 
               type="text" 
               value={disclaimer}
-              onChange={(e) => setDisclaimer(e.target.value)}
+              onChange={(e) => handleInputChange(setDisclaimer, e.target.value)}
               placeholder="Important note or warning text"
               style={{
                 width: '100%',
@@ -245,7 +259,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           gap: '12px'
         }}>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               padding: '10px 20px',
               borderRadius: '8px',

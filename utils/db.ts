@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc } from 'firebase/firestore';
-import { SectionData } from '../types';
+import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
+import { SectionData, ContentType } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 
 const COLLECTION_NAME = 'content';
@@ -155,7 +155,6 @@ export const seedDB = async (): Promise<SectionData[]> => {
       
       await batch.commit();
       
-      // DB에 저장된 UUID 포함된 데이터를 다시 반환 (상태 동기화 위해)
       return HANDBOOK_CONTENT.map(section => {
         const withUUID = ensureUUID(section);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -163,15 +162,29 @@ export const seedDB = async (): Promise<SectionData[]> => {
         return { ...section, ...rest };
       });
     } else {
+      // FORCE UPDATE logic for COMPANY section (as requested)
+      // This ensures the new nested list structure in constants.ts is reflected in DB
+      const companyLocal = HANDBOOK_CONTENT.find(c => c.id === ContentType.COMPANY);
+      if (companyLocal) {
+        try {
+          const companyDocRef = doc(db, COLLECTION_NAME, ContentType.COMPANY);
+          const cleanData = sanitizeForDB(companyLocal);
+          await setDoc(companyDocRef, cleanData);
+          console.log("Force updated COMPANY section from constants to sync new structure");
+        } catch(e) {
+          console.error("Failed to force update company section", e);
+        }
+      }
+
       const data: SectionData[] = [];
-      querySnapshot.forEach((doc) => {
+      const updatedSnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      updatedSnapshot.forEach((doc) => {
         data.push(restoreFromDB(doc.data()));
       });
       return data;
     }
   } catch (error) {
     console.error("DB Connection Failed (Check Firestore Rules):", error);
-    // 폴백 시에도 UUID 부여
     return HANDBOOK_CONTENT.map(s => {
        const withUUID = ensureUUID(s);
        // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -13,6 +13,7 @@ interface ContentRendererProps {
   allContent: SectionData[];
   onNavigate: (id: ContentType) => void;
   onUpdateContent: (subSections: SubSection[]) => void;
+  setIsDirty?: (dirty: boolean) => void;
 }
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => {
@@ -104,7 +105,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   };
 
   const renderCellContent = (cell: string, header: string, rowIndex: number, colIndex: number) => {
-    // Badge Logic for Job Titles
     if (header.includes('직급')) {
       const style = getBadgeStyle(cell);
       return (
@@ -124,7 +124,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         </span>
       );
     } 
-    // Badge Logic for Tool Types
     else if (header.includes('Type')) {
       let badgeColor = { bg: 'rgba(255,255,255,0.1)', text: '#ccc', border: 'transparent' };
       if (cell === 'UX') badgeColor = { bg: 'rgba(231,0,18,0.2)', text: '#ff6666', border: '1px solid rgba(231,0,18,0.4)' };
@@ -148,7 +147,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         </span>
       );
     }
-    // Link Logic for Emails
     else if (header.includes('이메일')) {
       return (
         <a href={`mailto:${cell}`} style={{ 
@@ -169,11 +167,9 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         </a>
       );
     } 
-    // Link Logic for Download
     else if (header.includes('Download') || cell.includes('[Download]')) {
        return parseInlineMarkdown(cell, `dl-${rowIndex}-${colIndex}`);
     }
-    // Formatting for Name (Bold)
     else if (header.includes('이름') || header.includes('Name')) {
        return <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{cell}</span>;
     }
@@ -181,9 +177,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     return cell;
   };
 
-  // --- RENDER MODE: GROUPED ACCORDION ---
   if (isGroupedTable) {
-    // 1. Group data by the grouping column
     const groupedData: Record<string, string[][]> = {};
     
     dataRows.forEach(row => {
@@ -195,14 +189,12 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       groupedData[groupKey].push(cells);
     });
 
-    // Filter out the grouping column from display headers
     const displayHeaders = rawHeaders.filter((_, idx) => idx !== groupColumnIndex);
 
     return (
       <div style={{ margin: '24px 0' }}>
         {Object.entries(groupedData).map(([groupName, groupRows], gIdx) => (
           <AccordionItem key={gIdx} title={groupName} defaultOpen={gIdx === 0}>
-             {/* Added wrapper with overflow-x: auto and minWidth on table to allow scrolling on mobile */}
              <div style={{ overflowX: 'auto', width: '100%' }}>
                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '600px' }}>
                   <thead>
@@ -215,7 +207,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                           color: '#666', 
                           fontSize: '11px', 
                           textTransform: 'uppercase',
-                          whiteSpace: 'nowrap' // Prevent header wrapping
+                          whiteSpace: 'nowrap'
                         }}>
                           {h}
                         </th>
@@ -224,7 +216,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                   </thead>
                   <tbody>
                     {groupRows.map((rowCells, rIdx) => {
-                      // Filter out the grouping column cell
                       const displayCells = rowCells.filter((_, idx) => idx !== groupColumnIndex);
                       
                       return (
@@ -246,7 +237,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     );
   }
 
-  // --- RENDER MODE: STANDARD TABLE ---
   return (
     <div style={{ 
       overflowX: 'auto', 
@@ -269,7 +259,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 fontSize: '12px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                whiteSpace: 'nowrap' // Prevent header wrapping
+                whiteSpace: 'nowrap'
               }}>
                 {h}
               </th>
@@ -389,9 +379,7 @@ const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) =
   </a>
 );
 
-// Helper to parse bold, code, links inline
 const parseInlineMarkdown = (text: string, keyPrefix: string) => {
-  // 1. Check for Full Line Image: ![alt](url)
   const imgMatch = text.match(/^!\[(.*?)\]\((.*?)\)$/);
   if (imgMatch) {
     return (
@@ -404,13 +392,11 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
     );
   }
 
-  // 2. Parse Links, Bold, and Inline Code within text
   const parts = text.split(/(\[.*?\]\(.*?\)|`.*?`|\*\*.*?\*\*)/g);
 
   return (
     <span key={keyPrefix}>
       {parts.map((part, i) => {
-        // Link: [text](url)
         const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
         if (linkMatch) {
           return (
@@ -435,7 +421,6 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
           );
         }
 
-        // Inline Code: `text`
         const codeMatch = part.match(/^`(.*?)`$/);
         if (codeMatch) {
           return (
@@ -456,7 +441,6 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
           );
         }
 
-        // Bold: **text**
         const boldMatch = part.match(/^\*\*(.*?)\*\*$/);
         if (boldMatch) {
           return <strong key={i} style={{ color: '#fff', fontWeight: 700 }}>{boldMatch[1]}</strong>;
@@ -468,23 +452,20 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
   );
 };
 
-// Main Markdown Parser that handles blocks
 const parseFormattedText = (text: string, keyPrefix: string) => {
   if (!text) return null;
   
-  // If text contains newlines, split into blocks to create hierarchy
   if (text.includes('\n')) {
     const lines = text.split('\n');
     return (
       <span key={keyPrefix} style={{ display: 'block' }}>
         {lines.map((line, i) => {
-          // If first line is bolded (starts with **), treat as a Sub-Header
           const isHeader = i === 0 && line.trim().startsWith('**');
           return (
             <span key={`${keyPrefix}-${i}`} style={{ 
               display: 'block', 
               marginBottom: isHeader ? '6px' : '4px',
-              marginTop: isHeader && i > 0 ? '12px' : '0', // Spacing if multiple blocks
+              marginTop: isHeader && i > 0 ? '12px' : '0', 
               color: isHeader ? '#fff' : '#b0b0b0',
               fontSize: isHeader ? '1.05rem' : '0.95rem',
               lineHeight: isHeader ? '1.4' : '1.6',
@@ -500,21 +481,23 @@ const parseFormattedText = (text: string, keyPrefix: string) => {
   return parseInlineMarkdown(text, keyPrefix);
 };
 
-export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allContent, onNavigate, onUpdateContent }) => {
+export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
+  data, 
+  allContent, 
+  onNavigate, 
+  onUpdateContent,
+  setIsDirty
+}) => {
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
   const isCompany = data.id === ContentType.COMPANY;
-  // Complex layout check (removed deleted types)
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
-  // Editing Logic
   const canEdit = !isWelcome && !isCompany;
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Deletion Logic
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
@@ -531,7 +514,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
     setIsModalOpen(true);
   };
 
-  // Step 1: Open Confirmation Modal
   const handleDelete = (e: React.MouseEvent, id: string | undefined) => {
     e.stopPropagation();
     e.preventDefault();
@@ -541,18 +523,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
     setDeleteModalOpen(true);
   };
 
-  // Step 2: Execute actual deletion
   const executeDelete = async () => {
     if (!deleteTargetId) return;
-
-    console.log("삭제 실행: ", deleteTargetId);
-    
-    // Filter out by UUID
     const newSubSections = data.subSections.filter(s => s.uuid !== deleteTargetId);
     
     try {
       await onUpdateContent(newSubSections);
-      console.log("삭제 성공");
     } catch (error) {
       console.error("Deletion failed:", error);
       alert("삭제 중 오류가 발생했습니다.");
@@ -564,19 +540,15 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
   const handleSaveModal = (newData: SubSection) => {
     let newSubSections = [...data.subSections];
     if (editingItemId) {
-      // Update existing by UUID
       newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? newData : sub);
     } else {
-      // Add new
       newSubSections.push(newData);
     }
     onUpdateContent(newSubSections);
   };
 
-  // Quick Link Logic
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
 
-  // --- RENDER MODE: FAQ SEARCH ---
   if (data.id === ContentType.FAQ) {
     return (
       <div key={data.id} className="animate-enter">
@@ -614,12 +586,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
           )}
         </header>
         
-        {/* Search Component */}
         <div className="animate-fade delay-4">
           <FaqSearch onNavigate={onNavigate} content={allContent} />
         </div>
 
-        {/* Edit Mode for FAQ: Show List of Q&A to Edit */}
         {canEdit && isEditMode && (
           <div style={{ marginTop: '60px', borderTop: '1px solid #333', paddingTop: '40px' }} className="animate-fade">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
@@ -700,6 +670,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveModal}
           initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined}
+          onDirty={setIsDirty}
         />
         <ConfirmModal 
           isOpen={deleteModalOpen}
@@ -712,7 +683,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
 
   return (
     <div key={data.id} className="animate-enter">
-      {/* Header */}
       <header style={{ marginBottom: '80px', position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
@@ -731,7 +701,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                 )}
             </div>
 
-            {/* Edit Toggle Button */}
             {canEdit && (
               <button 
                 onClick={() => setIsEditMode(!isEditMode)}
@@ -800,13 +769,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                  <h1 className="hero-title" style={{ 
                    marginBottom: '24px',
                    fontSize: 'clamp(3rem, 5vw, 5rem)', 
-                   fontWeight: 500, // Reduced from 900 for a lighter look
+                   fontWeight: 500,
                    letterSpacing: '-0.03em',
-                   
-                   // Reverted to Clean White
                    color: '#FFFFFF',
                    textShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                   
                    display: 'inline-block',
                    zIndex: 20,
                    position: 'relative'
@@ -832,7 +798,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
           </div>
         )}
 
-        {/* Decorative large icon in background - Subtle Watermark - Only if NO hero media */}
         {!hasHeroMedia && (
           <div style={{ 
             position: 'absolute', 
@@ -882,7 +847,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
               <div className="grid-layout">
                 {quickLinkSections.map((section, index) => {
                   const SectionIcon = section.icon;
-                  // Determine navigation target
                   const targetId = (section.children && section.children.length > 0) 
                     ? section.children[0].id 
                     : section.id;
@@ -1020,15 +984,17 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                    {Array.isArray(sub.content) ? (
                      <ul style={{ listStyle: 'none', padding: 0 }}>
                        {sub.content.map((item, i) => {
-                         if (item.trim().startsWith('```') && item.trim().endsWith('```')) {
-                            const codeText = item.replace(/^```/, '').replace(/```$/, '').trim();
+                         const cleanItem = item.trim();
+
+                         if (cleanItem.startsWith('```') && cleanItem.endsWith('```')) {
+                            const codeText = cleanItem.replace(/^```/, '').replace(/```$/, '').trim();
                             return <CodeBlock key={i} text={codeText} />;
                          }
-                         if (item.trim().startsWith('👉')) {
-                            const cleanText = item.replace(/^👉\s*/, '');
+                         if (cleanItem.startsWith('👉')) {
+                            const cleanText = cleanItem.replace(/^👉\s*/, '');
                             return <InfoBlock key={i}>{parseFormattedText(cleanText, `info-${i}`)}</InfoBlock>;
                          }
-                         const linkOnlyMatch = item.trim().match(/^\[(.*?)\]\((.*?)\)$/);
+                         const linkOnlyMatch = cleanItem.match(/^\[(.*?)\]\((.*?)\)$/);
                          if (linkOnlyMatch) {
                            return <LinkCardBlock key={i} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />;
                          }
@@ -1046,21 +1012,46 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
                              </StepBlock>
                            );
                          }
+                         
+                         // Check for Sub-bullets (Nested structure)
+                         const isSubBullet = item.startsWith('  -') || item.startsWith('\t-');
+                         const isMainBullet = cleanItem.startsWith('•') || cleanItem.startsWith('-');
+
                          return (
-                           <li key={i} className="list-item" style={{ alignItems: 'flex-start' }}>
-                             {!isComplexLayout && item.trim().startsWith('-') ? (
+                           <li key={i} className="list-item" style={{ 
+                             alignItems: 'flex-start',
+                             paddingLeft: isSubBullet ? '24px' : '0',
+                             marginTop: isSubBullet ? '-4px' : '8px'
+                            }}>
+                             {isMainBullet && !isComplexLayout ? (
                                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                   <span className="dot" style={{ marginTop: '10px' }}></span>
-                                   <div style={{ flex: 1 }}>
-                                      {parseFormattedText(item.replace(/^-/, '').trim(), `text-${i}`)}
+                                   {isSubBullet ? (
+                                      <span style={{ color: '#666', flexShrink: 0, marginTop: '2px', fontSize: '12px' }}>-</span>
+                                   ) : (
+                                      <span className="dot" style={{ marginTop: '10px' }}></span>
+                                   )}
+                                   <div style={{ 
+                                     flex: 1, 
+                                     color: isSubBullet ? '#999' : '#EAEAEA',
+                                     fontSize: isSubBullet ? '0.95rem' : '1.05rem' 
+                                   }}>
+                                      {parseFormattedText(cleanItem.replace(/^(•|-)\s*/, ''), `text-${i}`)}
                                    </div>
                                </div>
                              ) : (
                                <div style={{ paddingLeft: '0', width: '100%' }}>
-                                  {item.trim().startsWith('-') ? (
+                                  {(isMainBullet || isSubBullet) ? (
                                     <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                      <span style={{ color: '#444', flexShrink: 0, marginTop: '2px' }}>•</span>
-                                      <div style={{ flex: 1 }}>{parseFormattedText(item.replace(/^-/, '').trim(), `text-${i}`)}</div>
+                                      <span style={{ color: isSubBullet ? '#666' : '#E70012', flexShrink: 0, marginTop: '2px' }}>
+                                        {isSubBullet ? '-' : '•'}
+                                      </span>
+                                      <div style={{ 
+                                        flex: 1,
+                                        color: isSubBullet ? '#999' : '#EAEAEA',
+                                        fontSize: isSubBullet ? '0.95rem' : '1.05rem'
+                                      }}>
+                                        {parseFormattedText(cleanItem.replace(/^(•|-)\s*/, ''), `text-${i}`)}
+                                      </div>
                                     </div>
                                   ) : (
                                     parseFormattedText(item, `text-${i}`)
@@ -1094,7 +1085,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
              );
           })}
           
-          {/* Add New Block Button */}
           {isEditMode && (
              <button
                onClick={handleAddNew}
@@ -1134,6 +1124,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({ data, allConte
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveModal}
         initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined}
+        onDirty={setIsDirty}
       />
       
       <ConfirmModal 

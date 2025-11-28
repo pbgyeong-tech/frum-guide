@@ -11,6 +11,7 @@ import { trackMenuClick } from './utils/firebase';
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   
   // DB에서 불러온 데이터를 관리하는 State
   const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
@@ -32,6 +33,22 @@ const App: React.FC = () => {
     };
     loadData();
   }, []);
+
+  // Safe Navigation Handler
+  const handleNavigate = (id: ContentType) => {
+    if (activeSectionId === id) return;
+    
+    if (isDirty) {
+      if (window.confirm("저장하지 않은 내용이 있습니다. 정말 이동하시겠습니까?")) {
+        setIsDirty(false);
+        setActiveSectionId(id);
+        setIsMobileMenuOpen(false);
+      }
+    } else {
+      setActiveSectionId(id);
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   // 재귀적으로 섹션 데이터를 찾는 헬퍼 함수
   const findSection = (sections: SectionData[], id: ContentType): SectionData | undefined => {
@@ -63,6 +80,7 @@ const App: React.FC = () => {
     if (sectionToUpdate) {
       try {
         await saveContent(sectionToUpdate);
+        setIsDirty(false); // 저장 성공 시 dirty 해제
       } catch (e) {
         console.error("Failed to save to DB", e);
         alert("저장에 실패했습니다. 네트워크 상태나 권한을 확인해주세요.");
@@ -75,7 +93,7 @@ const App: React.FC = () => {
       {/* Sidebar */}
       <Sidebar
         activeSection={activeSectionId}
-        setActiveSection={setActiveSectionId}
+        setActiveSection={handleNavigate}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
       />
@@ -102,7 +120,7 @@ const App: React.FC = () => {
           <button 
             onClick={() => {
               trackMenuClick('Logo (Mobile)');
-              setActiveSectionId(ContentType.WELCOME);
+              handleNavigate(ContentType.WELCOME);
             }}
             style={{ 
               background: 'none', 
@@ -123,10 +141,12 @@ const App: React.FC = () => {
 
         <div className="content-wrapper">
           <ContentRenderer
+            key={activeSectionId} // Force remount on navigation to reset local edit state
             data={activeData}
             allContent={contentData}
-            onNavigate={setActiveSectionId}
+            onNavigate={handleNavigate}
             onUpdateContent={handleContentUpdate}
+            setIsDirty={setIsDirty}
           />
         </div>
       </main>
