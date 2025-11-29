@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, addDoc } from 'firebase/firestore';
-import { SectionData, ContentType, EditLog } from '../types';
+import { SectionData, ContentType, EditLog, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 
 const COLLECTION_NAME = 'content';
@@ -142,7 +142,11 @@ export const deleteDocument = async (id: string): Promise<void> => {
 // [LOG] 편집 로그 저장
 export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
   try {
-    await addDoc(collection(db, LOG_COLLECTION_NAME), log);
+    // Note: We use the generic log object here, which now includes the 'details' object 
+    // with before/after state as defined in types.ts.
+    // Firestore handles nested objects automatically.
+    const cleanLog = removeUndefined(log);
+    await addDoc(collection(db, LOG_COLLECTION_NAME), cleanLog);
     console.log("Edit log saved");
   } catch (e) {
     console.error("Failed to add edit log", e);

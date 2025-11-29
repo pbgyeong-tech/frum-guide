@@ -48,5 +48,8 @@ export interface EditLog {
   sectionId: string;
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
-  details?: string;
+  details: {
+    before?: SubSection;
+    after?: SubSection;
+  };
 }

@@ -508,7 +508,7 @@ const renderMarkdownContent = (content: string | string[]) => {
         <Component key={`header-${i}`} style={{ 
           color: '#fff', 
           marginTop: '28px', 
-          marginBottom: '16px',
+          marginBottom: '16px', 
           fontWeight: 700,
           lineHeight: 1.3,
           fontSize: level === 1 ? '1.5rem' : level === 2 ? '1.25rem' : '1.1rem' 
@@ -682,7 +682,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         sectionId: data.id,
         subSectionTitle: targetItem.title,
         action: 'delete',
-        details: 'Deleted content block'
+        details: {
+          before: targetItem,
+          after: undefined
+        }
       });
     }
 
@@ -699,6 +702,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   };
 
   const handleSaveModal = (newData: SubSection) => {
+    const originalItem = editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined;
+
     // Inject Metadata
     if (user && user.email) {
       newData.lastEditedBy = user.email;
@@ -711,7 +716,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         sectionId: data.id,
         subSectionTitle: newData.title,
         action: editingItemId ? 'update' : 'create',
-        details: editingItemId ? 'Updated existing block' : 'Created new block'
+        details: {
+          before: originalItem, // Will be undefined if this is a 'create' action
+          after: newData
+        }
       });
     }
 
