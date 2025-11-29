@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SectionData, ContentType, SubSection } from '../types';
+import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, Clock, User as UserIcon } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
@@ -398,7 +398,7 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
               style={{ 
                 color: '#E70012', 
                 textDecoration: 'none', 
-                fontWeight: 600,
+                fontWeight: 600, 
                 borderBottom: '1px solid rgba(231,0,18,0.3)',
                 paddingBottom: '0px',
                 transition: 'all 0.2s'
@@ -538,14 +538,11 @@ const renderMarkdownContent = (content: string | string[]) => {
     }
 
     // 6. List Items (*, -, •, 1.)
-    // We group consecutive list items to handle them nicely, though rendering them as divs is easier for mixing with custom parsers
-    // Checking for ordered list (1. ) or unordered (*, -, •)
     const isUnordered = /^(\*|-|•)\s/.test(trimLine);
     const isOrdered = /^\d+\.\s/.test(trimLine);
 
     if (isUnordered || isOrdered) {
-        // Handle single line list item
-        const isSubBullet = /^\s+(\*|-)\s/.test(line); // Check indentation in original line
+        const isSubBullet = /^\s+(\*|-)\s/.test(line); 
         
         if (isOrdered) {
              const match = trimLine.match(/^(\d+)\.\s*(.*)/);
@@ -618,6 +615,27 @@ const renderMarkdownContent = (content: string | string[]) => {
   return elements;
 };
 
+// Helper function to create content snapshot for logging
+const createSnapshot = (sub: SubSection): ContentSnapshot => {
+  let contentArr = Array.isArray(sub.content) ? [...sub.content] : sub.content.split('\n');
+  let disclaimer = '';
+  
+  // Extract disclaimer if it exists (logic matching EditModal)
+  const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
+  if (disclaimerIdx !== -1) {
+    disclaimer = contentArr[disclaimerIdx].replace(/^👉\s*/, '');
+    contentArr.splice(disclaimerIdx, 1);
+  }
+
+  return {
+    title: sub.title,
+    body_content: contentArr.join('\n'),
+    media: sub.imagePlaceholder || '',
+    external_link: sub.link || '',
+    disclaimer_note: disclaimer
+  };
+};
+
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
   data, 
   allContent, 
@@ -683,7 +701,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         subSectionTitle: targetItem.title,
         action: 'delete',
         details: {
-          before: targetItem,
+          before: createSnapshot(targetItem),
           after: undefined
         }
       });
@@ -717,8 +735,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         subSectionTitle: newData.title,
         action: editingItemId ? 'update' : 'create',
         details: {
-          before: originalItem, // Will be undefined if this is a 'create' action
-          after: newData
+          before: originalItem ? createSnapshot(originalItem) : undefined,
+          after: createSnapshot(newData)
         }
       });
     }
@@ -1012,7 +1030,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             right: '-50px', 
             top: '-60px', 
             opacity: '0.02', 
-            pointerEvents: 'none',
+            pointerEvents: 'none', 
             transform: 'rotate(-10deg)',
             filter: 'blur(2px)'
           }} className="hidden-on-mobile">

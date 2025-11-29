@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, addDoc } from 'firebase/firestore';
-import { SectionData, ContentType, EditLog, SubSection } from '../types';
+import { SectionData, ContentType, EditLog, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 
 const COLLECTION_NAME = 'content';

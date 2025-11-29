@@ -42,6 +42,14 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface ContentSnapshot {
+  title: string;
+  body_content: string;
+  media: string;
+  external_link: string;
+  disclaimer_note: string;
+}
+
 export interface EditLog {
   timestamp: number;
   userEmail: string;
@@ -49,7 +57,7 @@ export interface EditLog {
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
   details: {
-    before?: SubSection;
-    after?: SubSection;
+    before?: ContentSnapshot;
+    after?: ContentSnapshot;
   };
 }
