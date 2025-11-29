@@ -2,21 +2,30 @@
 import React from 'react';
 import { HANDBOOK_CONTENT } from '../constants';
 import { ContentType } from '../types';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, Lock, Unlock, LogOut } from 'lucide-react';
 import { trackMenuClick } from '../utils/firebase';
+import { User } from 'firebase/auth';
 
 interface SidebarProps {
   activeSection: ContentType;
   setActiveSection: (id: ContentType) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
+  isAdmin: boolean;
+  onLogin: () => void;
+  onLogout: () => void;
+  user: User | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeSection, 
   setActiveSection, // This is actually handleNavigate from App.tsx
   isMobileOpen,
-  setIsMobileOpen
+  setIsMobileOpen,
+  isAdmin,
+  onLogin,
+  onLogout,
+  user
 }) => {
   
   return (
@@ -104,6 +113,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           display: flex;
           align-items: center;
           gap: 8px;
+        }
+
+        .admin-login-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 32px;
+          color: #555;
+          font-size: 12px;
+          font-weight: 600;
+          transition: all 0.2s;
+          margin-top: 8px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .admin-login-btn:hover {
+          color: #ccc;
+          background: rgba(255,255,255,0.02);
         }
       `}</style>
 
@@ -206,7 +234,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
              <span>Lunch Solution Center</span>
            </a>
 
-           <div style={{ padding: '20px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
+           {/* Admin Login/Logout Button */}
+           {isAdmin ? (
+             <button onClick={onLogout} className="admin-login-btn">
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 {user?.photoURL ? (
+                    <img src={user.photoURL} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                 ) : (
+                    <Unlock size={14} color="#E70012" />
+                 )}
+                 <span style={{ color: '#E70012' }}>Admin Mode</span>
+               </div>
+               <LogOut size={14} />
+             </button>
+           ) : (
+             <button onClick={onLogin} className="admin-login-btn">
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 <Lock size={14} />
+                 <span>Admin Login</span>
+               </div>
+             </button>
+           )}
+
+           <div style={{ padding: '16px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
              FRUM<br/>CREATIVE SOLUTION CENTER
            </div>
         </div>

@@ -15,6 +15,7 @@ interface ContentRendererProps {
   onNavigate: (id: ContentType) => void;
   onUpdateContent: (subSections: SubSection[]) => void;
   setIsDirty?: (dirty: boolean) => void;
+  isAdmin: boolean;
 }
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => {
@@ -620,15 +621,16 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   allContent, 
   onNavigate, 
   onUpdateContent,
-  setIsDirty
+  setIsDirty,
+  isAdmin
 }) => {
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
-  // Allow editing for all pages except Welcome
-  const canEdit = !isWelcome;
+  // Only Admin can edit
+  const canEdit = !isWelcome && isAdmin;
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1192,7 +1194,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         </div>
 
         {/* Reset Button for Company and Tools Section to fix corrupted DB data */}
-        {(data.id === ContentType.COMPANY || data.id === ContentType.TOOLS) && (
+        {canEdit && isEditMode && (data.id === ContentType.COMPANY || data.id === ContentType.TOOLS) && (
             <div style={{ marginTop: '60px', borderTop: '1px solid #222', paddingTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                <button 
                   onClick={handleResetData}

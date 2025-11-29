@@ -6,15 +6,43 @@ import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
-import { trackMenuClick } from './utils/firebase';
+import { trackMenuClick, auth, loginWithGoogle, logout } from './utils/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+
   // DB에서 불러온 데이터를 관리하는 State
   const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        // Domain check
+        if (currentUser.email && currentUser.email.endsWith('@frum.co.kr')) {
+          setUser(currentUser);
+        } else {
+          // If domain doesn't match, sign out immediately
+          alert("사내 계정(@frum.co.kr)만 편집 권한을 가질 수 있습니다.");
+          logout();
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Is Admin if user is logged in (domain check is already done above)
+  const isAdmin = !!user;
 
   // 앱 시작 시 DB에서 데이터 로드
   useEffect(() => {
@@ -80,6 +108,11 @@ const App: React.FC = () => {
 
   // ContentRenderer에서 수정/삭제/추가 발생 시 호출되는 핸들러
   const handleContentUpdate = async (newSubSections: SubSection[]) => {
+    if (!isAdmin) {
+      alert("편집 권한이 없습니다.");
+      return;
+    }
+
     // 1. React State 업데이트 (화면에 즉시 반영)
     const updatedContent = contentData.map(section => {
       if (section.id === activeSectionId) {
@@ -110,6 +143,10 @@ const App: React.FC = () => {
         setActiveSection={handleNavigate}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
+        isAdmin={isAdmin}
+        onLogin={loginWithGoogle}
+        onLogout={logout}
+        user={user}
       />
 
       {/* Main Content */}
@@ -161,6 +198,7 @@ const App: React.FC = () => {
             onNavigate={handleNavigate}
             onUpdateContent={handleContentUpdate}
             setIsDirty={setIsDirty}
+            isAdmin={isAdmin}
           />
         </div>
       </main>
