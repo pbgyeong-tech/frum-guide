@@ -1,10 +1,11 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
-import { SectionData, ContentType } from '../types';
+import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, addDoc } from 'firebase/firestore';
+import { SectionData, ContentType, EditLog } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 
 const COLLECTION_NAME = 'content';
+const LOG_COLLECTION_NAME = 'edit_logs';
 
 // Simple UUID generator fallback
 const generateUUID = () => {
@@ -135,6 +136,16 @@ export const deleteDocument = async (id: string): Promise<void> => {
   } catch (error) {
     console.error("Error removing document: ", error);
     throw error;
+  }
+};
+
+// [LOG] 편집 로그 저장
+export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
+  try {
+    await addDoc(collection(db, LOG_COLLECTION_NAME), log);
+    console.log("Edit log saved");
+  } catch (e) {
+    console.error("Failed to add edit log", e);
   }
 };
 

@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2 } from 'lucide-react';
+import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, Clock, User as UserIcon } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { trackMenuClick } from '../utils/firebase';
+import { addEditLog } from '../utils/db';
+import { User } from 'firebase/auth';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -15,6 +17,7 @@ interface ContentRendererProps {
   onUpdateContent: (subSections: SubSection[]) => void;
   setIsDirty?: (dirty: boolean) => void;
   isAdmin: boolean;
+  user: User | null;
 }
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => {
@@ -621,7 +624,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   onNavigate, 
   onUpdateContent,
   setIsDirty,
-  isAdmin
+  isAdmin,
+  user
 }) => {
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
@@ -668,6 +672,20 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
 
   const executeDelete = async () => {
     if (!deleteTargetId) return;
+    
+    // Log deletion
+    const targetItem = data.subSections.find(s => s.uuid === deleteTargetId);
+    if (user && user.email && targetItem) {
+      addEditLog({
+        timestamp: Date.now(),
+        userEmail: user.email,
+        sectionId: data.id,
+        subSectionTitle: targetItem.title,
+        action: 'delete',
+        details: 'Deleted content block'
+      });
+    }
+
     const newSubSections = data.subSections.filter(s => s.uuid !== deleteTargetId);
     
     try {
@@ -681,6 +699,22 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   };
 
   const handleSaveModal = (newData: SubSection) => {
+    // Inject Metadata
+    if (user && user.email) {
+      newData.lastEditedBy = user.email;
+      newData.lastEditedAt = Date.now();
+      
+      // Log Action
+      addEditLog({
+        timestamp: Date.now(),
+        userEmail: user.email,
+        sectionId: data.id,
+        subSectionTitle: newData.title,
+        action: editingItemId ? 'update' : 'create',
+        details: editingItemId ? 'Updated existing block' : 'Created new block'
+      });
+    }
+
     let newSubSections = [...data.subSections];
     if (editingItemId) {
       newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? newData : sub);
@@ -802,6 +836,29 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   <div className="card-content" style={{ fontSize: '0.9rem', color: '#999', maxHeight: '60px', overflow: 'hidden' }}>
                     {Array.isArray(sub.content) ? sub.content.join(' ') : sub.content}
                   </div>
+                  
+                  {/* Metadata Display for FAQ */}
+                  {isEditMode && sub.lastEditedBy && (
+                     <div style={{ 
+                        marginTop: '16px', 
+                        paddingTop: '12px', 
+                        borderTop: '1px solid #333',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontSize: '0.75rem',
+                        color: '#666'
+                     }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                           <UserIcon size={10} />
+                           {sub.lastEditedBy.split('@')[0]}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                           <Clock size={10} />
+                           {sub.lastEditedAt ? new Date(sub.lastEditedAt).toLocaleDateString() : ''}
+                        </div>
+                     </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1140,6 +1197,30 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                    >
                      Access Portal <ArrowRight size={14} style={{ marginLeft: '4px' }} />
                    </a>
+                 )}
+
+                 {/* Metadata Footer */}
+                 {isEditMode && sub.lastEditedBy && (
+                   <div style={{ 
+                      marginTop: '24px', 
+                      paddingTop: '16px', 
+                      borderTop: '1px solid #222',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      fontSize: '0.8rem',
+                      color: '#666',
+                      fontFamily: 'monospace'
+                   }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                         <UserIcon size={12} color="#888" />
+                         <span style={{ color: '#888' }}>{sub.lastEditedBy}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                         <Clock size={12} color="#888" />
+                         <span>{sub.lastEditedAt ? new Date(sub.lastEditedAt).toLocaleString() : '-'}</span>
+                      </div>
+                   </div>
                  )}
                </article>
              );

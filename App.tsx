@@ -199,6 +199,7 @@ const App: React.FC = () => {
             onUpdateContent={handleContentUpdate}
             setIsDirty={setIsDirty}
             isAdmin={isAdmin}
+            user={user}
           />
         </div>
       </main>

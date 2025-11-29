@@ -24,8 +24,13 @@ export const loginWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login failed:", error);
+    if (error.code === 'auth/unauthorized-domain') {
+      alert("도메인 인증 오류: 현재 앱이 실행 중인 도메인이 Firebase Console의 승인된 도메인 목록(Authorized domains)에 없습니다. 개발자에게 문의하세요.");
+    } else if (error.code !== 'auth/popup-closed-by-user') {
+      alert(`로그인 실패: ${error.message}`);
+    }
     throw error;
   }
 };

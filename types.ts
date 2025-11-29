@@ -20,6 +20,8 @@ export interface SubSection {
   imagePlaceholder?: string;
   link?: string;
   keywords?: string[]; // Added for natural language search scoring
+  lastEditedBy?: string; // Email of the last editor
+  lastEditedAt?: number; // Timestamp of the last edit
 }
 
 export interface SectionData {
@@ -38,4 +40,13 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
+}
+
+export interface EditLog {
+  timestamp: number;
+  userEmail: string;
+  sectionId: string;
+  subSectionTitle: string;
+  action: 'create' | 'update' | 'delete';
+  details?: string;
 }
