@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -213,7 +214,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     );
   }
 
-  // 4. Standard Table Styling (Requested Fix)
+  // 4. Standard Table Styling
   return (
     <div style={{ 
       width: '100%', 
@@ -440,31 +441,178 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
 
 const parseFormattedText = (text: string, keyPrefix: string) => {
   if (!text) return null;
-  
-  if (text.includes('\n')) {
-    const lines = text.split('\n');
-    return (
-      <span key={keyPrefix} style={{ display: 'block' }}>
-        {lines.map((line, i) => {
-          const isHeader = i === 0 && line.trim().startsWith('**');
-          return (
-            <span key={`${keyPrefix}-${i}`} style={{ 
-              display: 'block', 
-              marginBottom: isHeader ? '6px' : '4px',
-              marginTop: isHeader && i > 0 ? '12px' : '0', 
-              color: isHeader ? '#fff' : '#b0b0b0',
-              fontSize: isHeader ? '1.05rem' : '0.95rem',
-              lineHeight: isHeader ? '1.4' : '1.6',
-              fontWeight: isHeader ? 600 : 400
-            }}>
-              {parseInlineMarkdown(line, `${keyPrefix}-${i}`)}
-            </span>
-          )
-        })}
-      </span>
-    );
-  }
   return parseInlineMarkdown(text, keyPrefix);
+};
+
+// --- New Robust Markdown Rendering Function ---
+const renderMarkdownContent = (content: string | string[]) => {
+  const lines = Array.isArray(content) ? content : content.split('\n');
+  const elements: React.ReactNode[] = [];
+  
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimLine = line.trim();
+    
+    // 1. Code Blocks (```)
+    if (trimLine.startsWith('```')) {
+      // Check for one-liner: ```code```
+      if (trimLine.length > 3 && trimLine.endsWith('```') && trimLine.slice(3, -3).indexOf('```') === -1) {
+        elements.push(<CodeBlock key={`code-${i}`} text={trimLine.slice(3, -3)} />);
+        i++;
+        continue;
+      }
+      // Multi-line code block
+      const codeContent = [];
+      i++; // Skip start fence
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeContent.push(lines[i]);
+        i++;
+      }
+      i++; // Skip end fence
+      elements.push(<CodeBlock key={`code-block-${i}`} text={codeContent.join('\n')} />);
+      continue;
+    }
+
+    // 2. Tables (| ... |)
+    if (trimLine.startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />);
+      continue;
+    }
+
+    // 3. Info Block (👉)
+    if (trimLine.startsWith('👉')) {
+      elements.push(
+        <InfoBlock key={`info-${i}`}>
+          {parseFormattedText(trimLine.replace(/^👉\s*/, ''), `info-txt-${i}`)}
+        </InfoBlock>
+      );
+      i++;
+      continue;
+    }
+
+    // 4. Headers (#)
+    if (trimLine.startsWith('#')) {
+      const level = trimLine.match(/^#+/)?.[0].length || 1;
+      const text = trimLine.replace(/^#+\s*/, '');
+      const Component = level === 1 ? 'h2' : level === 2 ? 'h3' : 'h4'; 
+      elements.push(
+        <Component key={`header-${i}`} style={{ 
+          color: '#fff', 
+          marginTop: '28px', 
+          marginBottom: '16px',
+          fontWeight: 700,
+          lineHeight: 1.3,
+          fontSize: level === 1 ? '1.5rem' : level === 2 ? '1.25rem' : '1.1rem' 
+        }}>
+          {parseFormattedText(text, `header-txt-${i}`)}
+        </Component>
+      );
+      i++;
+      continue;
+    }
+
+    // 5. Blockquote (>)
+    if (trimLine.startsWith('>')) {
+       elements.push(
+         <blockquote key={`quote-${i}`} style={{ 
+            borderLeft: '3px solid #E70012', 
+            paddingLeft: '16px', 
+            margin: '16px 0', 
+            color: '#999',
+            fontStyle: 'italic'
+         }}>
+            {parseFormattedText(trimLine.replace(/^>\s*/, ''), `quote-txt-${i}`)}
+         </blockquote>
+       );
+       i++;
+       continue;
+    }
+
+    // 6. List Items (*, -, •, 1.)
+    // We group consecutive list items to handle them nicely, though rendering them as divs is easier for mixing with custom parsers
+    // Checking for ordered list (1. ) or unordered (*, -, •)
+    const isUnordered = /^(\*|-|•)\s/.test(trimLine);
+    const isOrdered = /^\d+\.\s/.test(trimLine);
+
+    if (isUnordered || isOrdered) {
+        // Handle single line list item
+        const isSubBullet = /^\s+(\*|-)\s/.test(line); // Check indentation in original line
+        
+        if (isOrdered) {
+             const match = trimLine.match(/^(\d+)\.\s*(.*)/);
+             if (match) {
+                 elements.push(
+                     <StepBlock key={`step-${i}`} number={match[1]}>
+                         {parseFormattedText(match[2], `step-txt-${i}`)}
+                     </StepBlock>
+                 );
+             }
+        } else {
+            // Unordered
+            elements.push(
+                <div key={`list-${i}`} className="list-item" style={{ 
+                    paddingLeft: isSubBullet ? '24px' : '0', 
+                    marginTop: isSubBullet ? '-4px' : '8px',
+                    marginBottom: '8px'
+                }}>
+                  <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'flex-start' }}>
+                    {isSubBullet ? (
+                       <span style={{ color: '#666', flexShrink: 0, marginTop: '2px', fontSize: '12px' }}>-</span>
+                    ) : (
+                       <span className="dot" style={{ marginTop: '9px' }}></span>
+                    )}
+                    <div style={{ flex: 1, color: isSubBullet ? '#999' : '#EAEAEA', fontSize: isSubBullet ? '0.95rem' : '1.05rem', lineHeight: '1.6' }}>
+                      {parseFormattedText(trimLine.replace(/^(\*|-|•)\s*/, ''), `list-txt-${i}`)}
+                    </div>
+                  </div>
+                </div>
+            );
+        }
+        i++;
+        continue;
+    }
+
+    // 7. Link Cards (Standalone Link: [Text](URL))
+    const linkOnlyMatch = trimLine.match(/^\[(.*?)\]\((.*?)\)$/);
+    if (linkOnlyMatch && trimLine === linkOnlyMatch[0]) {
+        elements.push(<LinkCardBlock key={`link-card-${i}`} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />);
+        i++;
+        continue;
+    }
+
+    // 8. Image (Standalone: ![Alt](URL))
+    const imgMatch = trimLine.match(/^!\[(.*?)\]\((.*?)\)$/);
+    if (imgMatch && trimLine === imgMatch[0]) {
+        elements.push(
+          <div key={`img-${i}`} style={{ margin: '24px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #222' }}>
+             <img src={imgMatch[2]} alt={imgMatch[1]} style={{ width: '100%', display: 'block' }} />
+             {imgMatch[1] && <div style={{ padding: '8px', fontSize: '0.8rem', color: '#666', textAlign: 'center', background: '#050505' }}>{imgMatch[1]}</div>}
+          </div>
+        );
+        i++;
+        continue;
+    }
+
+    // 9. Standard Paragraph (or empty line)
+    if (trimLine === '') {
+        elements.push(<div key={`br-${i}`} style={{ height: '12px' }}></div>);
+    } else {
+        elements.push(
+            <p key={`p-${i}`} style={{ marginBottom: '12px', lineHeight: '1.7', color: '#ccc', fontSize: '1rem' }}>
+                {parseFormattedText(line, `p-txt-${i}`)}
+            </p>
+        );
+    }
+    i++;
+  }
+
+  return elements;
 };
 
 export const ContentRenderer: React.FC<ContentRendererProps> = ({ 
@@ -907,34 +1055,12 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         <>
         <div className="grid-layout">
           {data.subSections.map((sub, index) => {
-             // Robust Table Detection Logic
-             let isTable = false;
-             let tableContent = "";
-
-             // Case 1: Content is a single string (Template Literal)
-             if (typeof sub.content === 'string') {
-               // Check if it starts with pipe (ignoring whitespace)
-               if (/^\s*\|/.test(sub.content)) {
-                 isTable = true;
-                 tableContent = sub.content;
-               }
-             } 
-             // Case 2: Content is an array of strings (e.g. from DB edit)
-             else if (Array.isArray(sub.content) && sub.content.length > 0) {
-               // Check if the first line starts with pipe
-               const firstLine = sub.content[0];
-               if (typeof firstLine === 'string' && /^\s*\|/.test(firstLine)) {
-                 isTable = true;
-                 tableContent = sub.content.join('\n');
-               }
-             }
-
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
              const hasCode = !!sub.codeBlock;
              const hasImage = !!sub.imagePlaceholder;
              
-             // Update isFullWidth to include isTable
-             const isFullWidth = isComplexLayout || isTable || hasCode || hasImage || textLength > 300;
+             // Dynamic layout sizing
+             const isFullWidth = isComplexLayout || hasCode || hasImage || textLength > 300;
 
              return (
                <article 
@@ -1012,92 +1138,8 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                  )}
 
                  <div className="card-content">
-                   {isTable ? (
-                     <TableBlock text={tableContent} />
-                   ) : Array.isArray(sub.content) ? (
-                     <ul style={{ listStyle: 'none', padding: 0 }}>
-                       {sub.content.map((item, i) => {
-                         const cleanItem = item.trim();
-
-                         if (cleanItem.startsWith('```') && cleanItem.endsWith('```')) {
-                            const codeText = cleanItem.replace(/^```/, '').replace(/```$/, '').trim();
-                            return <CodeBlock key={i} text={codeText} />;
-                         }
-                         if (cleanItem.startsWith('👉')) {
-                            const cleanText = cleanItem.replace(/^👉\s*/, '');
-                            return <InfoBlock key={i}>{parseFormattedText(cleanText, `info-${i}`)}</InfoBlock>;
-                         }
-                         const linkOnlyMatch = cleanItem.match(/^\[(.*?)\]\((.*?)\)$/);
-                         if (linkOnlyMatch) {
-                           return <LinkCardBlock key={i} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />;
-                         }
-                         const stepMatch = item.match(/^(\*\*)?([①-⑮]|\d+\.)\s*(.*)/s);
-                         if (stepMatch) {
-                           const rawNum = stepMatch[2];
-                           const number = rawNum.replace('.', ''); 
-                           let contentPart = stepMatch[3];
-                           if (stepMatch[1] === '**') {
-                             contentPart = '**' + contentPart;
-                           }
-                           return (
-                             <StepBlock key={i} number={number}>
-                               {parseFormattedText(contentPart, `step-${i}`)}
-                             </StepBlock>
-                           );
-                         }
-                         
-                         // Check for Sub-bullets (Nested structure)
-                         const isSubBullet = item.startsWith('  -') || item.startsWith('\t-');
-                         const isMainBullet = cleanItem.startsWith('•') || cleanItem.startsWith('-');
-
-                         return (
-                           <li key={i} className="list-item" style={{ 
-                             alignItems: 'flex-start',
-                             paddingLeft: isSubBullet ? '24px' : '0',
-                             marginTop: isSubBullet ? '-4px' : '8px'
-                            }}>
-                             {isMainBullet && !isComplexLayout ? (
-                               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                   {isSubBullet ? (
-                                      <span style={{ color: '#666', flexShrink: 0, marginTop: '2px', fontSize: '12px' }}>-</span>
-                                   ) : (
-                                      <span className="dot" style={{ marginTop: '10px' }}></span>
-                                   )}
-                                   <div style={{ 
-                                     flex: 1, 
-                                     color: isSubBullet ? '#999' : '#EAEAEA',
-                                     fontSize: isSubBullet ? '0.95rem' : '1.05rem' 
-                                   }}>
-                                      {parseFormattedText(cleanItem.replace(/^(•|-)\s*/, ''), `text-${i}`)}
-                                   </div>
-                               </div>
-                             ) : (
-                               <div style={{ paddingLeft: '0', width: '100%' }}>
-                                  {(isMainBullet || isSubBullet) ? (
-                                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                      <span style={{ color: isSubBullet ? '#666' : '#E70012', flexShrink: 0, marginTop: '2px' }}>
-                                        {isSubBullet ? '-' : '•'}
-                                      </span>
-                                      <div style={{ 
-                                        flex: 1,
-                                        color: isSubBullet ? '#999' : '#EAEAEA',
-                                        fontSize: isSubBullet ? '0.95rem' : '1.05rem'
-                                      }}>
-                                        {parseFormattedText(cleanItem.replace(/^(•|-)\s*/, ''), `text-${i}`)}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    parseFormattedText(item, `text-${i}`)
-                                  )}
-                               </div>
-                             )}
-                           </li>
-                         );
-                       })}
-                     </ul>
-                   ) : (
-                     <p>{parseFormattedText(sub.content, 'single')}</p>
-                   )}
+                    {/* USE NEW RENDERER HERE */}
+                    {renderMarkdownContent(sub.content)}
                  </div>
 
                  {sub.codeBlock && <CodeBlock text={sub.codeBlock} />}
