@@ -2,12 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2 } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { trackMenuClick } from '../utils/firebase';
-import { resetToDefault } from '../utils/db';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -681,20 +680,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
     }
   };
 
-  // Add Reset Handler for corrupted DB recovery
-  const handleResetData = async () => {
-    if (window.confirm("정말 이 페이지의 데이터를 초기 상태로 되돌리시겠습니까?\n이 작업은 되돌릴 수 없으며, DB 데이터가 constants.ts 내용으로 덮어씌워집니다.")) {
-      try {
-        await resetToDefault(data.id);
-        alert("데이터가 초기화되었습니다. 페이지를 새로고침합니다.");
-        window.location.reload();
-      } catch (error) {
-        console.error("Reset failed", error);
-        alert("데이터 초기화에 실패했습니다.");
-      }
-    }
-  };
-
   const handleSaveModal = (newData: SubSection) => {
     let newSubSections = [...data.subSections];
     if (editingItemId) {
@@ -1192,32 +1177,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
              </button>
           )}
         </div>
-
-        {/* Reset Button for Company and Tools Section to fix corrupted DB data */}
-        {canEdit && isEditMode && (data.id === ContentType.COMPANY || data.id === ContentType.TOOLS) && (
-            <div style={{ marginTop: '60px', borderTop: '1px solid #222', paddingTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-               <button 
-                  onClick={handleResetData}
-                  style={{
-                     display: 'flex',
-                     alignItems: 'center',
-                     gap: '8px',
-                     padding: '12px 20px',
-                     background: '#1a1a1a',
-                     color: '#666',
-                     border: '1px solid #333',
-                     borderRadius: '8px',
-                     fontSize: '0.9rem',
-                     cursor: 'pointer',
-                     transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#E70012'; e.currentTarget.style.borderColor = '#E70012'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = '#333'; }}
-               >
-                  <RotateCcw size={16} /> 데이터 초기화 (Reset DB)
-               </button>
-            </div>
-        )}
         </>
       )}
 
