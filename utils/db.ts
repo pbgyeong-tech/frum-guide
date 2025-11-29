@@ -138,6 +138,24 @@ export const deleteDocument = async (id: string): Promise<void> => {
   }
 };
 
+// [RESET] 초기 데이터로 강제 복구
+export const resetToDefault = async (sectionId: ContentType): Promise<void> => {
+  try {
+    const originalSection = findLocalSection(sectionId, HANDBOOK_CONTENT);
+    if (!originalSection) throw new Error("Original section data not found");
+    
+    // Sanitize and ensure UUIDs are fresh or consistent
+    const cleanData = sanitizeForDB(originalSection);
+    
+    // Overwrite the document completely
+    await setDoc(doc(db, COLLECTION_NAME, sectionId), cleanData);
+    console.log(`Reset completed for ${sectionId}`);
+  } catch (error) {
+    console.error("Error resetting document:", error);
+    throw error;
+  }
+};
+
 // [INIT] 초기 데이터 시딩
 export const seedDB = async (): Promise<SectionData[]> => {
   try {

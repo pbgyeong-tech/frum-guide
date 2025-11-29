@@ -55,10 +55,12 @@ const App: React.FC = () => {
         setIsDirty(false);
         setActiveSectionId(id);
         setIsMobileMenuOpen(false);
+        window.scrollTo(0, 0);
       }
     } else {
       setActiveSectionId(id);
       setIsMobileMenuOpen(false);
+      window.scrollTo(0, 0);
     }
   };
 

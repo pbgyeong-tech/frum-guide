@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2 } from 'lucide-react';
+import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { trackMenuClick } from '../utils/firebase';
+import { resetToDefault } from '../utils/db';
 
 interface ContentRendererProps {
   data: SectionData;
@@ -76,36 +76,42 @@ const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaul
 };
 
 const TableBlock: React.FC<{ text: string }> = ({ text }) => {
-  const rows = text.trim().split('\n').filter(row => row.trim() !== '');
-  const rawHeaders = rows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
-  
-  // Detect separator line (e.g. |---|---|)
-  const isSeparator = (row: string) => row.includes('---');
-  const dataRows = rows.slice(1).filter(r => !isSeparator(r));
-
-  // Check if this table should be grouped (Look for "사업부" column)
-  const groupColumnIndex = rawHeaders.findIndex(h => h === '사업부');
-  const isGroupedTable = groupColumnIndex !== -1;
-
-  const getBadgeStyle = (role: string) => {
-    // Executive / Leadership
-    if (role.includes('대표')) return { bg: 'rgba(241, 196, 15, 0.15)', color: '#F4D03F', border: '1px solid rgba(241, 196, 15, 0.3)' }; // Gold
-    if (role.includes('이사')) return { bg: 'rgba(155, 89, 182, 0.15)', color: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.3)' }; // Purple
-    
-    // Senior Management
-    if (role.includes('수석')) return { bg: 'rgba(26, 188, 156, 0.15)', color: '#76D7C4', border: '1px solid rgba(26, 188, 156, 0.3)' }; // Teal/Cyan
-    if (role.includes('책임')) return { bg: 'rgba(231,0,18,0.15)', color: '#FF8A8A', border: '1px solid rgba(231,0,18,0.3)' }; // Reddish
-    
-    // Staff
-    if (role.includes('선임')) return { bg: 'rgba(52, 152, 219, 0.15)', color: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.3)' }; // Blueish
-    if (role.includes('사원')) return { bg: 'rgba(46, 204, 113, 0.15)', color: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.3)' }; // Greenish
-    
-    // Default
-    return { bg: 'rgba(255,255,255,0.1)', color: '#ddd', border: '1px solid rgba(255,255,255,0.1)' };
+  // 1. Parsing Logic
+  const parseRow = (rowStr: string) => {
+    // Split by pipe
+    const cells = rowStr.split('|');
+    // Remove first and last empty strings usually created by split('|...|')
+    if (rowStr.trim().startsWith('|')) cells.shift();
+    if (rowStr.trim().endsWith('|')) cells.pop();
+    return cells.map(c => c.trim());
   };
 
+  const rows = text.trim().split('\n').filter(row => row.trim() !== '');
+  
+  // Detect separator line (e.g. |---|---|)
+  const isSeparator = (row: string) => /^[\s\|\-:]+$/.test(row);
+  
+  const headerRow = rows[0] || "";
+  const headers = parseRow(headerRow);
+  const bodyRows = rows.slice(1).filter(r => !isSeparator(r));
+
+  // Legacy Grouping Logic for Organization Chart
+  const groupColumnIndex = headers.findIndex(h => h === '사업부');
+  const isGroupedTable = groupColumnIndex !== -1;
+
+  // Render Cell Helper (Handles Badges, Emails, and Markdown Links)
   const renderCellContent = (cell: string, header: string, rowIndex: number, colIndex: number) => {
+    // Special Badge Logic
     if (header.includes('직급')) {
+      const getBadgeStyle = (role: string) => {
+        if (role.includes('대표')) return { bg: 'rgba(241, 196, 15, 0.15)', color: '#F4D03F', border: '1px solid rgba(241, 196, 15, 0.3)' };
+        if (role.includes('이사')) return { bg: 'rgba(155, 89, 182, 0.15)', color: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.3)' };
+        if (role.includes('수석')) return { bg: 'rgba(26, 188, 156, 0.15)', color: '#76D7C4', border: '1px solid rgba(26, 188, 156, 0.3)' };
+        if (role.includes('책임')) return { bg: 'rgba(231,0,18,0.15)', color: '#FF8A8A', border: '1px solid rgba(231,0,18,0.3)' };
+        if (role.includes('선임')) return { bg: 'rgba(52, 152, 219, 0.15)', color: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.3)' };
+        if (role.includes('사원')) return { bg: 'rgba(46, 204, 113, 0.15)', color: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.3)' };
+        return { bg: 'rgba(255,255,255,0.1)', color: '#ddd', border: '1px solid rgba(255,255,255,0.1)' };
+      };
       const style = getBadgeStyle(cell);
       return (
         <span style={{
@@ -130,7 +136,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       else if (cell === 'Zip') badgeColor = { bg: 'rgba(52, 152, 219, 0.2)', text: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.4)' };
       else if (cell === '소통') badgeColor = { bg: 'rgba(155, 89, 182, 0.2)', text: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.4)' };
       else if (cell === '비용관리') badgeColor = { bg: 'rgba(46, 204, 113, 0.2)', text: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.4)' };
-
       return (
         <span style={{
           backgroundColor: badgeColor.bg,
@@ -149,47 +154,29 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     }
     else if (header.includes('이메일')) {
       return (
-        <a href={`mailto:${cell}`} style={{ 
-          color: '#aaa', 
-          textDecoration: 'none', 
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          transition: 'color 0.2s',
-          fontSize: '0.9rem',
-          whiteSpace: 'nowrap'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#aaa'}
-        >
+        <a href={`mailto:${cell}`} style={{ color: '#aaa', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
           <Mail size={14} strokeWidth={1.5} />
           {cell}
         </a>
       );
     } 
-    else if (header.includes('Download') || cell.includes('[Download]')) {
-       return parseInlineMarkdown(cell, `dl-${rowIndex}-${colIndex}`);
-    }
-    else if (header.includes('이름') || header.includes('Name')) {
-       return <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{cell}</span>;
-    }
 
-    return cell;
+    // 3. Link Parsing: [Text](URL) -> <a> tag
+    return parseInlineMarkdown(cell, `cell-${rowIndex}-${colIndex}`);
   };
 
   if (isGroupedTable) {
+    // Legacy support for complex grouped tables (Organization Chart)
     const groupedData: Record<string, string[][]> = {};
-    
-    dataRows.forEach(row => {
-      const cells = row.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+    bodyRows.forEach(row => {
+      const cells = parseRow(row);
+      if (cells.length < groupColumnIndex + 1) return;
       const groupKey = cells[groupColumnIndex];
-      if (!groupedData[groupKey]) {
-        groupedData[groupKey] = [];
-      }
+      if (!groupedData[groupKey]) groupedData[groupKey] = [];
       groupedData[groupKey].push(cells);
     });
 
-    const displayHeaders = rawHeaders.filter((_, idx) => idx !== groupColumnIndex);
+    const displayHeaders = headers.filter((_, idx) => idx !== groupColumnIndex);
 
     return (
       <div style={{ margin: '24px 0' }}>
@@ -198,28 +185,17 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
              <div style={{ overflowX: 'auto', width: '100%' }}>
                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '600px' }}>
                   <thead>
-                    <tr style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    <tr style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                       {displayHeaders.map((h, i) => (
-                        <th key={i} style={{ 
-                          textAlign: 'left', 
-                          padding: '12px 20px', 
-                          borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                          color: '#666', 
-                          fontSize: '11px', 
-                          textTransform: 'uppercase',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {h}
-                        </th>
+                        <th key={i} style={{ textAlign: 'left', padding: '12px 20px', color: '#888', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {groupRows.map((rowCells, rIdx) => {
                       const displayCells = rowCells.filter((_, idx) => idx !== groupColumnIndex);
-                      
                       return (
-                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', background: rIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
                           {displayCells.map((cell, cIdx) => (
                             <td key={cIdx} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {renderCellContent(cell, displayHeaders[cIdx], rIdx, cIdx)}
@@ -237,26 +213,27 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     );
   }
 
+  // 4. Standard Table Styling (Requested Fix)
   return (
     <div style={{ 
+      width: '100%', 
       overflowX: 'auto', 
       margin: '24px 0', 
-      border: '1px solid rgba(255,255,255,0.08)', 
+      border: '1px solid rgba(255,255,255,0.1)', 
       borderRadius: '12px', 
-      background: 'rgba(20,20,20,0.4)',
+      background: '#090909',
       boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
     }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', minWidth: '500px' }}>
         <thead>
-          <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-            {rawHeaders.map((h, i) => (
+          <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            {headers.map((h, i) => (
               <th key={i} style={{ 
                 textAlign: 'left', 
                 padding: '16px 20px', 
-                borderBottom: '1px solid rgba(255,255,255,0.1)', 
                 color: '#888', 
-                fontWeight: 600,
-                fontSize: '12px',
+                fontWeight: 700,
+                fontSize: '11px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 whiteSpace: 'nowrap'
@@ -267,19 +244,28 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
           </tr>
         </thead>
         <tbody>
-          {dataRows.map((row, i) => {
-            const cells = row.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+          {bodyRows.map((row, i) => {
+            const cells = parseRow(row);
+            // Pad cells if missing
+            while(cells.length < headers.length) cells.push('');
+            
             return (
-              <tr key={i} style={{ borderBottom: i === dataRows.length -1 ? 'none' : '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }} 
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                {cells.map((cell, j) => {
-                   return (
-                     <td key={j} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                       {renderCellContent(cell, rawHeaders[j], i, j)}
-                     </td>
-                   );
-                })}
+              <tr 
+                key={i} 
+                style={{ 
+                  borderBottom: i === bodyRows.length -1 ? 'none' : '1px solid rgba(255,255,255,0.05)', 
+                  // Even rows get darker background (simulating even:bg-gray-800)
+                  background: i % 2 === 1 ? 'rgba(31, 41, 55, 0.4)' : 'transparent',
+                  transition: 'background 0.2s'
+                }} 
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = i % 2 === 1 ? 'rgba(31, 41, 55, 0.4)' : 'transparent'}
+              >
+                {cells.map((cell, j) => (
+                   <td key={j} style={{ padding: '16px 20px', color: '#ccc', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                     {renderCellContent(cell, headers[j] || '', i, j)}
+                   </td>
+                ))}
               </tr>
             );
           })}
@@ -406,17 +392,17 @@ const parseInlineMarkdown = (text: string, keyPrefix: string) => {
               target="_blank" 
               rel="noreferrer" 
               style={{ 
-                color: '#fff', 
+                color: '#E70012', 
                 textDecoration: 'none', 
                 fontWeight: 600,
-                borderBottom: '1px solid rgba(255,255,255,0.4)',
+                borderBottom: '1px solid rgba(231,0,18,0.3)',
                 paddingBottom: '0px',
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#E70012'; e.currentTarget.style.borderColor = '#E70012'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = '#E70012'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(231,0,18,0.3)'; }}
             >
-              {linkMatch[1]} <ExternalLink size={10} style={{ display: 'inline', marginLeft: '1px' }} />
+              {linkMatch[1]}
             </a>
           );
         }
@@ -491,7 +477,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
-  const isCompany = data.id === ContentType.COMPANY;
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
   // Allow editing for all pages except Welcome
@@ -543,6 +528,20 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
       alert("삭제 중 오류가 발생했습니다.");
     } finally {
       setDeleteTargetId(null);
+    }
+  };
+
+  // Add Reset Handler for corrupted DB recovery
+  const handleResetData = async () => {
+    if (window.confirm("정말 이 페이지의 데이터를 초기 상태로 되돌리시겠습니까?\n이 작업은 되돌릴 수 없으며, DB 데이터가 constants.ts 내용으로 덮어씌워집니다.")) {
+      try {
+        await resetToDefault(data.id);
+        alert("데이터가 초기화되었습니다. 페이지를 새로고침합니다.");
+        window.location.reload();
+      } catch (error) {
+        console.error("Reset failed", error);
+        alert("데이터 초기화에 실패했습니다.");
+      }
     }
   };
 
@@ -905,14 +904,37 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
            </div>
         </>
       ) : (
+        <>
         <div className="grid-layout">
           {data.subSections.map((sub, index) => {
+             // Robust Table Detection Logic
+             let isTable = false;
+             let tableContent = "";
+
+             // Case 1: Content is a single string (Template Literal)
+             if (typeof sub.content === 'string') {
+               // Check if it starts with pipe (ignoring whitespace)
+               if (/^\s*\|/.test(sub.content)) {
+                 isTable = true;
+                 tableContent = sub.content;
+               }
+             } 
+             // Case 2: Content is an array of strings (e.g. from DB edit)
+             else if (Array.isArray(sub.content) && sub.content.length > 0) {
+               // Check if the first line starts with pipe
+               const firstLine = sub.content[0];
+               if (typeof firstLine === 'string' && /^\s*\|/.test(firstLine)) {
+                 isTable = true;
+                 tableContent = sub.content.join('\n');
+               }
+             }
+
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
-             const hasTable = typeof sub.content === 'string' && sub.content.trim().startsWith('|');
              const hasCode = !!sub.codeBlock;
              const hasImage = !!sub.imagePlaceholder;
              
-             const isFullWidth = isComplexLayout || hasTable || hasCode || hasImage || textLength > 300;
+             // Update isFullWidth to include isTable
+             const isFullWidth = isComplexLayout || isTable || hasCode || hasImage || textLength > 300;
 
              return (
                <article 
@@ -990,7 +1012,9 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                  )}
 
                  <div className="card-content">
-                   {Array.isArray(sub.content) ? (
+                   {isTable ? (
+                     <TableBlock text={tableContent} />
+                   ) : Array.isArray(sub.content) ? (
                      <ul style={{ listStyle: 'none', padding: 0 }}>
                        {sub.content.map((item, i) => {
                          const cleanItem = item.trim();
@@ -1071,8 +1095,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                          );
                        })}
                      </ul>
-                   ) : sub.content.trim().startsWith('|') ? (
-                     <TableBlock text={sub.content} />
                    ) : (
                      <p>{parseFormattedText(sub.content, 'single')}</p>
                    )}
@@ -1126,6 +1148,33 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
              </button>
           )}
         </div>
+
+        {/* Reset Button for Company and Tools Section to fix corrupted DB data */}
+        {(data.id === ContentType.COMPANY || data.id === ContentType.TOOLS) && (
+            <div style={{ marginTop: '60px', borderTop: '1px solid #222', paddingTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+               <button 
+                  onClick={handleResetData}
+                  style={{
+                     display: 'flex',
+                     alignItems: 'center',
+                     gap: '8px',
+                     padding: '12px 20px',
+                     background: '#1a1a1a',
+                     color: '#666',
+                     border: '1px solid #333',
+                     borderRadius: '8px',
+                     fontSize: '0.9rem',
+                     cursor: 'pointer',
+                     transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#E70012'; e.currentTarget.style.borderColor = '#E70012'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = '#333'; }}
+               >
+                  <RotateCcw size={16} /> 데이터 초기화 (Reset DB)
+               </button>
+            </div>
+        )}
+        </>
       )}
 
       <EditModal 
