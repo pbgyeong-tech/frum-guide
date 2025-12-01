@@ -599,7 +599,20 @@ const renderMarkdownContent = (content: string | string[]) => {
         continue;
     }
 
-    // 9. Standard Paragraph (or empty line)
+    // 9. Horizontal Rule (--- or ***)
+    if (/^(\*{3,}|-{3,})$/.test(trimLine)) {
+       elements.push(
+         <hr key={`hr-${i}`} style={{ 
+           margin: '16px 0', // my-4 equivalent
+           border: 'none', 
+           borderTop: '1px solid #4b5563' // border-gray-600 equivalent
+         }} />
+       );
+       i++;
+       continue;
+    }
+
+    // 10. Standard Paragraph (or empty line)
     if (trimLine === '') {
         elements.push(<div key={`br-${i}`} style={{ height: '12px' }}></div>);
     } else {
