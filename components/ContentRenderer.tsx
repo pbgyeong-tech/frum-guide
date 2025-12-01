@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, Clock, User as UserIcon } from 'lucide-react';
+import { Copy, Check, ArrowRight, Mail, ExternalLink, Lightbulb, Link as LinkIcon, ChevronDown, ChevronRight, Edit3, Plus, Trash2, Clock, User as UserIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
@@ -542,8 +542,6 @@ const renderMarkdownContent = (content: string | string[]) => {
     const isOrdered = /^\d+\.\s/.test(trimLine);
 
     if (isUnordered || isOrdered) {
-        const isSubBullet = /^\s+(\*|-)\s/.test(line); 
-        
         if (isOrdered) {
              const match = trimLine.match(/^(\d+)\.\s*(.*)/);
              if (match) {
@@ -554,20 +552,22 @@ const renderMarkdownContent = (content: string | string[]) => {
                  );
              }
         } else {
-            // Unordered
+            // Unordered - Modified style for indentation alignment with StepBlock text
             elements.push(
                 <div key={`list-${i}`} className="list-item" style={{ 
-                    paddingLeft: isSubBullet ? '24px' : '0', 
-                    marginTop: isSubBullet ? '-4px' : '8px',
-                    marginBottom: '8px'
+                    paddingLeft: '50px', // Align with numbered list text (approx 48px-52px indent)
+                    marginTop: '2px',
+                    marginBottom: '6px'
                 }}>
                   <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'flex-start' }}>
-                    {isSubBullet ? (
-                       <span style={{ color: '#666', flexShrink: 0, marginTop: '2px', fontSize: '12px' }}>-</span>
-                    ) : (
-                       <span className="dot" style={{ marginTop: '9px' }}></span>
-                    )}
-                    <div style={{ flex: 1, color: isSubBullet ? '#999' : '#EAEAEA', fontSize: isSubBullet ? '0.95rem' : '1.05rem', lineHeight: '1.6' }}>
+                    <span style={{ 
+                        color: '#555', 
+                        flexShrink: 0, 
+                        marginTop: '10px', 
+                        fontSize: '6px',
+                        lineHeight: 1
+                    }}>●</span>
+                    <div style={{ flex: 1, color: '#b0b0b0', fontSize: '0.95rem', lineHeight: '1.6' }}>
                       {parseFormattedText(trimLine.replace(/^(\*|-|•)\s*/, ''), `list-txt-${i}`)}
                     </div>
                   </div>
@@ -699,6 +699,22 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
 
     setDeleteTargetId(id);
     setDeleteModalOpen(true);
+  };
+
+  const handleMoveUp = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    if (index === 0) return;
+    const newSubSections = [...data.subSections];
+    [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
+    onUpdateContent(newSubSections);
+  };
+
+  const handleMoveDown = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    if (index === data.subSections.length - 1) return;
+    const newSubSections = [...data.subSections];
+    [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
+    onUpdateContent(newSubSections);
   };
 
   const executeDelete = async () => {
@@ -840,6 +856,48 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     zIndex: 1000, 
                     pointerEvents: 'auto'
                   }}>
+                    {/* Move Up */}
+                    {index > 0 && (
+                        <button 
+                            type="button"
+                            onClick={(e) => handleMoveUp(e, index)}
+                            style={{ 
+                              padding: '6px', 
+                              background: '#333', 
+                              borderRadius: '4px', 
+                              color: '#fff', 
+                              border: '1px solid #555', 
+                              cursor: 'pointer',
+                              pointerEvents: 'auto'
+                            }}
+                            title="Move Up"
+                        >
+                          <ArrowUp size={14} style={{ pointerEvents: 'none' }}/>
+                        </button>
+                    )}
+
+                    {/* Move Down */}
+                    {index < data.subSections.length - 1 && (
+                        <button 
+                            type="button"
+                            onClick={(e) => handleMoveDown(e, index)}
+                            style={{ 
+                              padding: '6px', 
+                              background: '#333', 
+                              borderRadius: '4px', 
+                              color: '#fff', 
+                              border: '1px solid #555', 
+                              cursor: 'pointer',
+                              pointerEvents: 'auto'
+                            }}
+                            title="Move Down"
+                        >
+                          <ArrowDown size={14} style={{ pointerEvents: 'none' }}/>
+                        </button>
+                    )}
+
+                    <div style={{ width: '4px' }}></div>
+
                     <button 
                       type="button" 
                       onClick={(e) => handleEdit(e, sub.uuid)} 
@@ -1165,6 +1223,48 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                      zIndex: 1000, 
                      pointerEvents: 'auto' 
                    }}>
+                     {/* Move Up */}
+                     {index > 0 && (
+                        <button 
+                            type="button"
+                            onClick={(e) => handleMoveUp(e, index)}
+                            style={{ 
+                              padding: '8px', 
+                              background: '#333', 
+                              borderRadius: '4px', 
+                              color: '#fff', 
+                              border: '1px solid #555', 
+                              cursor: 'pointer',
+                              pointerEvents: 'auto'
+                            }}
+                            title="Move Up"
+                        >
+                          <ArrowUp size={16} style={{ pointerEvents: 'none' }}/>
+                        </button>
+                     )}
+
+                     {/* Move Down */}
+                     {index < data.subSections.length - 1 && (
+                        <button 
+                            type="button"
+                            onClick={(e) => handleMoveDown(e, index)}
+                            style={{ 
+                              padding: '8px', 
+                              background: '#333', 
+                              borderRadius: '4px', 
+                              color: '#fff', 
+                              border: '1px solid #555', 
+                              cursor: 'pointer',
+                              pointerEvents: 'auto'
+                            }}
+                            title="Move Down"
+                        >
+                          <ArrowDown size={16} style={{ pointerEvents: 'none' }}/>
+                        </button>
+                     )}
+                     
+                     <div style={{ width: '4px' }}></div>
+
                      <button 
                         type="button"
                         onClick={(e) => handleEdit(e, sub.uuid)}
