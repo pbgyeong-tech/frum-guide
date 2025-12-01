@@ -1,4 +1,3 @@
-
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, addDoc } from 'firebase/firestore';
 import { SectionData, ContentType, EditLog, SubSection, ContentSnapshot } from '../types';
@@ -176,6 +175,7 @@ export const seedDB = async (): Promise<SectionData[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
     
+    // Only seed if strictly empty (no documents at all)
     if (querySnapshot.empty) {
       console.log("Database empty. Seeding initial data...");
       const batch = writeBatch(db);
@@ -188,6 +188,7 @@ export const seedDB = async (): Promise<SectionData[]> => {
       
       await batch.commit();
       
+      // Return seeded data (with generated UUIDs)
       return HANDBOOK_CONTENT.map(section => {
         const withUUID = ensureUUID(section);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -195,16 +196,17 @@ export const seedDB = async (): Promise<SectionData[]> => {
         return { ...section, ...rest };
       });
     } else {
-      // Data exists, return it
+      // Data exists, return the fetched data directly
       const data: SectionData[] = [];
-      const updatedSnapshot = await getDocs(collection(db, COLLECTION_NAME));
-      updatedSnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc) => {
         data.push(restoreFromDB(doc.data()));
       });
       return data;
     }
   } catch (error) {
     console.error("DB Connection Failed (Check Firestore Rules):", error);
+    // Return local content for fallback display only. 
+    // Since auto-save is removed from ContentRenderer, this will NOT overwrite DB.
     return HANDBOOK_CONTENT.map(s => {
        const withUUID = ensureUUID(s);
        // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -8,6 +8,7 @@ import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
 import { trackMenuClick, auth, loginWithGoogle, logout } from './utils/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { AdminRestoreButton } from './components/AdminRestoreButton'; // Import Restore Button
 
 const App: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<ContentType>(ContentType.WELCOME);
@@ -209,6 +210,9 @@ const App: React.FC = () => {
             user={user}
           />
         </div>
+        
+        {/* Admin Restore Button - Only visible to specific admin */}
+        <AdminRestoreButton user={user} />
       </main>
     </div>
   );

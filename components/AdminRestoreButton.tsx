@@ -1,0 +1,141 @@
+
+import React, { useState } from 'react';
+import { User } from 'firebase/auth';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../utils/firebase';
+import { saveContent } from '../utils/db';
+import { EditLog, SectionData, SubSection } from '../types';
+import { HANDBOOK_CONTENT } from '../constants';
+import { RotateCcw, Loader2, AlertTriangle } from 'lucide-react';
+
+interface Props {
+  user: User | null;
+}
+
+export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
+  const [loading, setLoading] = useState(false);
+
+  // 보안 체크: 지정된 관리자 이메일이 아니면 렌더링하지 않음
+  if (user?.email !== 'bg.park@frum.co.kr') return null;
+
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  const handleRestore = async () => {
+    if (!confirm('🚨 긴급 복구 모드\n\nDB의 현재 데이터를 무시하고, [편집 로그]를 기반으로 데이터를 재구성하여 덮어씁니다.\n정말 진행하시겠습니까?')) return;
+    
+    setLoading(true);
+    try {
+        console.log("Starting restoration process...");
+
+        // 1. 모든 로그 가져오기
+        const logsSnap = await getDocs(collection(db, 'edit_logs'));
+        const logs = logsSnap.docs.map(d => d.data() as EditLog).sort((a,b) => a.timestamp - b.timestamp);
+        
+        console.log(`Found ${logs.length} edit logs. Replaying...`);
+
+        // 2. 기본 데이터(상수) 복제 (아이콘 등 함수는 JSON 변환 시 제거됨 -> DB 저장용으로 적합)
+        const restoredSections: SectionData[] = JSON.parse(JSON.stringify(HANDBOOK_CONTENT));
+        
+        // 3. 로그 리플레이 (순차적 적용)
+        logs.forEach(log => {
+            const section = restoredSections.find(s => s.id === log.sectionId);
+            if (!section) return;
+            
+            // subSections 배열 초기화
+            if (!section.subSections) section.subSections = [];
+
+            if (log.action === 'create' && log.details.after) {
+                // 생성
+                const snap = log.details.after;
+                const newContent = snap.body_content ? snap.body_content.split('\n') : [];
+                if (snap.disclaimer_note) newContent.push(`👉 ${snap.disclaimer_note}`);
+                
+                section.subSections.push({
+                    uuid: generateUUID(),
+                    title: snap.title,
+                    content: newContent,
+                    imagePlaceholder: snap.media || undefined,
+                    link: snap.external_link || undefined,
+                    keywords: snap.title.split(' ')
+                });
+            } else if (log.action === 'update' && log.details.before && log.details.after) {
+                // 수정: 이전 제목(before.title)으로 찾아서 업데이트
+                const targetTitle = log.details.before.title;
+                const idx = section.subSections.findIndex(s => s.title === targetTitle);
+                
+                if (idx !== -1) {
+                    const snap = log.details.after;
+                    const newContent = snap.body_content ? snap.body_content.split('\n') : [];
+                    if (snap.disclaimer_note) newContent.push(`👉 ${snap.disclaimer_note}`);
+                    
+                    section.subSections[idx] = {
+                        ...section.subSections[idx],
+                        title: snap.title,
+                        content: newContent,
+                        imagePlaceholder: snap.media || undefined,
+                        link: snap.external_link || undefined
+                        // uuid는 유지하거나 새로 생성해도 무방 (복구 시점 기준)
+                    };
+                }
+            } else if (log.action === 'delete') {
+                // 삭제: 제목으로 찾아서 제거
+                const targetTitle = log.subSectionTitle;
+                const idx = section.subSections.findIndex(s => s.title === targetTitle);
+                if (idx !== -1) {
+                    section.subSections.splice(idx, 1);
+                }
+            }
+        });
+
+        // 4. DB에 저장
+        for (const section of restoredSections) {
+             console.log(`Restoring section: ${section.id}`);
+             await saveContent(section);
+        }
+        
+        alert("✅ 복구가 완료되었습니다. 페이지를 새로고침하여 확인하세요.");
+        window.location.reload();
+
+    } catch (e) {
+        console.error("Restoration failed", e);
+        alert("❌ 복구 중 오류가 발생했습니다. 콘솔을 확인하세요.");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', bottom: '20px', left: '20px', zIndex: 9999 }}>
+        <button 
+            onClick={handleRestore}
+            disabled={loading}
+            style={{
+                background: '#0f0f0f',
+                border: '1px solid #333',
+                color: loading ? '#666' : '#E70012',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: loading ? 'wait' : 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                transition: 'all 0.2s',
+                fontFamily: 'monospace'
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#E70012'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}
+        >
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+            {loading ? 'RESTORING...' : 'EMERGENCY FIX'}
+        </button>
+    </div>
+  );
+};
