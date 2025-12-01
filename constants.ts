@@ -113,7 +113,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     id: ContentType.IT_SETUP,
     title: "업무 시작 세팅",
     icon: Wifi,
-    description: "무선네트워크 연결과 이메일 설정하기",
+    description: "무선네트워크 연결과 이메일 설정",
     subSections: [
       {
         title: "무선 인터넷 설정하기",
@@ -323,7 +323,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     id: ContentType.EXPENSE,
     title: "비용",
     icon: CreditCard,
-    description: "경비 처리 및 법인카드 사용 가이드입니다.",
+    description: "경비 처리 및 법인카드 사용 가이드",
     subSections: [
       {
         title: "1. 법인카드 사용 규정",
@@ -362,7 +362,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     id: ContentType.TOOLS,
     title: "업무를 도와주는 툴",
     icon: Laptop,
-    description: "업무에 도움이 되는 앱을 다운로드하세요.",
+    description: "업무에 도움이 되는 앱 다운로드",
     subSections: [
       {
         title: "Tool List",

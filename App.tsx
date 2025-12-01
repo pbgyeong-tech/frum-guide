@@ -48,11 +48,18 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await seedDB();
-        // constants.ts의 순서대로 정렬 (DB는 순서를 보장하지 않으므로)
-        const orderMap = HANDBOOK_CONTENT.map(c => c.id);
-        const sortedData = data.sort((a, b) => orderMap.indexOf(a.id) - orderMap.indexOf(b.id));
-        setContentData(sortedData);
+        const dbData = await seedDB();
+        
+        // [수정] DB 데이터와 로컬 상수 데이터(HANDBOOK_CONTENT)를 병합
+        // 새로운 메뉴(예: Expense)가 코드에는 추가되었지만 DB에 없을 경우를 처리
+        const mergedData = HANDBOOK_CONTENT.map(localSection => {
+          // DB에서 해당 ID를 가진 섹션을 찾음
+          const dbSection = dbData.find(d => d.id === localSection.id);
+          // DB에 있으면 DB 데이터를 사용(수정사항 반영), 없으면 로컬 초기 데이터를 사용
+          return dbSection || localSection;
+        });
+
+        setContentData(mergedData);
       } catch (e) {
         console.error("DB Load Error", e);
         // DB 연결 실패 시 로컬 상수로 폴백

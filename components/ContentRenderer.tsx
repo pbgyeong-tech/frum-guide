@@ -666,7 +666,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const Icon = data.icon;
   const hasHeroMedia = !!(data.heroImage || data.heroVideo);
   const isWelcome = data.id === ContentType.WELCOME;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.EXPENSE, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
   const canEdit = !isWelcome && isAdmin;
   
