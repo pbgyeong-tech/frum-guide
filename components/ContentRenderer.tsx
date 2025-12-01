@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -19,6 +18,43 @@ interface ContentRendererProps {
   isAdmin: boolean;
   user: User | null;
 }
+
+// [수정됨] 회색 계열을 제거하고 확실히 구분되는 색상만 남긴 팔레트
+const BADGE_PALETTE = [
+  { bg: 'rgba(239, 68, 68, 0.2)',  color: '#fca5a5', border: '1px solid rgba(185, 28, 28, 0.5)' },   // Red
+  { bg: 'rgba(59, 130, 246, 0.2)',  color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' },   // Blue
+  { bg: 'rgba(16, 185, 129, 0.2)',  color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' },    // Green
+  { bg: 'rgba(168, 85, 247, 0.2)',  color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' },  // Purple
+  { bg: 'rgba(245, 158, 11, 0.2)',  color: '#fcd34d', border: '1px solid rgba(180, 83, 9, 0.5)' },    // Amber
+  { bg: 'rgba(236, 72, 153, 0.2)',  color: '#f9a8d4', border: '1px solid rgba(190, 24, 93, 0.5)' },   // Pink
+  { bg: 'rgba(6, 182, 212, 0.2)',   color: '#67e8f9', border: '1px solid rgba(21, 94, 117, 0.5)' },   // Cyan
+  { bg: 'rgba(132, 204, 22, 0.2)',  color: '#bef264', border: '1px solid rgba(63, 98, 18, 0.5)' },    // Lime
+  { bg: 'rgba(99, 102, 241, 0.2)',  color: '#c7d2fe', border: '1px solid rgba(67, 56, 202, 0.5)' },   // Indigo
+  { bg: 'rgba(20, 184, 166, 0.2)',  color: '#5eead4', border: '1px solid rgba(15, 118, 110, 0.5)' },  // Teal
+  { bg: 'rgba(249, 115, 22, 0.2)',  color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' },   // Orange
+  { bg: 'rgba(217, 70, 239, 0.2)',  color: '#f0abfc', border: '1px solid rgba(162, 28, 175, 0.5)' },  // Fuchsia
+  { bg: 'rgba(14, 165, 233, 0.2)',  color: '#7dd3fc', border: '1px solid rgba(3, 105, 161, 0.5)' },   // Sky
+  { bg: 'rgba(234, 179, 8, 0.2)',   color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' },    // Yellow
+  { bg: 'rgba(244, 63, 94, 0.2)',   color: '#fda4af', border: '1px solid rgba(190, 18, 60, 0.5)' },   // Rose
+  { bg: 'rgba(139, 92, 246, 0.2)',  color: '#c4b5fd', border: '1px solid rgba(109, 40, 217, 0.5)' },  // Violet
+];
+
+// Enhanced Hash Function (DJB2 Variant)
+const getBadgeStyle = (text: string) => {
+  if (!text) return BADGE_PALETTE[0];
+  
+  // Normalize: Remove spaces, lowercase to ensure "UX" and "ux" are same color
+  const normalized = text.trim().toLowerCase().replace(/\s+/g, '');
+  
+  let hash = 5381;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  
+  const index = Math.abs(hash) % BADGE_PALETTE.length;
+  return BADGE_PALETTE[index];
+};
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => {
   const [copied, setCopied] = useState(false);
@@ -80,50 +116,36 @@ const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaul
 };
 
 const TableBlock: React.FC<{ text: string }> = ({ text }) => {
-  // 1. Parsing Logic
   const parseRow = (rowStr: string) => {
-    // Split by pipe
     const cells = rowStr.split('|');
-    // Remove first and last empty strings usually created by split('|...|')
     if (rowStr.trim().startsWith('|')) cells.shift();
     if (rowStr.trim().endsWith('|')) cells.pop();
     return cells.map(c => c.trim());
   };
 
   const rows = text.trim().split('\n').filter(row => row.trim() !== '');
-  
-  // Detect separator line (e.g. |---|---|)
   const isSeparator = (row: string) => /^[\s\|\-:]+$/.test(row);
   
   const headerRow = rows[0] || "";
   const headers = parseRow(headerRow);
   const bodyRows = rows.slice(1).filter(r => !isSeparator(r));
 
-  // Legacy Grouping Logic for Organization Chart
   const groupColumnIndex = headers.findIndex(h => h === '사업부');
   const isGroupedTable = groupColumnIndex !== -1;
 
-  // Render Cell Helper (Handles Badges, Emails, and Markdown Links)
   const renderCellContent = (cell: string, header: string, rowIndex: number, colIndex: number) => {
-    // Special Badge Logic
-    if (header.includes('직급')) {
-      const getBadgeStyle = (role: string) => {
-        if (role.includes('대표')) return { bg: 'rgba(241, 196, 15, 0.15)', color: '#F4D03F', border: '1px solid rgba(241, 196, 15, 0.3)' };
-        if (role.includes('이사')) return { bg: 'rgba(155, 89, 182, 0.15)', color: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.3)' };
-        if (role.includes('수석')) return { bg: 'rgba(26, 188, 156, 0.15)', color: '#76D7C4', border: '1px solid rgba(26, 188, 156, 0.3)' };
-        if (role.includes('책임')) return { bg: 'rgba(231,0,18,0.15)', color: '#FF8A8A', border: '1px solid rgba(231,0,18,0.3)' };
-        if (role.includes('선임')) return { bg: 'rgba(52, 152, 219, 0.15)', color: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.3)' };
-        if (role.includes('사원')) return { bg: 'rgba(46, 204, 113, 0.15)', color: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.3)' };
-        return { bg: 'rgba(255,255,255,0.1)', color: '#ddd', border: '1px solid rgba(255,255,255,0.1)' };
-      };
+    const h = header.toLowerCase();
+    
+    // [수정됨] 직급 또는 Type 컬럼에 대해 랜덤 뱃지 적용
+    if (h.includes('직급') || h.includes('type')) {
       const style = getBadgeStyle(cell);
       return (
         <span style={{
           backgroundColor: style.bg,
           color: style.color,
           border: style.border,
-          padding: '4px 12px',
-          borderRadius: '999px',
+          padding: '4px 8px',
+          borderRadius: '4px',
           fontSize: '11px',
           fontWeight: 600,
           display: 'inline-block',
@@ -134,29 +156,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         </span>
       );
     } 
-    else if (header.includes('Type')) {
-      let badgeColor = { bg: 'rgba(255,255,255,0.1)', text: '#ccc', border: 'transparent' };
-      if (cell === 'UX') badgeColor = { bg: 'rgba(231,0,18,0.2)', text: '#ff6666', border: '1px solid rgba(231,0,18,0.4)' };
-      else if (cell === 'Zip') badgeColor = { bg: 'rgba(52, 152, 219, 0.2)', text: '#85C1E9', border: '1px solid rgba(52, 152, 219, 0.4)' };
-      else if (cell === '소통') badgeColor = { bg: 'rgba(155, 89, 182, 0.2)', text: '#D2B4DE', border: '1px solid rgba(155, 89, 182, 0.4)' };
-      else if (cell === '비용관리') badgeColor = { bg: 'rgba(46, 204, 113, 0.2)', text: '#82E0AA', border: '1px solid rgba(46, 204, 113, 0.4)' };
-      return (
-        <span style={{
-          backgroundColor: badgeColor.bg,
-          color: badgeColor.text,
-          border: badgeColor.border,
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '11px',
-          fontWeight: 600,
-          display: 'inline-block',
-          whiteSpace: 'nowrap'
-        }}>
-          {cell}
-        </span>
-      );
-    }
-    else if (header.includes('이메일')) {
+    else if (h.includes('이메일')) {
       return (
         <a href={`mailto:${cell}`} style={{ color: '#aaa', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
           <Mail size={14} strokeWidth={1.5} />
@@ -165,12 +165,10 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       );
     } 
 
-    // 3. Link Parsing: [Text](URL) -> <a> tag
     return parseInlineMarkdown(cell, `cell-${rowIndex}-${colIndex}`);
   };
 
   if (isGroupedTable) {
-    // Legacy support for complex grouped tables (Organization Chart)
     const groupedData: Record<string, string[][]> = {};
     bodyRows.forEach(row => {
       const cells = parseRow(row);
@@ -217,7 +215,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     );
   }
 
-  // 4. Standard Table Styling
   return (
     <div style={{ 
       width: '100%', 
@@ -250,7 +247,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         <tbody>
           {bodyRows.map((row, i) => {
             const cells = parseRow(row);
-            // Pad cells if missing
             while(cells.length < headers.length) cells.push('');
             
             return (
@@ -258,7 +254,6 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 key={i} 
                 style={{ 
                   borderBottom: i === bodyRows.length -1 ? 'none' : '1px solid rgba(255,255,255,0.05)', 
-                  // Even rows get darker background (simulating even:bg-gray-800)
                   background: i % 2 === 1 ? 'rgba(31, 41, 55, 0.4)' : 'transparent',
                   transition: 'background 0.2s'
                 }} 
@@ -447,7 +442,6 @@ const parseFormattedText = (text: string, keyPrefix: string) => {
   return parseInlineMarkdown(text, keyPrefix);
 };
 
-// --- New Robust Markdown Rendering Function ---
 const renderMarkdownContent = (content: string | string[]) => {
   const lines = Array.isArray(content) ? content : content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -457,27 +451,25 @@ const renderMarkdownContent = (content: string | string[]) => {
     const line = lines[i];
     const trimLine = line.trim();
     
-    // 1. Code Blocks (```)
+    // 1. Code Blocks
     if (trimLine.startsWith('```')) {
-      // Check for one-liner: ```code```
       if (trimLine.length > 3 && trimLine.endsWith('```') && trimLine.slice(3, -3).indexOf('```') === -1) {
         elements.push(<CodeBlock key={`code-${i}`} text={trimLine.slice(3, -3)} />);
         i++;
         continue;
       }
-      // Multi-line code block
       const codeContent = [];
-      i++; // Skip start fence
+      i++; 
       while (i < lines.length && !lines[i].trim().startsWith('```')) {
         codeContent.push(lines[i]);
         i++;
       }
-      i++; // Skip end fence
+      i++; 
       elements.push(<CodeBlock key={`code-block-${i}`} text={codeContent.join('\n')} />);
       continue;
     }
 
-    // 2. Tables (| ... |)
+    // 2. Tables
     if (trimLine.startsWith('|')) {
       const tableLines = [];
       while (i < lines.length && lines[i].trim().startsWith('|')) {
@@ -488,7 +480,7 @@ const renderMarkdownContent = (content: string | string[]) => {
       continue;
     }
 
-    // 3. Info Block (👉)
+    // 3. Info Block
     if (trimLine.startsWith('👉')) {
       elements.push(
         <InfoBlock key={`info-${i}`}>
@@ -499,7 +491,7 @@ const renderMarkdownContent = (content: string | string[]) => {
       continue;
     }
 
-    // 4. Headers (#)
+    // 4. Headers
     if (trimLine.startsWith('#')) {
       const level = trimLine.match(/^#+/)?.[0].length || 1;
       const text = trimLine.replace(/^#+\s*/, '');
@@ -520,7 +512,7 @@ const renderMarkdownContent = (content: string | string[]) => {
       continue;
     }
 
-    // 5. Blockquote (>)
+    // 5. Blockquote
     if (trimLine.startsWith('>')) {
        elements.push(
          <blockquote key={`quote-${i}`} style={{ 
@@ -537,14 +529,13 @@ const renderMarkdownContent = (content: string | string[]) => {
        continue;
     }
 
-    // 6. List Items (*, -, •, 1.)
+    // 6. List Items
     const isUnordered = /^(\*|-|•)\s/.test(trimLine);
     const isOrdered = /^\d+\.\s/.test(trimLine);
 
     if (isUnordered || isOrdered) {
-        let marginBottom = '24px'; // Default mb-6
+        let marginBottom = '24px'; 
         
-        // Check next line context to determine margin
         const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
         const nextTrimLine = nextLine !== null ? nextLine.trim() : null;
         const isLastLine = i === lines.length - 1;
@@ -553,21 +544,10 @@ const renderMarkdownContent = (content: string | string[]) => {
         const nextIsUnordered = nextTrimLine ? /^(\*|-|•)\s/.test(nextTrimLine) : false;
 
         if (isOrdered) {
-            // Rule 1: Ordered + Unordered -> mb-2 (8px)
-            if (nextIsUnordered) {
-                marginBottom = '8px';
-            }
-            // Rule 4 (default for Ordered): mb-6 (24px)
+            if (nextIsUnordered) marginBottom = '8px';
         } else if (isUnordered) {
-            // Rule 2: Unordered + Unordered -> mb-2 (8px)
-            if (nextIsUnordered) {
-                marginBottom = '8px';
-            } 
-            // Rule 3: Unordered + Ordered OR End -> mb-10 (40px)
-            else if (nextIsOrdered || isLastLine) {
-                marginBottom = '40px';
-            }
-            // Rule 4 (default for Unordered): mb-6 (24px)
+            if (nextIsUnordered) marginBottom = '8px';
+            else if (nextIsOrdered || isLastLine) marginBottom = '40px';
         }
 
         if (isOrdered) {
@@ -580,10 +560,9 @@ const renderMarkdownContent = (content: string | string[]) => {
                  );
              }
         } else {
-            // Unordered
             elements.push(
                 <div key={`list-${i}`} className="list-item" style={{ 
-                    paddingLeft: '50px', // Matches previous change request
+                    paddingLeft: '50px', 
                     marginTop: '2px',
                     marginBottom: marginBottom
                 }}>
@@ -606,7 +585,7 @@ const renderMarkdownContent = (content: string | string[]) => {
         continue;
     }
 
-    // 7. Link Cards (Standalone Link: [Text](URL))
+    // 7. Link Cards
     const linkOnlyMatch = trimLine.match(/^\[(.*?)\]\((.*?)\)$/);
     if (linkOnlyMatch && trimLine === linkOnlyMatch[0]) {
         elements.push(<LinkCardBlock key={`link-card-${i}`} text={linkOnlyMatch[1]} url={linkOnlyMatch[2]} />);
@@ -614,7 +593,7 @@ const renderMarkdownContent = (content: string | string[]) => {
         continue;
     }
 
-    // 8. Image (Standalone: ![Alt](URL))
+    // 8. Image
     const imgMatch = trimLine.match(/^!\[(.*?)\]\((.*?)\)$/);
     if (imgMatch && trimLine === imgMatch[0]) {
         elements.push(
@@ -627,20 +606,20 @@ const renderMarkdownContent = (content: string | string[]) => {
         continue;
     }
 
-    // 9. Horizontal Rule (--- or ***)
+    // 9. Horizontal Rule
     if (/^(\*{3,}|-{3,})$/.test(trimLine)) {
        elements.push(
          <hr key={`hr-${i}`} style={{ 
-           margin: '30px 0', // my-4 equivalent
+           margin: '30px 0', 
            border: 'none', 
-           borderTop: '1px solid #212121' // border-gray-600 equivalent
+           borderTop: '1px solid #212121' 
          }} />
        );
        i++;
        continue;
     }
 
-    // 10. Standard Paragraph (or empty line)
+    // 10. Paragraph
     if (trimLine === '') {
         elements.push(<div key={`br-${i}`} style={{ height: '12px' }}></div>);
     } else {
@@ -656,12 +635,10 @@ const renderMarkdownContent = (content: string | string[]) => {
   return elements;
 };
 
-// Helper function to create content snapshot for logging
 const createSnapshot = (sub: SubSection): ContentSnapshot => {
   let contentArr = Array.isArray(sub.content) ? [...sub.content] : sub.content.split('\n');
   let disclaimer = '';
   
-  // Extract disclaimer if it exists (logic matching EditModal)
   const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
   if (disclaimerIdx !== -1) {
     disclaimer = contentArr[disclaimerIdx].replace(/^👉\s*/, '');
@@ -691,7 +668,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const isWelcome = data.id === ContentType.WELCOME;
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ].includes(data.id);
   
-  // Only Admin can edit
   const canEdit = !isWelcome && isAdmin;
   
   const [isEditMode, setIsEditMode] = useState(false);
@@ -700,7 +676,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  // Explicitly reset edit mode when navigating to a new section
   useEffect(() => {
     setIsEditMode(false);
     setEditingItemId(null);
@@ -748,7 +723,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const executeDelete = async () => {
     if (!deleteTargetId) return;
     
-    // Log deletion
     const targetItem = data.subSections.find(s => s.uuid === deleteTargetId);
     if (user && user.email && targetItem) {
       addEditLog({
@@ -779,12 +753,10 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
   const handleSaveModal = (newData: SubSection) => {
     const originalItem = editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined;
 
-    // Inject Metadata
     if (user && user.email) {
       newData.lastEditedBy = user.email;
       newData.lastEditedAt = Date.now();
       
-      // Log Action
       addEditLog({
         timestamp: Date.now(),
         userEmail: user.email,
@@ -884,7 +856,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     zIndex: 1000, 
                     pointerEvents: 'auto'
                   }}>
-                    {/* Move Up */}
                     {index > 0 && (
                         <button 
                             type="button"
@@ -903,8 +874,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           <ArrowUp size={14} style={{ pointerEvents: 'none' }}/>
                         </button>
                     )}
-
-                    {/* Move Down */}
                     {index < data.subSections.length - 1 && (
                         <button 
                             type="button"
@@ -923,9 +892,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           <ArrowDown size={14} style={{ pointerEvents: 'none' }}/>
                         </button>
                     )}
-
                     <div style={{ width: '4px' }}></div>
-
                     <button 
                       type="button" 
                       onClick={(e) => handleEdit(e, sub.uuid)} 
@@ -961,8 +928,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   <div className="card-content" style={{ fontSize: '0.9rem', color: '#999', maxHeight: '60px', overflow: 'hidden' }}>
                     {Array.isArray(sub.content) ? sub.content.join(' ') : sub.content}
                   </div>
-                  
-                  {/* Metadata Display for FAQ */}
                   {isEditMode && sub.lastEditedBy && (
                      <div style={{ 
                         marginTop: '16px', 
@@ -989,7 +954,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
             </div>
           </div>
         )}
-
         <EditModal 
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -1016,7 +980,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                     <h1 className="hero-title animate-fade delay-2">
                       {data.title}
                     </h1>
-                    
                     {data.description && (
                       <p className="hero-desc animate-fade delay-3">
                         {data.description}
@@ -1025,7 +988,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   </>
                 )}
             </div>
-
             {canEdit && (
               <button 
                 onClick={() => setIsEditMode(!isEditMode)}
@@ -1073,13 +1035,11 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                    className="hero-img-anim"
                  />
                )}
-               
                <div className="tech-scan-line"></div>
                <div className="brand-slash-container">
                   <div className="brand-slash-line"></div>
                </div>
                <div className="hero-overlay-gradient"></div>
-               
                <div style={{
                  position: 'absolute',
                  inset: 0,
@@ -1122,7 +1082,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
              </div>
           </div>
         )}
-
         {!hasHeroMedia && (
           <div style={{ 
             position: 'absolute', 
@@ -1167,7 +1126,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                </p>
              </div>
            )}
-
            <div className="animate-fade delay-5">
               <div className="grid-layout">
                 {quickLinkSections.map((section, index) => {
@@ -1175,7 +1133,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                   const targetId = (section.children && section.children.length > 0) 
                     ? section.children[0].id 
                     : section.id;
-
                   return (
                     <button 
                       key={section.id} 
@@ -1227,8 +1184,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
              const hasCode = !!sub.codeBlock;
              const hasImage = !!sub.imagePlaceholder;
-             
-             // Dynamic layout sizing
              const isFullWidth = isComplexLayout || hasCode || hasImage || textLength > 300;
 
              return (
@@ -1251,7 +1206,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                      zIndex: 1000, 
                      pointerEvents: 'auto' 
                    }}>
-                     {/* Move Up */}
                      {index > 0 && (
                         <button 
                             type="button"
@@ -1270,8 +1224,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           <ArrowUp size={16} style={{ pointerEvents: 'none' }}/>
                         </button>
                      )}
-
-                     {/* Move Down */}
                      {index < data.subSections.length - 1 && (
                         <button 
                             type="button"
@@ -1290,9 +1242,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                           <ArrowDown size={16} style={{ pointerEvents: 'none' }}/>
                         </button>
                      )}
-                     
                      <div style={{ width: '4px' }}></div>
-
                      <button 
                         type="button"
                         onClick={(e) => handleEdit(e, sub.uuid)}
@@ -1329,7 +1279,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                      </button>
                    </div>
                  )}
-
                  <h3 className="card-title" style={{
                    borderBottom: '1px solid rgba(255,255,255,0.1)',
                    paddingBottom: '12px',
@@ -1341,20 +1290,15 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                    {!isComplexLayout && <span className="card-marker"></span>}
                    {sub.title}
                  </h3>
-
                  {sub.imagePlaceholder && (
                    <div style={{ margin: '24px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #222' }}>
                      <img src={sub.imagePlaceholder} alt="" style={{ width: '100%', display: 'block', opacity: 0.8 }} />
                    </div>
                  )}
-
                  <div className="card-content">
-                    {/* USE NEW RENDERER HERE */}
                     {renderMarkdownContent(sub.content)}
                  </div>
-
                  {sub.codeBlock && <CodeBlock text={sub.codeBlock} />}
-
                  {sub.link && (
                    <a 
                     href={sub.link} 
@@ -1365,8 +1309,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                      Access Portal <ArrowRight size={14} style={{ marginLeft: '4px' }} />
                    </a>
                  )}
-
-                 {/* Metadata Footer */}
                  {isEditMode && sub.lastEditedBy && (
                    <div style={{ 
                       marginTop: '24px', 
@@ -1427,7 +1369,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         </div>
         </>
       )}
-
       <EditModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -1435,7 +1376,6 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined}
         onDirty={setIsDirty}
       />
-      
       <ConfirmModal 
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}

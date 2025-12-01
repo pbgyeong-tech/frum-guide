@@ -7,6 +7,7 @@ export enum ContentType {
   IT_SETUP = 'it_setup',
   WELFARE = 'welfare',
   COMMUTE = 'commute',
+  EXPENSE = 'expense',
   TOOLS = 'tools',
   OFFICE_GUIDE = 'office_guide',
   FAQ = 'faq',
