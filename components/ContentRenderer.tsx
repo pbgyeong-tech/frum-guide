@@ -682,6 +682,19 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
     setIsModalOpen(false);
   }, [data.id]);
 
+  // NEW: Auto-fix UUIDs
+  useEffect(() => {
+    if (isAdmin && data.subSections && data.subSections.some(sub => !sub.uuid)) {
+      console.log(`[Auto-Fix] Generating missing UUIDs for section: ${data.title}`);
+      const fixedSubSections = data.subSections.map(sub => ({
+        ...sub,
+        uuid: sub.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36))
+      }));
+      
+      onUpdateContent(fixedSubSections);
+    }
+  }, [data, isAdmin, onUpdateContent]);
+
   const handleEdit = (e: React.MouseEvent, id: string | undefined) => {
     e.stopPropagation();
     e.preventDefault();

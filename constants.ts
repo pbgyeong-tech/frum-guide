@@ -326,6 +326,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "경비 처리 및 법인카드 사용 가이드",
     subSections: [
       {
+        uuid: "expense-1",
         title: "1. 법인카드 사용 규정",
         content: [
           "**1) 식대 한도**",
@@ -341,6 +342,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["법인카드", "한도", "식대", "야근", "주말", "규정", "회식", "제한"]
       },
       {
+        uuid: "expense-2",
         title: "2. 지출 결의 프로세스 (Spendit)",
         content: [
           "**1) 영수증 제출 기한**",
