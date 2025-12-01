@@ -15,6 +15,9 @@ interface Props {
 export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
   const [loading, setLoading] = useState(false);
 
+  // Debug log to verify user and email match
+  console.log('AdminRestoreButton Render Check. Current User Email:', user?.email);
+
   // 보안 체크: 지정된 관리자 이메일이 아니면 렌더링하지 않음
   if (user?.email !== 'bg.park@frum.co.kr') return null;
 
@@ -110,30 +113,28 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: '20px', left: '20px', zIndex: 9999 }}>
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 99999 }}>
         <button 
             onClick={handleRestore}
             disabled={loading}
             style={{
-                background: '#0f0f0f',
-                border: '1px solid #333',
-                color: loading ? '#666' : '#E70012',
-                padding: '10px 16px',
+                background: 'red',
+                border: '2px solid white',
+                color: 'white',
+                padding: '12px 20px',
                 borderRadius: '8px',
-                fontSize: '11px',
-                fontWeight: 700,
+                fontSize: '12px',
+                fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 cursor: loading ? 'wait' : 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
                 transition: 'all 0.2s',
                 fontFamily: 'monospace'
             }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#E70012'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}
         >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />}
             {loading ? 'RESTORING...' : 'EMERGENCY FIX'}
         </button>
     </div>

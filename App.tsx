@@ -210,10 +210,10 @@ const App: React.FC = () => {
             user={user}
           />
         </div>
-        
-        {/* Admin Restore Button - Only visible to specific admin */}
-        <AdminRestoreButton user={user} />
       </main>
+
+      {/* Admin Restore Button - Moved outside of main to ensure visibility */}
+      <AdminRestoreButton user={user} />
     </div>
   );
 };
