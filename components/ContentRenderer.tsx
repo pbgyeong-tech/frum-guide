@@ -279,8 +279,8 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const StepBlock: React.FC<{ number: string, children: React.ReactNode }> = ({ number, children }) => (
-  <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', alignItems: 'flex-start' }}>
+const StepBlock: React.FC<{ number: string, children: React.ReactNode, style?: React.CSSProperties }> = ({ number, children, style }) => (
+  <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', alignItems: 'flex-start', ...style }}>
     <div style={{
       flexShrink: 0,
       width: '32px',
@@ -542,22 +542,50 @@ const renderMarkdownContent = (content: string | string[]) => {
     const isOrdered = /^\d+\.\s/.test(trimLine);
 
     if (isUnordered || isOrdered) {
+        let marginBottom = '24px'; // Default mb-6
+        
+        // Check next line context to determine margin
+        const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
+        const nextTrimLine = nextLine !== null ? nextLine.trim() : null;
+        const isLastLine = i === lines.length - 1;
+        
+        const nextIsOrdered = nextTrimLine ? /^\d+\.\s/.test(nextTrimLine) : false;
+        const nextIsUnordered = nextTrimLine ? /^(\*|-|•)\s/.test(nextTrimLine) : false;
+
+        if (isOrdered) {
+            // Rule 1: Ordered + Unordered -> mb-2 (8px)
+            if (nextIsUnordered) {
+                marginBottom = '8px';
+            }
+            // Rule 4 (default for Ordered): mb-6 (24px)
+        } else if (isUnordered) {
+            // Rule 2: Unordered + Unordered -> mb-2 (8px)
+            if (nextIsUnordered) {
+                marginBottom = '8px';
+            } 
+            // Rule 3: Unordered + Ordered OR End -> mb-10 (40px)
+            else if (nextIsOrdered || isLastLine) {
+                marginBottom = '40px';
+            }
+            // Rule 4 (default for Unordered): mb-6 (24px)
+        }
+
         if (isOrdered) {
              const match = trimLine.match(/^(\d+)\.\s*(.*)/);
              if (match) {
                  elements.push(
-                     <StepBlock key={`step-${i}`} number={match[1]}>
+                     <StepBlock key={`step-${i}`} number={match[1]} style={{ marginBottom }}>
                          {parseFormattedText(match[2], `step-txt-${i}`)}
                      </StepBlock>
                  );
              }
         } else {
-            // Unordered - Modified style for indentation alignment with StepBlock text
+            // Unordered
             elements.push(
                 <div key={`list-${i}`} className="list-item" style={{ 
-                    paddingLeft: '50px', // Align with numbered list text (approx 48px-52px indent)
+                    paddingLeft: '50px', // Matches previous change request
                     marginTop: '2px',
-                    marginBottom: '6px'
+                    marginBottom: marginBottom
                 }}>
                   <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'flex-start' }}>
                     <span style={{ 
