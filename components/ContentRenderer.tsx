@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -19,7 +20,7 @@ interface ContentRendererProps {
   user: User | null;
 }
 
-// [수정됨] 회색 계열을 제거하고 확실히 구분되는 색상만 남긴 팔레트
+// [수정됨] 회색 계열을 제거하고 확실히 구분되는 색상만 남긴 팔레트 (해시 폴백용)
 const BADGE_PALETTE = [
   { bg: 'rgba(239, 68, 68, 0.2)',  color: '#fca5a5', border: '1px solid rgba(185, 28, 28, 0.5)' },   // Red
   { bg: 'rgba(59, 130, 246, 0.2)',  color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' },   // Blue
@@ -39,17 +40,38 @@ const BADGE_PALETTE = [
   { bg: 'rgba(139, 92, 246, 0.2)',  color: '#c4b5fd', border: '1px solid rgba(109, 40, 217, 0.5)' },  // Violet
 ];
 
-// Enhanced Hash Function (DJB2 Variant)
+// 직급별 고정 스타일 매핑
+const EXPLICIT_STYLES: Record<string, { bg: string, color: string, border: string }> = {
+  ceo: { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }, // 대표: Yellow/Gold
+  executive: { bg: 'rgba(147, 51, 234, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }, // 이사: Purple (무게감)
+  chief: { bg: 'rgba(225, 29, 72, 0.2)', color: '#fda4af', border: '1px solid rgba(159, 18, 57, 0.5)' }, // 수석: Rose (붉은 계열)
+  lead: { bg: 'rgba(234, 88, 12, 0.2)', color: '#fdba74', border: '1px solid rgba(154, 52, 18, 0.5)' }, // 책임: Orange (이사/수석과 구분)
+  senior: { bg: 'rgba(37, 99, 235, 0.2)', color: '#93c5fd', border: '1px solid rgba(30, 64, 175, 0.5)' }, // 선임: Blue (명확한 파랑)
+  associate: { bg: 'rgba(5, 150, 105, 0.2)', color: '#6ee7b7', border: '1px solid rgba(6, 78, 59, 0.5)' }, // 사원: Emerald/Green (선임과 구분)
+  intern: { bg: 'rgba(71, 85, 105, 0.2)', color: '#cbd5e1', border: '1px solid rgba(51, 65, 85, 0.5)' }, // 인턴: Slate/Gray
+};
+
+// 하이브리드 뱃지 스타일 계산 함수
 const getBadgeStyle = (text: string) => {
   if (!text) return BADGE_PALETTE[0];
   
-  // Normalize: Remove spaces, lowercase to ensure "UX" and "ux" are same color
-  const normalized = text.trim().toLowerCase().replace(/\s+/g, '');
-  
+  const lowerText = text.trim().toLowerCase();
+
+  // 1. 우선순위 규칙: 직급 키워드에 따른 고정 색상
+  if (lowerText.includes('대표') || lowerText.includes('ceo')) return EXPLICIT_STYLES.ceo;
+  if (lowerText.includes('이사') || lowerText.includes('임원') || lowerText.includes('director')) return EXPLICIT_STYLES.executive;
+  if (lowerText.includes('수석') || lowerText.includes('principal') || lowerText.includes('chief')) return EXPLICIT_STYLES.chief;
+  if (lowerText.includes('책임') || lowerText.includes('lead') || lowerText.includes('head')) return EXPLICIT_STYLES.lead;
+  if (lowerText.includes('선임') || lowerText.includes('senior')) return EXPLICIT_STYLES.senior;
+  if (lowerText.includes('사원') || lowerText.includes('associate') || lowerText.includes('junior')) return EXPLICIT_STYLES.associate;
+  if (lowerText.includes('인턴') || lowerText.includes('intern')) return EXPLICIT_STYLES.intern;
+
+  // 2. Fallback: 기존 DJB2 해시 알고리즘 (Type, 금액 등 기타 용도)
+  const normalized = lowerText.replace(/\s+/g, '');
   let hash = 5381;
   for (let i = 0; i < normalized.length; i++) {
     hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   
   const index = Math.abs(hash) % BADGE_PALETTE.length;
@@ -136,8 +158,8 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const renderCellContent = (cell: string, header: string, rowIndex: number, colIndex: number) => {
     const h = header.toLowerCase();
     
-    // [수정됨] 직급 또는 Type 컬럼에 대해 랜덤 뱃지 적용
-    if (h.includes('직급') || h.includes('type')) {
+    // [수정됨] 직급, Type, 또는 한도금액 컬럼에 대해 뱃지 적용
+    if (h.includes('직급') || h.includes('type') || h.includes('한도금액')) {
       const style = getBadgeStyle(cell);
       return (
         <span style={{
