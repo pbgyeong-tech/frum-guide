@@ -631,7 +631,7 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (/^(\*{3,}|-{3,})$/.test(trimLine)) {
        elements.push(
          <hr key={`hr-${i}`} style={{ 
-           margin: '30px 0', 
+           margin: '40px 0', 
            border: 'none', 
            borderTop: '1px solid #212121' 
          }} />
