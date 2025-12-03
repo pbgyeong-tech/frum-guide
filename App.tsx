@@ -11,34 +11,34 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
 import { GeminiAssistant } from './components/GeminiAssistant';
 
+// Component handling the main layout and logic based on URL params
 const MainLayout: React.FC = () => {
-  // URL Parameter Hook
+  // 1. Get Section ID from URL
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const location = useLocation();
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
-  
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const mainContentRef = useRef<HTMLDivElement>(null);
-
-  // Validate ID from URL
+  // 2. Validate ID and determine current active section
   const isValidSection = (id: string | undefined): id is ContentType => {
     return Object.values(ContentType).includes(id as ContentType);
   };
 
-  // Determine active section from URL or fallback to WELCOME
   const currentSectionId = isValidSection(sectionId) ? sectionId : ContentType.WELCOME;
 
-  // Effect: Redirect to /welcome if URL contains invalid ID
-  // Note: Root path '/' is handled by <Route> in App component, this handles invalid /:sectionId
+  // State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Effect: Redirect if URL param is invalid (e.g., /invalid-id -> /welcome)
   useEffect(() => {
     if (sectionId && !isValidSection(sectionId)) {
-      navigate('/welcome', { replace: true });
+      navigate(`/${ContentType.WELCOME}`, { replace: true });
     }
   }, [sectionId, navigate]);
 
@@ -92,7 +92,7 @@ const MainLayout: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  // Find Section Data Helper
+  // Helper: Find Data recursively
   const findSection = (sections: SectionData[], id: string): SectionData | undefined => {
     for (const section of sections) {
       if (section.id === id) return section;
@@ -104,10 +104,10 @@ const MainLayout: React.FC = () => {
     return undefined;
   };
 
-  // Resolve Active Data
+  // Determine Active Data based on URL
   const activeData = findSection(contentData, currentSectionId) || findSection(contentData, ContentType.WELCOME) || contentData[0];
 
-  // Side Effects for View (Scroll reset, Title, Analytics)
+  // Scroll Reset & Analytics when Section Changes
   useEffect(() => {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
@@ -131,7 +131,7 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  // Navigation Handler using useNavigate
+  // Navigation Handler using Router
   const handleNavigate = (id: ContentType) => {
     if (currentSectionId === id) return;
     
@@ -246,7 +246,7 @@ const MainLayout: React.FC = () => {
 
         <div className="content-wrapper">
           <ContentRenderer
-            key={currentSectionId}
+            key={currentSectionId} // Force re-render on ID change
             data={activeData}
             allContent={contentData}
             onNavigate={handleNavigate}
@@ -264,18 +264,14 @@ const MainLayout: React.FC = () => {
   );
 };
 
-// Main Router Configuration
+// Root App Component handling Routes
 const App: React.FC = () => {
   return (
     <Routes>
-      {/* Root Path -> Redirect to /welcome */}
-      <Route path="/" element={<Navigate to="/welcome" replace />} />
-      
-      {/* Dynamic Section Route */}
+      <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
       <Route path="/:sectionId" element={<MainLayout />} />
-      
-      {/* Catch-all 404 handling -> Redirect to /welcome */}
-      <Route path="*" element={<Navigate to="/welcome" replace />} />
+      {/* Catch all for 404s */}
+      <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
     </Routes>
   );
 };
