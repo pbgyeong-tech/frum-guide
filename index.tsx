@@ -1,15 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css'; // css 파일이 있다면 유지, 없으면 삭제
+// 1. BrowserRouter 대신 HashRouter를 가져옵니다.
+import { HashRouter } from 'react-router-dom';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    {/* 2. BrowserRouter를 HashRouter로 교체 */}
+    <HashRouter>
+      <App />
+    </HashRouter>
+  </React.StrictMode>,
 );
