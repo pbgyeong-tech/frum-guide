@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { ContentRenderer } from './components/ContentRenderer';
 import { HANDBOOK_CONTENT } from './constants';
@@ -16,9 +16,7 @@ const MainLayout: React.FC = () => {
   // 1. Get Section ID from URL
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const location = useLocation();
-
+  
   // 2. Validate ID and determine current active section
   const isValidSection = (id: string | undefined): id is ContentType => {
     return Object.values(ContentType).includes(id as ContentType);
