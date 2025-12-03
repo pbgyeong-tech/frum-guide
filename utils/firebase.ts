@@ -55,3 +55,16 @@ export const trackMenuClick = (menuName: string) => {
     console.warn("[Analytics] Failed to log event", e);
   }
 };
+
+// Helper to track screen views (SPA Page Views)
+export const trackScreenView = (screenName: string, screenClass: string) => {
+  try {
+    logEvent(analytics, 'screen_view', {
+      firebase_screen: screenName,
+      firebase_screen_class: screenClass
+    });
+    // console.log(`[Analytics] Screen View: ${screenName} (${screenClass})`);
+  } catch (e) {
+    console.warn("[Analytics] Failed to log screen_view", e);
+  }
+};

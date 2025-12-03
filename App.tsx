@@ -6,7 +6,7 @@ import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
-import { trackMenuClick, auth, loginWithGoogle, logout } from './utils/firebase';
+import { trackMenuClick, auth, loginWithGoogle, logout, trackScreenView } from './utils/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { AdminRestoreButton } from './components/AdminRestoreButton'; // Import Restore Button
 
@@ -138,6 +138,14 @@ const App: React.FC = () => {
   };
 
   const activeData = findSection(contentData, activeSectionId) || contentData[0];
+
+  // [Added] Update Document Title & Track Screen View
+  useEffect(() => {
+    if (activeData) {
+      document.title = `${activeData.title} | FRUM Onboarding`;
+      trackScreenView(activeData.title, activeSectionId);
+    }
+  }, [activeData, activeSectionId]);
 
   // ContentRenderer에서 수정/삭제/추가 발생 시 호출되는 핸들러
   const handleContentUpdate = async (newSubSections: SubSection[]) => {
