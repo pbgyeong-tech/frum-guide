@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ContentRenderer } from './components/ContentRenderer';
 import { HANDBOOK_CONTENT } from './constants';
@@ -15,6 +15,10 @@ const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   
+  // [Added] Scroll & Progress State
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   // Auth State
   const [user, setUser] = useState<User | null>(null);
 
@@ -82,6 +86,28 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
+  // [Added] Fix Scroll Position Bug on Navigation
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
+    }
+    setScrollProgress(0);
+  }, [activeSectionId]);
+
+  // [Added] Handle Scroll for Progress Bar
+  const handleScroll = () => {
+    if (mainContentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = mainContentRef.current;
+      if (scrollHeight === clientHeight) {
+        setScrollProgress(0);
+        return;
+      }
+      const total = scrollHeight - clientHeight;
+      const progress = (scrollTop / total) * 100;
+      setScrollProgress(progress);
+    }
+  };
+
   // Safe Navigation Handler
   const handleNavigate = (id: ContentType) => {
     if (activeSectionId === id) return;
@@ -91,12 +117,11 @@ const App: React.FC = () => {
         setIsDirty(false);
         setActiveSectionId(id);
         setIsMobileMenuOpen(false);
-        window.scrollTo(0, 0);
+        // Note: Scroll reset is handled by the useEffect above
       }
     } else {
       setActiveSectionId(id);
       setIsMobileMenuOpen(false);
-      window.scrollTo(0, 0);
     }
   };
 
@@ -145,6 +170,20 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      {/* [Added] Scroll Progress Bar */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: `${scrollProgress}%`,
+        height: '3px',
+        background: '#E70012',
+        zIndex: 9999,
+        transition: 'width 0.1s linear',
+        boxShadow: '0 0 10px rgba(231,0,18,0.7)',
+        pointerEvents: 'none'
+      }} />
+
       {/* Sidebar */}
       <Sidebar
         activeSection={activeSectionId}
@@ -158,7 +197,11 @@ const App: React.FC = () => {
       />
 
       {/* Main Content */}
-      <main className="main-content">
+      <main 
+        className="main-content" 
+        ref={mainContentRef} 
+        onScroll={handleScroll}
+      >
         {/* Mobile Header */}
         <div style={{
           position: 'sticky',

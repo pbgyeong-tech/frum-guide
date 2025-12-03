@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -800,11 +801,71 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
     onUpdateContent(newSubSections);
   };
 
+  // [Added] Spotlight Logic: Handle Mouse Move on Grid
+  const handleGridMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const cards = e.currentTarget.getElementsByClassName('bento-card');
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      (card as HTMLElement).style.setProperty('--mouse-x', `${x}px`);
+      (card as HTMLElement).style.setProperty('--mouse-y', `${y}px`);
+    }
+  };
+
+  // [Added] Inject Styles for Spotlight
+  const SpotlightStyles = () => (
+    <style>{`
+      /* Background Glow */
+      .bento-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(231, 0, 18, 0.08), transparent 40%);
+        opacity: 0;
+        transition: opacity 0.5s;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .grid-layout:hover .bento-card::after {
+        opacity: 1;
+      }
+
+      /* Border Glow - Gradient Mask Trick */
+      .bento-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 12px; 
+        padding: 1.5px; /* Border thickness */
+        background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(231, 0, 18, 0.6), transparent 40%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.5s;
+      }
+      .grid-layout:hover .bento-card::before {
+        opacity: 1;
+      }
+
+      /* Ensure content is above background glow but managed properly */
+      .bento-card > * {
+        position: relative;
+        z-index: 2;
+      }
+    `}</style>
+  );
+
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
 
   if (data.id === ContentType.FAQ) {
     return (
       <div key={data.id} className="animate-enter">
+        <SpotlightStyles />
         <header style={{ marginBottom: '60px', position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 className="hero-title animate-fade delay-2">
@@ -865,7 +926,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
                </button>
             </div>
             
-            <div className="grid-layout">
+            <div className="grid-layout" onMouseMove={handleGridMouseMove}>
               {data.subSections.map((sub, index) => (
                 <div key={sub.uuid || index} className="bento-card" style={{ position: 'relative', border: '1px solid #E70012' }}>
                   <div style={{ 
@@ -993,6 +1054,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
 
   return (
     <div key={data.id} className="animate-enter">
+      <SpotlightStyles />
       <header style={{ marginBottom: '80px', position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
@@ -1148,7 +1210,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
              </div>
            )}
            <div className="animate-fade delay-5">
-              <div className="grid-layout">
+              <div className="grid-layout" onMouseMove={handleGridMouseMove}>
                 {quickLinkSections.map((section, index) => {
                   const SectionIcon = section.icon;
                   const targetId = (section.children && section.children.length > 0) 
@@ -1200,7 +1262,7 @@ export const ContentRenderer: React.FC<ContentRendererProps> = ({
         </>
       ) : (
         <>
-        <div className="grid-layout">
+        <div className="grid-layout" onMouseMove={handleGridMouseMove}>
           {data.subSections.map((sub, index) => {
              const textLength = Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length;
              const hasCode = !!sub.codeBlock;
