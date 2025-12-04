@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -296,16 +297,41 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
 
+  // [Defensive Coding] subSections가 배열이 아닌 경우 빈 배열로 대체
+  const safeSubSections = Array.isArray(data.subSections) ? data.subSections : [];
+
   useEffect(() => { setIsEditMode(false); }, [data.id]);
   const handleEdit = (uuid: string) => { setEditingItemId(uuid); setIsModalOpen(true); };
   const handleAddNew = () => { setEditingItemId(null); setIsModalOpen(true); };
+  
   const handleSaveModal = (newData: SubSection) => {
-    let newSubSections = [...data.subSections];
+    let newSubSections = [...safeSubSections];
     if (editingItemId) newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? newData : sub);
     else newSubSections.push({ ...newData, uuid: crypto.randomUUID() });
     onUpdateContent(data.id, newSubSections);
   };
-  const handleDelete = (uuid: string) => { if(confirm("삭제?")) onUpdateContent(data.id, data.subSections.filter(s => s.uuid !== uuid)); };
+
+  const handleDelete = (uuid: string) => { 
+    if(confirm("삭제?")) {
+      onUpdateContent(data.id, safeSubSections.filter(s => s.uuid !== uuid));
+    }
+  };
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newSubSections = [...safeSubSections];
+    if (index >= newSubSections.length) return;
+    [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
+    onUpdateContent(data.id, newSubSections);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === safeSubSections.length - 1) return;
+    const newSubSections = [...safeSubSections];
+    if (index >= newSubSections.length - 1) return;
+    [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
+    onUpdateContent(data.id, newSubSections);
+  };
 
   // FAQ 뷰
   if (isFAQ) {
@@ -332,10 +358,11 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                     <h1 className="hero-title" style={{ fontSize: 'clamp(3rem, 5vw, 5rem)' }}>{data.title}</h1>
                 </div>
             </div>
-            {data.subSections.length > 0 && (
+            {/* 안전하게 접근 */}
+            {safeSubSections.length > 0 && (
              <div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto 80px', padding: '0 20px' }}>
-               <h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{data.subSections[0].title}</h2>
-               <p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{data.subSections[0].content}</p>
+               <h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2>
+               <p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p>
              </div>
             )}
             <div className="grid-layout">
@@ -358,14 +385,54 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     <div className="animate-enter">
       <header style={{ marginBottom: '60px', display: 'flex', justifyContent: 'space-between' }}>
         <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
-        {isAdmin && <button onClick={() => setIsEditMode(!isEditMode)} style={{ color: isEditMode ? '#fff' : '#E70012', border: `1px solid ${isEditMode ? '#fff' : '#E70012'}`, padding: '8px 16px', borderRadius: '8px', height: 'fit-content' }}>{isEditMode ? 'Done' : 'Edit Page'}</button>}
+        {isAdmin && (
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)} 
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              border: '1px solid #E70012',
+              background: isEditMode ? '#E70012' : 'transparent',
+              color: isEditMode ? '#fff' : '#E70012',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Edit3 size={16} />
+            {isEditMode ? 'Done Editing' : 'Edit Page'}
+          </button>
+        )}
       </header>
       <div className="grid-layout">
-        {data.subSections.map((sub, index) => {
-          const isFullWidth = isComplexLayout || sub.content.length > 200 || sub.title.includes('전결');
+        {/* 안전하게 safeSubSections.map 사용 */}
+        {safeSubSections.map((sub, index) => {
+          const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length) > 200 || sub.title.includes('전결');
           return (
             <article key={sub.uuid || index} className={`bento-card ${isFullWidth ? 'full-width' : ''}`} style={{ position: 'relative', border: isEditMode ? '1px dashed #E70012' : undefined }}>
-              {isEditMode && <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4, zIndex: 10 }}><button onClick={() => handleEdit(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4 }}><Edit3 size={14} color="white" /></button><button onClick={() => handleDelete(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4 }}><Trash2 size={14} color="red" /></button></div>}
+              {isEditMode && (
+                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4, zIndex: 10 }}>
+                  {index > 0 && (
+                    <button onClick={() => handleMoveUp(index)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
+                      <ArrowUp size={14} color="white" />
+                    </button>
+                  )}
+                  {index < safeSubSections.length - 1 && (
+                    <button onClick={() => handleMoveDown(index)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
+                      <ArrowDown size={14} color="white" />
+                    </button>
+                  )}
+                  <button onClick={() => handleEdit(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
+                    <Edit3 size={14} color="white" />
+                  </button>
+                  <button onClick={() => handleDelete(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
+                    <Trash2 size={14} color="red" />
+                  </button>
+                </div>
+              )}
               
               <h3 className="card-title" style={{ 
                 borderBottom: '1px solid rgba(255,255,255,0.1)', 
@@ -401,7 +468,13 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         })}
         {isEditMode && <button onClick={handleAddNew} style={{ border: '2px dashed #333', borderRadius: 12, padding: 40, color: '#666', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}><Plus size={32} /><span style={{ marginTop: 12 }}>Add Block</span></button>}
       </div>
-      <EditModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} initialData={editingItemId ? data.subSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
+      <EditModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveModal} 
+        initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} 
+        onDirty={setIsDirty} 
+      />
     </div>
   );
 };
