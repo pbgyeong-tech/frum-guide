@@ -1,7 +1,8 @@
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, writeBatch, deleteDoc, addDoc } from 'firebase/firestore';
 import { SectionData, ContentType, EditLog, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 const COLLECTION_NAME = 'content';
 const LOG_COLLECTION_NAME = 'edit_logs';
@@ -103,9 +104,9 @@ const findLocalSection = (id: string, list: SectionData[]): SectionData | undefi
 // [READ] 모든 콘텐츠 불러오기
 export const getAllContent = async (): Promise<SectionData[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+    const querySnapshot = await db.collection(COLLECTION_NAME).get();
     const data: SectionData[] = [];
-    querySnapshot.forEach((doc) => {
+    querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
       data.push(restoreFromDB(doc.data()));
     });
     return data;
@@ -119,7 +120,7 @@ export const getAllContent = async (): Promise<SectionData[]> => {
 export const saveContent = async (content: SectionData): Promise<void> => {
   try {
     const dataToSave = sanitizeForDB(content);
-    await setDoc(doc(db, COLLECTION_NAME, content.id), dataToSave);
+    await db.collection(COLLECTION_NAME).doc(content.id).set(dataToSave);
     console.log(`Content saved for ${content.id}`);
   } catch (error) {
     console.error("Error saving document to Firebase: ", error);
@@ -130,7 +131,7 @@ export const saveContent = async (content: SectionData): Promise<void> => {
 // [DELETE] 전체 섹션 문서 삭제하기
 export const deleteDocument = async (id: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, COLLECTION_NAME, id));
+    await db.collection(COLLECTION_NAME).doc(id).delete();
     console.log(`Document ${id} successfully deleted!`);
   } catch (error) {
     console.error("Error removing document: ", error);
@@ -141,11 +142,8 @@ export const deleteDocument = async (id: string): Promise<void> => {
 // [LOG] 편집 로그 저장
 export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
   try {
-    // Note: We use the generic log object here, which now includes the 'details' object 
-    // with before/after state as defined in types.ts.
-    // Firestore handles nested objects automatically.
     const cleanLog = removeUndefined(log);
-    await addDoc(collection(db, LOG_COLLECTION_NAME), cleanLog);
+    await db.collection(LOG_COLLECTION_NAME).add(cleanLog);
     console.log("Edit log saved");
   } catch (e) {
     console.error("Failed to add edit log", e);
@@ -162,7 +160,7 @@ export const resetToDefault = async (sectionId: ContentType): Promise<void> => {
     const cleanData = sanitizeForDB(originalSection);
     
     // Overwrite the document completely
-    await setDoc(doc(db, COLLECTION_NAME, sectionId), cleanData);
+    await db.collection(COLLECTION_NAME).doc(sectionId).set(cleanData);
     console.log(`Reset completed for ${sectionId}`);
   } catch (error) {
     console.error("Error resetting document:", error);
@@ -173,15 +171,15 @@ export const resetToDefault = async (sectionId: ContentType): Promise<void> => {
 // [INIT] 초기 데이터 시딩
 export const seedDB = async (): Promise<SectionData[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+    const querySnapshot = await db.collection(COLLECTION_NAME).get();
     
     // Only seed if strictly empty (no documents at all)
     if (querySnapshot.empty) {
       console.log("Database empty. Seeding initial data...");
-      const batch = writeBatch(db);
+      const batch = db.batch();
       
       for (const section of HANDBOOK_CONTENT) {
-        const docRef = doc(db, COLLECTION_NAME, section.id);
+        const docRef = db.collection(COLLECTION_NAME).doc(section.id);
         const cleanData = sanitizeForDB(section); // UUID injected here
         batch.set(docRef, cleanData);
       }
@@ -198,7 +196,7 @@ export const seedDB = async (): Promise<SectionData[]> => {
     } else {
       // Data exists, return the fetched data directly
       const data: SectionData[] = [];
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
         data.push(restoreFromDB(doc.data()));
       });
       return data;
@@ -206,7 +204,6 @@ export const seedDB = async (): Promise<SectionData[]> => {
   } catch (error) {
     console.error("DB Connection Failed (Check Firestore Rules):", error);
     // Return local content for fallback display only. 
-    // Since auto-save is removed from ContentRenderer, this will NOT overwrite DB.
     return HANDBOOK_CONTENT.map(s => {
        const withUUID = ensureUUID(s);
        // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,8 +1,7 @@
-
-import { initializeApp } from "firebase/app";
-import { getAnalytics, logEvent } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/firestore";
+import "firebase/compat/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDIt20kjrVkUFVn1f63ON58XjRTifQ3KcM",
@@ -14,15 +13,24 @@ const firebaseConfig = {
   measurementId: "G-Q50NVK8GZT"
 };
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Initialize Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+const app = firebase.app();
+let analytics;
+if (typeof window !== 'undefined') {
+  analytics = firebase.analytics();
+}
+
+export const db = firebase.firestore();
+export const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await auth.signInWithPopup(googleProvider);
     return result.user;
   } catch (error: any) {
     console.error("Login failed:", error);
@@ -37,7 +45,7 @@ export const loginWithGoogle = async () => {
 
 export const logout = async () => {
   try {
-    await signOut(auth);
+    await auth.signOut();
   } catch (error) {
     console.error("Logout failed:", error);
   }
@@ -46,10 +54,12 @@ export const logout = async () => {
 // Helper to track menu clicks
 export const trackMenuClick = (menuName: string) => {
   try {
-    logEvent(analytics, 'select_content', {
-      content_type: 'menu',
-      item_id: menuName
-    });
+    if (analytics) {
+      analytics.logEvent('select_content', {
+        content_type: 'menu',
+        item_id: menuName
+      });
+    }
     console.log(`[Analytics] Tracked click: ${menuName}`);
   } catch (e) {
     console.warn("[Analytics] Failed to log event", e);
@@ -59,11 +69,12 @@ export const trackMenuClick = (menuName: string) => {
 // Helper to track screen views (SPA Page Views)
 export const trackScreenView = (screenName: string, screenClass: string) => {
   try {
-    logEvent(analytics, 'screen_view', {
-      firebase_screen: screenName,
-      firebase_screen_class: screenClass
-    });
-    // console.log(`[Analytics] Screen View: ${screenName} (${screenClass})`);
+    if (analytics) {
+      analytics.logEvent('screen_view', {
+        firebase_screen: screenName,
+        firebase_screen_class: screenClass
+      });
+    }
   } catch (e) {
     console.warn("[Analytics] Failed to log screen_view", e);
   }

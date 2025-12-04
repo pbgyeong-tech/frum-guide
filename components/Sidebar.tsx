@@ -1,9 +1,7 @@
-
 import React from 'react';
-import { HANDBOOK_CONTENT } from '../constants';
 import { ContentType } from '../types';
-import { X, ExternalLink, Lock, Unlock, LogOut } from 'lucide-react';
-import { trackMenuClick } from '../utils/firebase';
+import { HANDBOOK_CONTENT } from '../constants';
+import { LogOut, X, ExternalLink } from 'lucide-react';
 import { User } from 'firebase/auth';
 
 interface SidebarProps {
@@ -19,246 +17,85 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeSection, 
-  setActiveSection, // This is actually handleNavigate from App.tsx
-  isMobileOpen,
+  setActiveSection, 
+  isMobileOpen, 
   setIsMobileOpen,
-  isAdmin,
-  onLogin,
-  onLogout,
-  user
+  isAdmin, 
+  onLogin, 
+  onLogout 
 }) => {
-  
   return (
     <>
-      <style>{`
-        .sidebar-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          height: 100%;
-          width: var(--sidebar-width);
-          background: var(--bg-main);
-          border-right: 1px solid var(--border-color);
-          z-index: 90;
-          display: flex;
-          flex-direction: column;
-          padding: 40px 0;
-          transition: transform 0.4s var(--easing);
-        }
-        
-        @media (max-width: 768px) {
-          .sidebar-container {
-            transform: translateX(${isMobileOpen ? '0' : '-100%'});
-            box-shadow: 20px 0 50px rgba(0,0,0,0.5);
-          }
-          .mobile-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 80;
-            backdrop-filter: blur(5px);
-            opacity: ${isMobileOpen ? 1 : 0};
-            pointer-events: ${isMobileOpen ? 'auto' : 'none'};
-            transition: opacity 0.4s;
-          }
-        }
-        @media (min-width: 769px) {
-           .sidebar-container {
-             position: relative;
-             transform: none !important;
-           }
-           .mobile-overlay { display: none; }
-        }
+      {/* 모바일용 오버레이 (배경 어둡게) */}
+      <div 
+        className={`mobile-overlay ${isMobileOpen ? 'active' : ''}`} 
+        onClick={() => setIsMobileOpen(false)}
+      />
 
-        .nav-button {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px 32px;
-          color: var(--text-secondary);
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s;
-          position: relative;
-        }
-
-        .nav-button:hover {
-          color: var(--text-primary);
-          background: rgba(255,255,255,0.03);
-        }
-
-        .nav-button.active {
-          color: var(--text-primary);
-          background: rgba(255,255,255,0.05);
-        }
-        
-        .nav-button.active::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 3px;
-          background: var(--accent-color);
-        }
-
-        .nav-group-title {
-          padding: 24px 32px 12px 32px;
-          color: #666;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .admin-login-btn {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 12px 32px;
-          color: #555;
-          font-size: 12px;
-          font-weight: 600;
-          transition: all 0.2s;
-          margin-top: 8px;
-          border-top: 1px solid rgba(255,255,255,0.05);
-        }
-        .admin-login-btn:hover {
-          color: #ccc;
-          background: rgba(255,255,255,0.02);
-        }
-      `}</style>
-
-      {/* Mobile Overlay */}
-      <div className="mobile-overlay" onClick={() => setIsMobileOpen(false)} />
-
-      <aside className="sidebar-container">
-        {/* Header / Logo */}
-        <div style={{ padding: '0 32px 40px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button 
-            onClick={() => {
-              trackMenuClick('Logo (Sidebar)');
-              setActiveSection(ContentType.WELCOME);
-            }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-          >
-            <img src="https://www.frum.co.kr/images/frum-logo-white.svg" alt="FRUM" width="100" />
-          </button>
-          
-          <button 
-            onClick={() => setIsMobileOpen(false)} 
-            style={{ color: 'white', display: isMobileOpen ? 'block' : 'none' }}
-            className="md-hidden"
-          >
+      <aside className={`sidebar-container ${isMobileOpen ? 'open' : ''}`}>
+        {/* 모바일 닫기 버튼 */}
+        <div style={{ position: 'absolute', top: '20px', right: '20px', display: isMobileOpen ? 'block' : 'none', zIndex: 101 }}>
+          <button className="nav-button" onClick={() => setIsMobileOpen(false)} style={{ color: '#fff', width: 'auto', padding: '8px' }}>
             <X size={24} />
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav style={{ flex: 1, overflowY: 'auto' }}>
-          {HANDBOOK_CONTENT
-            .filter(section => section.id !== ContentType.WELCOME)
-            .map((section) => {
-            const Icon = section.icon;
-            
-            // Check for nested children
-            if (section.children && section.children.length > 0) {
-              return (
-                <div key={section.id}>
-                  <div className="nav-group-title">
-                    <Icon size={14} />
-                    <span>{section.title}</span>
-                  </div>
-                  {section.children.map(child => {
-                    const ChildIcon = child.icon;
-                    const isChildActive = activeSection === child.id;
-                    return (
-                      <button
-                        key={child.id}
-                        onClick={() => {
-                          trackMenuClick(child.title);
-                          setActiveSection(child.id);
-                        }}
-                        className={`nav-button ${isChildActive ? 'active' : ''}`}
-                        style={{ paddingLeft: '56px' }}
-                      >
-                         {/* Optional child icon, or just text */}
-                         <span>{child.title}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            }
+        <div style={{ padding: '40px 32px', marginBottom: '20px' }}>
+          <img 
+            src="https://www.frum.co.kr/images/frum-logo-white.svg" 
+            alt="FRUM" 
+            style={{ height: '24px', cursor: 'pointer' }}
+            onClick={() => { setActiveSection(ContentType.WELCOME); setIsMobileOpen(false); }}
+          />
+        </div>
 
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          {HANDBOOK_CONTENT.map((section) => {
+            if (section.id === ContentType.WELCOME) return null;
             const isActive = activeSection === section.id;
-            
+            const Icon = section.icon;
             return (
               <button
                 key={section.id}
-                onClick={() => {
-                  trackMenuClick(section.title);
-                  setActiveSection(section.id);
-                }}
                 className={`nav-button ${isActive ? 'active' : ''}`}
+                onClick={() => { setActiveSection(section.id); setIsMobileOpen(false); }}
               >
-                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                <span>{section.title}</span>
+                <Icon size={18} />
+                {section.title}
               </button>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div style={{ borderTop: '1px solid var(--border-color)' }}>
-           {/* External Link */}
-           <a 
-             href="https://lunch-solution-center.vercel.app/" 
-             target="_blank" 
-             rel="noreferrer"
-             className="nav-button"
-             style={{ 
-               color: '#999', 
-               borderBottom: '1px solid rgba(255,255,255,0.05)',
-               marginTop: '8px'
-             }}
-             onClick={() => trackMenuClick('Lunch Solution Center (External)')}
-           >
-             <ExternalLink size={18} />
-             <span>Lunch Solution Center</span>
-           </a>
-
-           {/* Admin Login/Logout Button */}
-           {isAdmin ? (
-             <button onClick={onLogout} className="admin-login-btn">
-               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                 {user?.photoURL ? (
-                    <img src={user.photoURL} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
-                 ) : (
-                    <Unlock size={14} color="#E70012" />
-                 )}
-                 <span style={{ color: '#E70012' }}>Admin Mode</span>
-               </div>
-               <LogOut size={14} />
-             </button>
-           ) : (
-             <button onClick={onLogin} className="admin-login-btn">
-               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                 <Lock size={14} />
-                 <span>Admin Login</span>
-               </div>
-             </button>
-           )}
-
-           <div style={{ padding: '16px 32px 32px 32px', fontSize: '10px', color: '#444', lineHeight: '1.5' }}>
-             FRUM<br/>CREATIVE SOLUTION CENTER
-           </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <a 
+            href="https://lunch-solution-center.vercel.app/" 
+            target="_blank" 
+            rel="noreferrer"
+            className="nav-button"
+            style={{ textDecoration: 'none' }}
+          >
+            <ExternalLink size={18} />
+            Lunch Solution Center
+          </a>
+          
+          {isAdmin ? (
+            <button 
+              className="nav-button"
+              onClick={onLogout} 
+              style={{ color: '#666' }}
+            >
+              <LogOut size={18} /> Admin Logout
+            </button>
+          ) : (
+            <button 
+              className="nav-button"
+              onClick={onLogin} 
+              style={{ color: '#666' }}
+            >
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#666' }}></div> Admin Login
+            </button>
+          )}
         </div>
       </aside>
     </>

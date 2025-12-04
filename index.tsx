@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { BrowserRouter } from 'react-router-dom'; // HashRouter 대신 Browser 사용
-import './index.css';
+import { HashRouter } from 'react-router-dom'; // 👈 여기를 HashRouter로 변경
+import './index.css'; // (파일 없으면 이 줄은 지우셔도 됨)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <App />
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>,
 );

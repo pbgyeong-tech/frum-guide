@@ -1,15 +1,14 @@
-
 import React, { useState } from 'react';
-import { User } from 'firebase/auth';
-import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import { saveContent } from '../utils/db';
 import { EditLog, SectionData, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { RotateCcw, Loader2, AlertTriangle } from 'lucide-react';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 interface Props {
-  user: User | null;
+  user: firebase.User | null;
 }
 
 export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
@@ -36,8 +35,10 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
         console.log("Starting restoration process...");
 
         // 1. 모든 로그 가져오기
-        const logsSnap = await getDocs(collection(db, 'edit_logs'));
-        const logs = logsSnap.docs.map(d => d.data() as EditLog).sort((a,b) => a.timestamp - b.timestamp);
+        const logsSnap = await db.collection('edit_logs').get();
+        const logs: EditLog[] = [];
+        logsSnap.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => logs.push(doc.data() as EditLog));
+        logs.sort((a,b) => a.timestamp - b.timestamp);
         
         console.log(`Found ${logs.length} edit logs. Replaying...`);
 

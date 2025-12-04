@@ -1,48 +1,99 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { ContentRenderer } from './components/ContentRenderer';
 import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
-import { trackMenuClick, auth, loginWithGoogle, logout, trackScreenView } from './utils/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, loginWithGoogle, logout, trackScreenView, trackMenuClick } from './utils/firebase';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
-import { GeminiAssistant } from './components/GeminiAssistant';
+import firebase from 'firebase/compat/app';
 
-// Component handling the main layout and logic based on URL params
-const MainLayout: React.FC = () => {
-  // 1. Get Section ID from URL
+// Helper: Find Data recursively
+const findSection = (sections: SectionData[], id: string): SectionData | undefined => {
+  for (const section of sections) {
+    if (section.id === id) return section;
+    if (section.children) {
+      const found = findSection(section.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+};
+
+// MainLayout Component
+const MainLayout: React.FC<{
+  contentData: SectionData[];
+  onUpdateContent: (id: ContentType, newSubSections: SubSection[]) => void;
+  setIsDirty: (dirty: boolean) => void;
+  isAdmin: boolean;
+  user: firebase.User | null;
+  onNavigate: (id: ContentType) => void;
+}> = ({ contentData, onUpdateContent, setIsDirty, isAdmin, user, onNavigate }) => {
   const { sectionId } = useParams<{ sectionId: string }>();
-  const navigate = useNavigate();
   
-  // 2. Validate ID and determine current active section
   const isValidSection = (id: string | undefined): id is ContentType => {
     return Object.values(ContentType).includes(id as ContentType);
   };
 
-  const currentSectionId = isValidSection(sectionId) ? sectionId : ContentType.WELCOME;
+  // Redirect invalid IDs to Welcome
+  if (!isValidSection(sectionId)) {
+    return <Navigate to={`/${ContentType.WELCOME}`} replace />;
+  }
 
-  // State
+  const currentId = sectionId as ContentType;
+  const activeData = findSection(contentData, currentId) || contentData[0];
+
+  useEffect(() => {
+    if (activeData) {
+      document.title = `${activeData.title} | FRUM Onboarding`;
+      trackScreenView(activeData.title, currentId);
+    }
+  }, [activeData, currentId]);
+
+  const handleContentUpdate = (newSubSections: SubSection[]) => {
+    onUpdateContent(currentId, newSubSections);
+  };
+
+  return (
+    <ContentRenderer
+      key={currentId}
+      data={activeData}
+      allContent={contentData}
+      onNavigate={onNavigate}
+      onUpdateContent={handleContentUpdate}
+      setIsDirty={setIsDirty}
+      isAdmin={isAdmin}
+      user={user}
+    />
+  );
+};
+
+// Root App Component
+const App: React.FC = () => {
+  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
+  const [user, setUser] = useState<firebase.User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
   const [scrollProgress, setScrollProgress] = useState(0);
   
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Effect: Redirect if URL param is invalid (e.g., /invalid-id -> /welcome)
-  useEffect(() => {
-    if (sectionId && !isValidSection(sectionId)) {
-      navigate(`/${ContentType.WELCOME}`, { replace: true });
-    }
-  }, [sectionId, navigate]);
+  // Determine active section for Sidebar highlighting based on URL hash path
+  // With HashRouter, location.pathname is the path after #
+  const currentPath = location.pathname.substring(1).split('/')[0]; 
+  const activeSectionId = Object.values(ContentType).includes(currentPath as ContentType) 
+    ? (currentPath as ContentType) 
+    : ContentType.WELCOME;
 
-  // Auth Listener
+  const isAdmin = !!user;
+
+  // 1. Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         if (currentUser.email && currentUser.email.endsWith('@frum.co.kr')) {
           setUser(currentUser);
@@ -58,9 +109,7 @@ const MainLayout: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const isAdmin = !!user;
-
-  // DB Load
+  // 2. DB Load
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -78,7 +127,7 @@ const MainLayout: React.FC = () => {
     loadData();
   }, []);
 
-  // Before Unload Warning
+  // 3. Before Unload Warning
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
@@ -90,35 +139,13 @@ const MainLayout: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  // Helper: Find Data recursively
-  const findSection = (sections: SectionData[], id: string): SectionData | undefined => {
-    for (const section of sections) {
-      if (section.id === id) return section;
-      if (section.children) {
-        const found = findSection(section.children, id);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  };
-
-  // Determine Active Data based on URL
-  const activeData = findSection(contentData, currentSectionId) || findSection(contentData, ContentType.WELCOME) || contentData[0];
-
-  // Scroll Reset & Analytics when Section Changes
+  // 4. Scroll Reset on Navigation
   useEffect(() => {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
     setScrollProgress(0);
-  }, [currentSectionId]);
-
-  useEffect(() => {
-    if (activeData) {
-      document.title = `${activeData.title} | FRUM Onboarding`;
-      trackScreenView(activeData.title, currentSectionId);
-    }
-  }, [activeData, currentSectionId]);
+  }, [location.pathname]);
 
   const handleScroll = () => {
     if (mainContentRef.current) {
@@ -129,9 +156,8 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  // Navigation Handler using Router
   const handleNavigate = (id: ContentType) => {
-    if (currentSectionId === id) return;
+    if (activeSectionId === id) return;
     
     const performNavigation = () => {
       navigate(`/${id}`);
@@ -148,20 +174,20 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  const handleContentUpdate = async (newSubSections: SubSection[]) => {
+  const handleUpdateContent = async (id: ContentType, newSubSections: SubSection[]) => {
     if (!isAdmin) {
       alert("편집 권한이 없습니다.");
       return;
     }
     const updatedContent = contentData.map(section => {
-      if (section.id === currentSectionId) {
+      if (section.id === id) {
         return { ...section, subSections: newSubSections };
       }
       return section;
     });
     setContentData(updatedContent);
 
-    const sectionToUpdate = updatedContent.find(s => s.id === currentSectionId);
+    const sectionToUpdate = updatedContent.find(s => s.id === id);
     if (sectionToUpdate) {
       try {
         await saveContent(sectionToUpdate);
@@ -190,7 +216,7 @@ const MainLayout: React.FC = () => {
       }} />
 
       <Sidebar
-        activeSection={currentSectionId}
+        activeSection={activeSectionId}
         setActiveSection={handleNavigate}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
@@ -205,7 +231,6 @@ const MainLayout: React.FC = () => {
         ref={mainContentRef} 
         onScroll={handleScroll}
       >
-        {/* Mobile Header Style */}
         <style>{`
           @media (min-width: 769px) { .mobile-header { display: none !important; } }
         `}</style>
@@ -224,7 +249,11 @@ const MainLayout: React.FC = () => {
           borderBottom: '1px solid #333'
         }}>
           <button 
-            onClick={() => handleNavigate(ContentType.WELCOME)}
+            onClick={() => {
+              trackMenuClick('Logo (Mobile)');
+              navigate('/');
+              window.scrollTo(0, 0);
+            }}
             style={{ 
               background: 'none', 
               border: 'none', 
@@ -243,34 +272,31 @@ const MainLayout: React.FC = () => {
         </div>
 
         <div className="content-wrapper">
-          <ContentRenderer
-            key={currentSectionId} // Force re-render on ID change
-            data={activeData}
-            allContent={contentData}
-            onNavigate={handleNavigate}
-            onUpdateContent={handleContentUpdate}
-            setIsDirty={setIsDirty}
-            isAdmin={isAdmin}
-            user={user}
-          />
+          <Routes>
+            {/* 1. Root/Welcome routes */}
+            <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
+            
+            {/* 2. Main content route */}
+            <Route path="/:sectionId" element={
+              <MainLayout 
+                contentData={contentData}
+                onUpdateContent={handleUpdateContent}
+                setIsDirty={setIsDirty}
+                isAdmin={isAdmin}
+                user={user}
+                onNavigate={handleNavigate}
+              />
+            } />
+
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
+          </Routes>
         </div>
+
+        {/* 챗봇 제거 완료 */}
+        <AdminRestoreButton user={user} />
       </main>
-
-      <AdminRestoreButton user={user} />
-      <GeminiAssistant />
     </div>
-  );
-};
-
-// Root App Component handling Routes
-const App: React.FC = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
-      <Route path="/:sectionId" element={<MainLayout />} />
-      {/* Catch all for 404s */}
-      <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
-    </Routes>
   );
 };
 
