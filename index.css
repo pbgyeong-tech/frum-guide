@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -31,6 +32,7 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   background-image: radial-gradient(circle at 50% -20%, #0c0014 0%, #000000 70%);
+  min-width: 360px;
 }
 
 /* Scrollbar */
@@ -180,6 +182,25 @@ aside.sidebar-container {
 .brand-slash-container { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
 .brand-slash-line { position: absolute; top: 50%; left: 50%; width: 2px; height: 60%; background: var(--accent-color); transform: translate(-50%, -50%) rotate(-45deg); opacity: 0.9; mix-blend-mode: screen; }
 .hero-overlay-gradient { position: absolute; inset: 0; background: radial-gradient(circle at 50% 120%, rgba(0,0,0,0.8), transparent 70%), linear-gradient(to top, #000000 0%, transparent 40%); z-index: 5; }
+
+/* Page Header Styles */
+.page-header {
+  margin-bottom: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .hero-title {
+    font-size: 2.5rem; /* Mobile font size override */
+  }
+}
 
 /* Chat Styles (Assumed based on usage) */
 .chat-fab {

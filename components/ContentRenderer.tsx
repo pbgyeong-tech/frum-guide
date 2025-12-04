@@ -163,11 +163,11 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
           <AccordionItem key={i} title={groupName} defaultOpen={i === 0}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead><tr style={{ background: 'rgba(0,0,0,0.3)' }}>{displayHeaders.map((h, k) => <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px' }}>{h}</th>)}</tr></thead>
+                <thead><tr style={{ background: 'rgba(0,0,0,0.3)' }}>{displayHeaders.map((h, k) => <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
                 <tbody>
                   {groupRows.map((rowCells, rIdx) => {
                     const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
-                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: '#ccc' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
+                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
                   })}
                 </tbody>
               </table>
@@ -182,12 +182,12 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   return (
     <div style={{ width: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-        <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{h}</th>)}</tr></thead>
+        <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
         <tbody>
           {bodyRows.map((row, i) => {
             const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
             while (cells.length < headers.length) cells.push('');
-            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
+            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
           })}
         </tbody>
       </table>
@@ -371,7 +371,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   if (isFAQ) {
     return (
       <div className="animate-enter">
-        <header style={{ marginBottom: '60px' }}>
+        <header className="page-header">
           <h1 className="hero-title">{data.title}</h1>
           <p className="hero-desc">{data.description}</p>
         </header>
@@ -417,11 +417,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   // 일반 콘텐츠 뷰
   return (
     <div className="animate-enter">
-      {/* 
-         수정됨: alignItems: 'flex-start' 추가 
-         이전에는 stretch(기본값) 때문에 텍스트가 길어지면 버튼도 같이 세로로 늘어남
-      */}
-      <header style={{ marginBottom: '60px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <header className="page-header">
         <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
         {isAdmin && (
           <button 
