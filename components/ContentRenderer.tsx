@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Check, Copy } from 'lucide-react';
+import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 
@@ -161,7 +161,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
       <div style={{ margin: '24px 0' }}>
         {Object.entries(grouped).map(([groupName, groupRows], i) => (
           <AccordionItem key={i} title={groupName} defaultOpen={i === 0}>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead><tr style={{ background: 'rgba(0,0,0,0.3)' }}>{displayHeaders.map((h, k) => <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
                 <tbody>
@@ -179,15 +179,16 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   }
   
   // 일반 테이블 모드
+  // 중요: maxWidth: '100%'와 overflowX: 'auto'를 통해 긴 표가 있어도 카드 내에서 스크롤되게 함 (페이지 전체 스크롤 방지)
   return (
-    <div style={{ width: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
         <tbody>
           {bodyRows.map((row, i) => {
             const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
             while (cells.length < headers.length) cells.push('');
-            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
+            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
           })}
         </tbody>
       </table>
@@ -340,7 +341,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
 
     // 4. 상위 컴포넌트로 전달 (DB 저장)
-    // IMPORTANT: Call signature must match (SubSection[]) as handled in MainLayout
     onUpdateContent(newSubSections);
   };
 
@@ -444,76 +444,102 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         )}
       </header>
       <div className="grid-layout">
-        {/* 안전하게 safeSubSections.map 사용 */}
         {safeSubSections.map((sub, index) => {
-          const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.join('').length : sub.content.length) > 200 || sub.title.includes('전결');
+          // Heuristic for full width based on content length or explicit layout
+          const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
+          
           return (
-            <article key={sub.uuid || index} className={`bento-card ${isFullWidth ? 'full-width' : ''}`} style={{ position: 'relative', border: isEditMode ? '1px dashed #E70012' : undefined }}>
-              {isEditMode && (
-                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4, zIndex: 10 }}>
-                  {index > 0 && (
-                    <button onClick={() => handleMoveUp(index)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
-                      <ArrowUp size={14} color="white" />
-                    </button>
-                  )}
-                  {index < safeSubSections.length - 1 && (
-                    <button onClick={() => handleMoveDown(index)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
-                      <ArrowDown size={14} color="white" />
-                    </button>
-                  )}
-                  <button onClick={() => handleEdit(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
-                    <Edit3 size={14} color="white" />
-                  </button>
-                  <button onClick={() => handleDelete(sub.uuid!)} style={{ background: '#333', padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none' }}>
-                    <Trash2 size={14} color="red" />
-                  </button>
-                </div>
-              )}
-              
-              <h3 className="card-title" style={{ 
-                borderBottom: '1px solid rgba(255,255,255,0.1)', 
-                paddingBottom: '16px', 
-                marginBottom: '24px', 
-                width: '100%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '12px' 
-              }}>
-                {!isComplexLayout && <span className="card-marker"></span>}
-                {sub.title}
-              </h3>
+             <div key={sub.uuid || index} className={`bento-card ${isFullWidth ? 'full-width' : ''}`}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>{sub.title}</h3>
+                 {isAdmin && isEditMode && (
+                   <div style={{ display: 'flex', gap: '8px' }}>
+                     <button onClick={() => handleMoveUp(index)} disabled={index === 0} style={{ color: '#666', cursor: index === 0 ? 'default' : 'pointer' }}><ArrowUp size={16} /></button>
+                     <button onClick={() => handleMoveDown(index)} disabled={index === safeSubSections.length - 1} style={{ color: '#666', cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer' }}><ArrowDown size={16} /></button>
+                     <button onClick={() => handleEdit(sub.uuid || '')} style={{ color: '#666' }}><Edit3 size={16} /></button>
+                     <button onClick={() => handleDelete(sub.uuid || '')} style={{ color: '#666' }}><Trash2 size={16} /></button>
+                   </div>
+                 )}
+               </div>
+               
+               {/* Media */}
+               {sub.imagePlaceholder && (
+                 <div style={{ marginBottom: '20px' }}>
+                   <img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                 </div>
+               )}
 
-              {sub.imagePlaceholder && (
-                <div style={{ marginBottom: '20px' }}>
-                  <img 
-                    src={sub.imagePlaceholder} 
-                    alt={sub.title} 
-                    referrerPolicy="no-referrer"
-                    style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} 
-                  />
-                </div>
-              )}
-              <div className="card-content">{renderMarkdownContent(Array.isArray(sub.content) ? sub.content.join('\n') : sub.content)}</div>
-              
-              {/* Disclaimer (별도 필드용) - Parse Markdown to support bold/links inside disclaimer */}
-              {sub.disclaimer && (
-                <InfoBlock>
-                  {sub.disclaimer.split('\n').map((line, i) => (
-                    <div key={i}>{parseInlineMarkdown(line)}</div>
-                  ))}
-                </InfoBlock>
-              )}
-            </article>
+               {/* Content */}
+               <div style={{ color: '#ccc', lineHeight: '1.6' }}>
+                  {renderMarkdownContent(sub.content)}
+               </div>
+
+               {/* Code Block */}
+               {sub.codeBlock && (
+                  <div style={{ position: 'relative', marginTop: '16px' }}>
+                    <CodeBlock text={sub.codeBlock} />
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(sub.codeBlock!)}
+                      style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }}
+                      title="Copy"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+               )}
+
+               {/* Link */}
+               {sub.link && (
+                 <a href={sub.link} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}>
+                   <LinkIcon size={16} /> Link
+                 </a>
+               )}
+
+               {/* Disclaimer Field (NEW) */}
+               {sub.disclaimer && (
+                 <InfoBlock>
+                   {/* Disclaimer supports markdown-like bolding if needed, or just text */}
+                   {parseInlineMarkdown(sub.disclaimer)}
+                 </InfoBlock>
+               )}
+
+             </div>
           );
         })}
-        {isEditMode && <button onClick={handleAddNew} style={{ border: '2px dashed #333', borderRadius: 12, padding: 40, color: '#666', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}><Plus size={32} /><span style={{ marginTop: 12 }}>Add Block</span></button>}
+
+        {/* Add New Button */}
+        {isAdmin && (
+           <button 
+             onClick={handleAddNew}
+             className="bento-card"
+             style={{ 
+               display: 'flex', 
+               flexDirection: 'column', 
+               alignItems: 'center', 
+               justifyContent: 'center', 
+               minHeight: '200px',
+               borderStyle: 'dashed',
+               borderColor: '#333',
+               background: 'transparent',
+               cursor: 'pointer',
+               color: '#666',
+               gap: '12px'
+             }}
+           >
+             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <Plus size={24} />
+             </div>
+             <span style={{ fontWeight: 600 }}>Add Content Block</span>
+           </button>
+        )}
       </div>
+
       <EditModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSaveModal} 
-        initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} 
-        onDirty={setIsDirty} 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveModal}
+        initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined}
+        onDirty={setIsDirty}
       />
     </div>
   );
