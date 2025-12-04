@@ -17,8 +17,8 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
   // Debug log to verify user and email match
   console.log('AdminRestoreButton Render Check. Current User Email:', user?.email);
 
-  // 보안 체크: 지정된 관리자 이메일이 아니면 렌더링하지 않음
-  if (user?.email !== 'bg.park@frum.co.kr') return null;
+  // 보안 체크: 특정 관리자(bg.park@frum.co.kr)에게만 복구 버튼 노출
+  if (!user || user.email !== 'bg.park@frum.co.kr') return null;
 
   const generateUUID = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

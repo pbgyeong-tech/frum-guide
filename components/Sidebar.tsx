@@ -2,7 +2,7 @@ import React from 'react';
 import { ContentType } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { LogOut, X, ExternalLink } from 'lucide-react';
-import { User } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
 
 interface SidebarProps {
   activeSection: ContentType;
@@ -12,7 +12,7 @@ interface SidebarProps {
   isAdmin: boolean;
   onLogin: () => void;
   onLogout: () => void;
-  user: User | null;
+  user: firebase.User | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 

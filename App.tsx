@@ -43,6 +43,7 @@ const MainLayout: React.FC<{
   }
 
   const currentId = sectionId as ContentType;
+  // DB에서 불러온 최신 contentData에서 현재 섹션 데이터를 찾음
   const activeData = findSection(contentData, currentId) || contentData[0];
 
   useEffect(() => {
@@ -82,11 +83,14 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Determine active section for Sidebar highlighting based on URL hash path
-  // With HashRouter, location.pathname is the path after #
-  const currentPath = location.pathname.substring(1).split('/')[0]; 
-  const activeSectionId = Object.values(ContentType).includes(currentPath as ContentType) 
-    ? (currentPath as ContentType) 
+  // [1] HashRouter 호환 섹션 감지 로직
+  // window.location.hash를 직접 파싱하여 현재 섹션을 명확히 식별
+  const hashPath = typeof window !== 'undefined' 
+    ? window.location.hash.replace(/^#\//, '').split('/')[0] 
+    : '';
+
+  const activeSectionId = Object.values(ContentType).includes(hashPath as ContentType) 
+    ? (hashPath as ContentType) 
     : ContentType.WELCOME;
 
   const isAdmin = !!user;
@@ -109,18 +113,16 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. DB Load
+  // 2. DB Load (Initial Seed/Fetch)
   useEffect(() => {
     const loadData = async () => {
       try {
-        const dbData = await seedDB();
-        const mergedData = HANDBOOK_CONTENT.map(localSection => {
-          const dbSection = dbData.find(d => d.id === localSection.id);
-          return dbSection || localSection;
-        });
+        // seedDB now returns the merged data (Local + Firestore)
+        const mergedData = await seedDB();
         setContentData(mergedData);
       } catch (e) {
         console.error("DB Load Error", e);
+        // Fallback to local constant if DB fails
         setContentData(HANDBOOK_CONTENT);
       }
     };
@@ -145,7 +147,7 @@ const App: React.FC = () => {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
     setScrollProgress(0);
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   const handleScroll = () => {
     if (mainContentRef.current) {
@@ -174,11 +176,14 @@ const App: React.FC = () => {
     }
   };
 
+  // [Update & Save Logic]
   const handleUpdateContent = async (id: ContentType, newSubSections: SubSection[]) => {
     if (!isAdmin) {
       alert("편집 권한이 없습니다.");
       return;
     }
+
+    // 1. Update Local State first for immediate feedback
     const updatedContent = contentData.map(section => {
       if (section.id === id) {
         return { ...section, subSections: newSubSections };
@@ -187,15 +192,20 @@ const App: React.FC = () => {
     });
     setContentData(updatedContent);
 
+    // 2. Persist to Firestore
+    // 정확히 해당 ID를 가진 섹션을 찾아서 저장
     const sectionToUpdate = updatedContent.find(s => s.id === id);
     if (sectionToUpdate) {
       try {
         await saveContent(sectionToUpdate);
         setIsDirty(false);
+        console.log(`Saved successfully: ${id}`);
       } catch (e) {
-        console.error("Failed to save", e);
-        alert("저장 실패");
+        console.error("Failed to save to DB:", e);
+        alert("저장에 실패했습니다. 네트워크를 확인해주세요.");
       }
+    } else {
+      console.error("Critical Error: Section to save not found in state", id);
     }
   };
 
@@ -293,7 +303,6 @@ const App: React.FC = () => {
           </Routes>
         </div>
 
-        {/* 챗봇 제거 완료 */}
         <AdminRestoreButton user={user} />
       </main>
     </div>

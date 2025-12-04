@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Check, Copy } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
-import { User } from 'firebase/auth';
 
 // ----------------------------------------------------------------------
 // 1. 스타일 & 유틸리티 (뱃지 색상 등)
@@ -305,15 +303,35 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   const handleAddNew = () => { setEditingItemId(null); setIsModalOpen(true); };
   
   const handleSaveModal = (newData: SubSection) => {
-    let newSubSections = [...safeSubSections];
-    if (editingItemId) newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? newData : sub);
-    else newSubSections.push({ ...newData, uuid: crypto.randomUUID() });
-    onUpdateContent(data.id, newSubSections);
+    // 1. 기존 데이터가 배열인지 확인하고, 아니면 빈 배열로 초기화 (안전장치)
+    const currentList = Array.isArray(data.subSections) ? data.subSections : [];
+    
+    // 2. 복사본 생성
+    let newSubSections = [...currentList];
+
+    // 3. 수정 또는 추가
+    if (editingItemId) {
+      // 수정: ID가 일치하는 항목 교체 (UUID 유지)
+      newSubSections = newSubSections.map(sub => 
+        sub.uuid === editingItemId ? { ...newData, uuid: editingItemId } : sub
+      );
+    } else {
+      // 추가: 배열 끝에 새 항목 추가 (새 UUID 생성)
+      const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+        ? crypto.randomUUID() 
+        : Math.random().toString(36).substring(2);
+      newSubSections.push({ ...newData, uuid: newUuid });
+    }
+
+    // 4. 상위 컴포넌트로 전달 (DB 저장)
+    // IMPORTANT: Call signature must match (SubSection[]) as handled in MainLayout
+    onUpdateContent(newSubSections);
   };
 
   const handleDelete = (uuid: string) => { 
-    if(confirm("삭제?")) {
-      onUpdateContent(data.id, safeSubSections.filter(s => s.uuid !== uuid));
+    if(confirm("삭제하시겠습니까? 복구할 수 없습니다.")) {
+      const newSubSections = safeSubSections.filter(s => s.uuid !== uuid);
+      onUpdateContent(newSubSections);
     }
   };
 
@@ -322,7 +340,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length) return;
     [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
   };
 
   const handleMoveDown = (index: number) => {
@@ -330,7 +348,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length - 1) return;
     [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
   };
 
   // FAQ 뷰

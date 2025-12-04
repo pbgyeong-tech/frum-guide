@@ -20,12 +20,13 @@ interface SearchResultItem {
 
 // Korean particle removal for natural language processing
 const removeKoreanParticles = (text: string) => {
+  if (!text) return "";
   // Removes common particles: 은,는,이,가,을,를,에,게,서,의,도,만,로,으로,하고,한
   return text.replace(/[은는이가을를에게서의도만]|(로)|(으로)|(하고)|(한)/g, "");
 };
 
 const normalize = (text: string) => {
-  return text.toLowerCase().replace(/[\s\p{P}]/gu, "");
+  return (text || "").toLowerCase().replace(/[\s\p{P}]/gu, "");
 };
 
 export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => {
@@ -38,22 +39,27 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
     const index: SearchResultItem[] = [];
 
     const traverse = (sections: SectionData[]) => {
+      // Defensive check: Ensure sections is an array
+      if (!Array.isArray(sections)) return;
+
       sections.forEach(section => {
-        // If section has subsections, add them
-        if (section.subSections && section.subSections.length > 0) {
+        // Defensive check: Ensure subSections is an array before iterating
+        if (Array.isArray(section.subSections)) {
           section.subSections.forEach(sub => {
+            if (!sub) return; // Skip null/undefined items
             index.push({
               sectionId: section.id,
-              sectionTitle: section.title,
-              title: sub.title,
-              content: sub.content,
-              keywords: sub.keywords || [],
+              sectionTitle: section.title || "",
+              title: sub.title || "",
+              content: sub.content || "",
+              keywords: Array.isArray(sub.keywords) ? sub.keywords : [],
               score: 0
             });
           });
         }
-        // Recurse if it has children
-        if (section.children) {
+        
+        // Recurse if it has children and children is an array
+        if (section.children && Array.isArray(section.children)) {
           traverse(section.children);
         }
       });
@@ -83,13 +89,17 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
     // Score Items
     const scoredItems = searchIndex.map(item => {
       let score = 0;
-      const normTitle = normalize(item.title);
-      const contentStr = Array.isArray(item.content) ? item.content.join(" ") : item.content;
-      const normContent = normalize(contentStr);
+      const safeTitle = item.title || "";
+      const normTitle = normalize(safeTitle);
       
+      const contentStr = Array.isArray(item.content) ? item.content.join(" ") : (item.content || "");
+      const normContent = normalize(contentStr as string);
+      
+      const lowerQuery = query.toLowerCase();
+
       // A. Exact Phrase Match (Highest Priority)
-      if (item.title.toLowerCase().includes(query.toLowerCase())) score += 50;
-      if (contentStr.toLowerCase().includes(query.toLowerCase())) score += 20;
+      if (safeTitle.toLowerCase().includes(lowerQuery)) score += 50;
+      if ((contentStr as string).toLowerCase().includes(lowerQuery)) score += 20;
 
       // B. Token & Keyword Matching
       tokens.forEach(token => {

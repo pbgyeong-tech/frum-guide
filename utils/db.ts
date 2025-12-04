@@ -4,11 +4,11 @@ import { HANDBOOK_CONTENT } from '../constants';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 
-const COLLECTION_NAME = 'content';
+const COLLECTION_NAME = 'content'; // "handbook" 대신 기존 컬렉션명 유지하되 로직 강화
 const LOG_COLLECTION_NAME = 'edit_logs';
 
 // Simple UUID generator fallback
-const generateUUID = () => {
+export const generateUUID = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
@@ -74,14 +74,18 @@ const sanitizeForDB = (section: SectionData): any => {
 };
 
 // Firestore에서 불러온 데이터에 로컬 아이콘을 다시 연결
-const restoreFromDB = (data: any): SectionData => {
-  const localSection = findLocalSection(data.id, HANDBOOK_CONTENT);
-  const icon = localSection?.icon || HANDBOOK_CONTENT[0].icon;
+const restoreFromDB = (data: any, originalSection?: SectionData): SectionData => {
+  const icon = originalSection?.icon || HANDBOOK_CONTENT[0].icon;
 
   // 데이터 로드 시에도 UUID가 혹시 없으면 부여 (방어 코드)
   const dataWithUUID = ensureUUID(data);
 
-  const restored: SectionData = { ...dataWithUUID, icon };
+  // 로컬 구조(icon 등)와 DB 데이터를 병합
+  const restored: SectionData = { 
+    ...originalSection, // 로컬 상수(아이콘 등) 우선 적용
+    ...dataWithUUID,    // DB 데이터(내용) 덮어쓰기
+    icon 
+  };
   
   if (restored.children) {
     restored.children = restored.children.map((child: any) => restoreFromDB(child));
@@ -101,29 +105,19 @@ const findLocalSection = (id: string, list: SectionData[]): SectionData | undefi
   return undefined;
 };
 
-// [READ] 모든 콘텐츠 불러오기
-export const getAllContent = async (): Promise<SectionData[]> => {
-  try {
-    const querySnapshot = await db.collection(COLLECTION_NAME).get();
-    const data: SectionData[] = [];
-    querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-      data.push(restoreFromDB(doc.data()));
-    });
-    return data;
-  } catch (error) {
-    console.error("Error getting documents from Firebase: ", error);
-    return [];
-  }
-};
-
 // [UPDATE/CREATE] 특정 섹션의 콘텐츠 저장하기
+// section.id를 Firestore Document ID로 사용하여 명확히 매핑
 export const saveContent = async (content: SectionData): Promise<void> => {
   try {
+    if (!content.id) throw new Error("Section ID is missing");
+
     const dataToSave = sanitizeForDB(content);
-    await db.collection(COLLECTION_NAME).doc(content.id).set(dataToSave);
-    console.log(`Content saved for ${content.id}`);
+    // Use section.id as the Document ID. Merge true to update safely.
+    await db.collection(COLLECTION_NAME).doc(content.id).set(dataToSave, { merge: true });
+    
+    console.log(`[DB] Content saved for document ID: ${content.id}`);
   } catch (error) {
-    console.error("Error saving document to Firebase: ", error);
+    console.error(`[DB] Error saving document ${content.id}: `, error);
     throw error;
   }
 };
@@ -150,65 +144,60 @@ export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
   }
 };
 
+// [INIT] 데이터 로드 및 초기화 (Seed + Fetch)
+// 로컬 상수를 기반으로 DB 데이터를 병합하여 반환
+export const seedDB = async (): Promise<SectionData[]> => {
+  try {
+    // 1. Get all documents from Firestore
+    const querySnapshot = await db.collection(COLLECTION_NAME).get();
+    
+    // 2. Create a Map for O(1) lookup
+    const dbMap = new Map<string, SectionData>();
+    querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
+      // Document ID is the key
+      dbMap.set(doc.id, doc.data() as SectionData);
+    });
+
+    console.log(`[DB] Loaded ${dbMap.size} documents from Firestore.`);
+
+    // 3. Merge Local Constants with DB Data
+    const mergedData = HANDBOOK_CONTENT.map(localSection => {
+      const dbData = dbMap.get(localSection.id);
+      
+      if (dbData) {
+        // If DB has data, use it (restoring icons from local)
+        return restoreFromDB(dbData, localSection);
+      } else {
+        // If DB missing, use local and ensure UUIDs
+        const withUUID = ensureUUID(localSection);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { icon, ...rest } = withUUID;
+        return { ...localSection, ...rest };
+      }
+    });
+
+    return mergedData;
+  } catch (error) {
+    console.error("[DB] Connection Failed or Error:", error);
+    // Fallback to local
+    return HANDBOOK_CONTENT.map(s => ensureUUID(s));
+  }
+};
+
 // [RESET] 초기 데이터로 강제 복구
 export const resetToDefault = async (sectionId: ContentType): Promise<void> => {
   try {
     const originalSection = findLocalSection(sectionId, HANDBOOK_CONTENT);
     if (!originalSection) throw new Error("Original section data not found");
     
-    // Sanitize and ensure UUIDs are fresh or consistent
+    // Sanitize and ensure UUIDs are fresh
     const cleanData = sanitizeForDB(originalSection);
     
-    // Overwrite the document completely
+    // Overwrite the document completely using ID
     await db.collection(COLLECTION_NAME).doc(sectionId).set(cleanData);
     console.log(`Reset completed for ${sectionId}`);
   } catch (error) {
     console.error("Error resetting document:", error);
     throw error;
-  }
-};
-
-// [INIT] 초기 데이터 시딩
-export const seedDB = async (): Promise<SectionData[]> => {
-  try {
-    const querySnapshot = await db.collection(COLLECTION_NAME).get();
-    
-    // Only seed if strictly empty (no documents at all)
-    if (querySnapshot.empty) {
-      console.log("Database empty. Seeding initial data...");
-      const batch = db.batch();
-      
-      for (const section of HANDBOOK_CONTENT) {
-        const docRef = db.collection(COLLECTION_NAME).doc(section.id);
-        const cleanData = sanitizeForDB(section); // UUID injected here
-        batch.set(docRef, cleanData);
-      }
-      
-      await batch.commit();
-      
-      // Return seeded data (with generated UUIDs)
-      return HANDBOOK_CONTENT.map(section => {
-        const withUUID = ensureUUID(section);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { icon, ...rest } = withUUID;
-        return { ...section, ...rest };
-      });
-    } else {
-      // Data exists, return the fetched data directly
-      const data: SectionData[] = [];
-      querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-        data.push(restoreFromDB(doc.data()));
-      });
-      return data;
-    }
-  } catch (error) {
-    console.error("DB Connection Failed (Check Firestore Rules):", error);
-    // Return local content for fallback display only. 
-    return HANDBOOK_CONTENT.map(s => {
-       const withUUID = ensureUUID(s);
-       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-       const { icon, ...rest } = withUUID;
-       return { ...s, ...rest };
-    });
   }
 };
