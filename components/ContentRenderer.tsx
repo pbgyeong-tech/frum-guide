@@ -250,15 +250,16 @@ const renderMarkdownContent = (content: string | string[]) => {
         const nextIsUnordered = /^(\-|•|\*)\s/.test(nextLine);
         let marginBottom = '24px';
         if (isOrdered && nextIsUnordered) marginBottom = '8px'; // 상위-하위 연결 시 좁게
-        if (isUnordered && nextIsUnordered) marginBottom = '8px'; // 하위끼리 좁게
+        // 하위끼리 좁게 (기존 8px -> 4px로 수정)
+        if (isUnordered && nextIsUnordered) marginBottom = '4px';
 
         if (isOrdered) {
              const match = line.match(/^(\d+)\.\s+(.*)/);
              if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            // 들여쓰기 52px 적용
-            elements.push(<div key={i} style={{ display: 'flex', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', marginTop: '6px' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.6, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            // 들여쓰기 52px 적용, lineHeight 1.6 -> 1.5로 수정
+            elements.push(<div key={i} style={{ display: 'flex', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', marginTop: '6px' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
         }
         i++; continue;
     }
@@ -450,14 +451,110 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
           
           return (
              <div key={sub.uuid || index} className={`bento-card ${isFullWidth ? 'full-width' : ''}`}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>{sub.title}</h3>
+               <div style={{ 
+                 display: 'flex', 
+                 justifyContent: 'space-between', 
+                 alignItems: 'flex-start', 
+                 marginBottom: '24px', 
+                 borderBottom: '1px solid rgba(255,255,255,0.15)', 
+                 paddingBottom: '20px' 
+               }}>
+                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>
+                 
+                 {/* -------------------- UPDATED EDIT CONTROLS -------------------- */}
                  {isAdmin && isEditMode && (
-                   <div style={{ display: 'flex', gap: '8px' }}>
-                     <button onClick={() => handleMoveUp(index)} disabled={index === 0} style={{ color: '#666', cursor: index === 0 ? 'default' : 'pointer' }}><ArrowUp size={16} /></button>
-                     <button onClick={() => handleMoveDown(index)} disabled={index === safeSubSections.length - 1} style={{ color: '#666', cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer' }}><ArrowDown size={16} /></button>
-                     <button onClick={() => handleEdit(sub.uuid || '')} style={{ color: '#666' }}><Edit3 size={16} /></button>
-                     <button onClick={() => handleDelete(sub.uuid || '')} style={{ color: '#666' }}><Trash2 size={16} /></button>
+                   <div style={{ display: 'flex', alignItems: 'center' }}>
+                     {/* Move Buttons Group */}
+                     <div style={{ display: 'flex', gap: '4px' }}>
+                       <button
+                         onClick={() => handleMoveUp(index)}
+                         disabled={index === 0}
+                         title="Move Up"
+                         style={{
+                           width: '32px', height: '32px',
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                           background: index === 0 ? 'transparent' : '#1a1a1a',
+                           border: index === 0 ? '1px solid transparent' : '1px solid #333',
+                           borderRadius: '6px',
+                           color: index === 0 ? '#444' : '#ccc',
+                           cursor: index === 0 ? 'default' : 'pointer',
+                           transition: 'all 0.2s'
+                         }}
+                         onMouseEnter={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#666')}
+                         onMouseLeave={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#333')}
+                       >
+                         <ArrowUp size={16} />
+                       </button>
+                       <button
+                         onClick={() => handleMoveDown(index)}
+                         disabled={index === safeSubSections.length - 1}
+                         title="Move Down"
+                         style={{
+                           width: '32px', height: '32px',
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                           background: index === safeSubSections.length - 1 ? 'transparent' : '#1a1a1a',
+                           border: index === safeSubSections.length - 1 ? '1px solid transparent' : '1px solid #333',
+                           borderRadius: '6px',
+                           color: index === safeSubSections.length - 1 ? '#444' : '#ccc',
+                           cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer',
+                           transition: 'all 0.2s'
+                         }}
+                          onMouseEnter={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#666')}
+                          onMouseLeave={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#333')}
+                       >
+                         <ArrowDown size={16} />
+                       </button>
+                     </div>
+
+                     {/* Separator */}
+                     <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
+
+                     {/* Action Buttons Group */}
+                     <div style={{ display: 'flex', gap: '8px' }}>
+                       <button
+                         onClick={() => handleEdit(sub.uuid || '')}
+                         title="Edit"
+                         style={{
+                           width: '32px', height: '32px',
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                           background: '#1a1a1a',
+                           border: '1px solid #333',
+                           borderRadius: '6px',
+                           color: '#fff',
+                           cursor: 'pointer',
+                           transition: 'all 0.2s'
+                         }}
+                         onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                         onMouseLeave={(e) => e.currentTarget.style.background = '#1a1a1a'}
+                       >
+                         <Edit3 size={16} />
+                       </button>
+
+                       <button
+                         onClick={() => handleDelete(sub.uuid || '')}
+                         title="Delete"
+                         style={{
+                           width: '32px', height: '32px',
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                           background: 'rgba(231,0,18,0.1)',
+                           border: '1px solid rgba(231,0,18,0.3)',
+                           borderRadius: '6px',
+                           color: '#ff5555',
+                           cursor: 'pointer',
+                           transition: 'all 0.2s'
+                         }}
+                         onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(231,0,18,0.2)';
+                            e.currentTarget.style.borderColor = '#E70012';
+                         }}
+                         onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(231,0,18,0.1)';
+                            e.currentTarget.style.borderColor = 'rgba(231,0,18,0.3)';
+                         }}
+                       >
+                         <Trash2 size={16} />
+                       </button>
+                     </div>
                    </div>
                  )}
                </div>
