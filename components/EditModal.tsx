@@ -31,12 +31,19 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           ? [...initialData.content] 
           : [initialData.content];
         
-        const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
-        if (disclaimerIdx !== -1) {
-          setDisclaimer(contentArr[disclaimerIdx].replace(/^👉\s*/, ''));
-          contentArr.splice(disclaimerIdx, 1);
-        } else {
-          setDisclaimer('');
+        // 1. Check for explicit disclaimer field first
+        if (initialData.disclaimer) {
+          setDisclaimer(initialData.disclaimer);
+        } 
+        // 2. Legacy fallback: Check for '👉' in content (if data hasn't been migrated yet)
+        else {
+          const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
+          if (disclaimerIdx !== -1) {
+            setDisclaimer(contentArr[disclaimerIdx].replace(/^👉\s*/, ''));
+            contentArr.splice(disclaimerIdx, 1);
+          } else {
+            setDisclaimer('');
+          }
         }
 
         setContent(contentArr.join('\n'));
@@ -70,9 +77,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   const handleSave = () => {
     const contentArray = content.split('\n').filter(line => line.trim() !== '');
     
-    if (disclaimer.trim()) {
-      contentArray.push(`👉 ${disclaimer.trim()}`);
-    }
+    // NOTE: Disclaimer is now saved as a separate field, NOT appended to content with '👉'.
     
     const uuid = initialData?.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
 
@@ -82,6 +87,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
       content: contentArray,
       imagePlaceholder: mediaUrl.trim() || undefined,
       link: link.trim() || undefined,
+      disclaimer: disclaimer.trim() || undefined,
       keywords: title.split(' ') 
     };
 

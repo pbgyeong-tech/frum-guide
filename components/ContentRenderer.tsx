@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
@@ -74,7 +75,7 @@ const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-// 강조 박스 (InfoBlock)
+// 강조 박스 (InfoBlock) - disclaimer 전용
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{
     background: 'linear-gradient(90deg, rgba(231,0,18,0.05) 0%, rgba(20,20,20,0.5) 100%)',
@@ -82,13 +83,15 @@ const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     padding: '16px',
     borderRadius: '0 8px 8px 0',
     marginTop: '20px',
+    marginBottom: '20px',
     fontSize: '0.9rem',
     color: '#ddd',
     display: 'flex',
     gap: '12px',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    whiteSpace: 'pre-wrap' // 줄바꿈 지원
   }}>
-    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0 }} />
+    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
     <div style={{ lineHeight: 1.6, flex: 1 }}>{children}</div>
   </div>
 );
@@ -265,15 +268,28 @@ const renderMarkdownContent = (content: string | string[]) => {
       i++; continue;
     }
 
-    // 7. Disclaimer/Note (>) - 붉은 박스
+    // 7. Blockquote (Markdown >) -> InfoBlock (Red Box)
+    // Content 영역에서 >로 시작하는 문장만 붉은 박스로 변환합니다. (👉는 변환 안 함)
     if (line.startsWith('>')) {
+        const quoteLines: string[] = [];
+        while (i < lines.length && lines[i].trim().startsWith('>')) {
+            // Remove '>' and space
+            quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+            i++;
+        }
         elements.push(
-            <InfoBlock key={i}>{parseInlineMarkdown(line.replace(/^>\s*/, '').trim())}</InfoBlock>
+            <InfoBlock key={`quote-${i}`}>
+                {quoteLines.map((qLine, qIdx) => (
+                    <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>
+                        {parseInlineMarkdown(qLine)}
+                    </div>
+                ))}
+            </InfoBlock>
         );
-        i++; continue;
+        continue;
     }
 
-    // 8. 일반 텍스트
+    // 8. 일반 텍스트 (👉 포함)
     if (line !== '') {
       elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem' }}>{parseInlineMarkdown(line)}</p>);
     }
@@ -401,7 +417,11 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   // 일반 콘텐츠 뷰
   return (
     <div className="animate-enter">
-      <header style={{ marginBottom: '60px', display: 'flex', justifyContent: 'space-between' }}>
+      {/* 
+         수정됨: alignItems: 'flex-start' 추가 
+         이전에는 stretch(기본값) 때문에 텍스트가 길어지면 버튼도 같이 세로로 늘어남
+      */}
+      <header style={{ marginBottom: '60px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
         {isAdmin && (
           <button 
@@ -417,7 +437,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
               color: isEditMode ? '#fff' : '#E70012',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap', // 텍스트 줄바꿈 방지
+              flexShrink: 0 // 찌그러짐 방지
             }}
           >
             <Edit3 size={16} />
@@ -477,9 +499,13 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
               )}
               <div className="card-content">{renderMarkdownContent(Array.isArray(sub.content) ? sub.content.join('\n') : sub.content)}</div>
               
-              {/* Disclaimer (별도 필드용) */}
+              {/* Disclaimer (별도 필드용) - Parse Markdown to support bold/links inside disclaimer */}
               {sub.disclaimer && (
-                <InfoBlock>{sub.disclaimer}</InfoBlock>
+                <InfoBlock>
+                  {sub.disclaimer.split('\n').map((line, i) => (
+                    <div key={i}>{parseInlineMarkdown(line)}</div>
+                  ))}
+                </InfoBlock>
               )}
             </article>
           );

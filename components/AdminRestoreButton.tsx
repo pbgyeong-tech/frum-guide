@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { db } from '../utils/firebase';
 import { saveContent } from '../utils/db';
@@ -57,7 +58,6 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
                 // 생성
                 const snap = log.details.after;
                 const newContent = snap.body_content ? snap.body_content.split('\n') : [];
-                if (snap.disclaimer_note) newContent.push(`👉 ${snap.disclaimer_note}`);
                 
                 section.subSections.push({
                     uuid: generateUUID(),
@@ -65,6 +65,7 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
                     content: newContent,
                     imagePlaceholder: snap.media || undefined,
                     link: snap.external_link || undefined,
+                    disclaimer: snap.disclaimer_note || undefined,
                     keywords: snap.title.split(' ')
                 });
             } else if (log.action === 'update' && log.details.before && log.details.after) {
@@ -75,14 +76,14 @@ export const AdminRestoreButton: React.FC<Props> = ({ user }) => {
                 if (idx !== -1) {
                     const snap = log.details.after;
                     const newContent = snap.body_content ? snap.body_content.split('\n') : [];
-                    if (snap.disclaimer_note) newContent.push(`👉 ${snap.disclaimer_note}`);
                     
                     section.subSections[idx] = {
                         ...section.subSections[idx],
                         title: snap.title,
                         content: newContent,
                         imagePlaceholder: snap.media || undefined,
-                        link: snap.external_link || undefined
+                        link: snap.external_link || undefined,
+                        disclaimer: snap.disclaimer_note || undefined
                         // uuid는 유지하거나 새로 생성해도 무방 (복구 시점 기준)
                     };
                 }

@@ -20,6 +20,7 @@ export interface SubSection {
   codeBlock?: string; // For things like signatures or wifi passwords
   imagePlaceholder?: string;
   link?: string;
+  disclaimer?: string; // Explicit field for the red info box
   keywords?: string[]; // Added for natural language search scoring
   lastEditedBy?: string; // Email of the last editor
   lastEditedAt?: number; // Timestamp of the last edit

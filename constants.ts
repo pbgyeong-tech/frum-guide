@@ -149,10 +149,10 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "3. 서명 항목 텍스트필드에 아래 내용을 복사해 입력해주세요.",
             "[`서명 템플릿 문서 바로가기`](https://docs.google.com/document/d/1nFBXteCI4ZUzkaKYsMgZ5dKH2QgMb-G34xoHjhtgc0g/edit?tab=t.0)",
             "직급/직책, 영문 이름, 휴대폰 번호는 변경하여 입력해주세요.",
-            "👉 **직급별 영문 표기법**\n사원: Associate UX Consultant\n선임: UX Consultant\n책임: Sr. UX Consultant\n수석: Chief UX Consultant",
             "![Signature Example](https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/b5c191d2a7647ce4bcef2bd40dc2d624434bf5776f0ca1e244074aca7c76175c.png)",
             "4. **변경사항 저장** 버튼을 눌러 저장해주세요."
         ],
+        disclaimer: "**직급별 영문 표기법**\n사원: Associate UX Consultant\n선임: UX Consultant\n책임: Sr. UX Consultant\n수석: Chief UX Consultant",
         keywords: ["서명", "이메일", "메일", "sign", "명함", "직급", "영문", "지메일", "gmail"]
       }
     ]
@@ -204,9 +204,9 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "추천한 인재가 입사 후 6개월 이상 근무 시, 추천자에게 아래와 같이 지급합니다.",
             "- 사원·선임: 50만원",
             "- 책임·수석: 70만원",
-            "- 임원: 100만원",
-            "👉 ※ 추천자가 신규 입사자의 입사일 기준 6개월 이내 퇴사 시 지급되지 않습니다."
+            "- 임원: 100만원"
         ],
+        disclaimer: "※ 추천자가 신규 입사자의 입사일 기준 6개월 이내 퇴사 시 지급되지 않습니다.",
         keywords: ["채용", "추천", "인재", "보상금", "리워드", "소개"]
       },
       {
@@ -218,7 +218,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "2. 각 조는 랜덤으로 선정된 조장이 리드",
             "3. 식당·일정 조율",
             "4. 해당 날 카드 수령 → 결제 → 영수증 제출",
-            "👉 법인카드 1매 운영 → 타 조와 일정 중복 주의",
             "[자세히 보기](https://docs.google.com/spreadsheets/d/1UVeggMBHTAObqB-F-3Koenxb8oP-87YD-KPK1yg8si4/edit?gid=1304888920#gid=1304888920)",
             "\n",
             "**2) 해피아워 (Happy Hour)**",
@@ -227,6 +226,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
             "2. 2층 레인보우룸에서 전직원이 함께 참여",
             "3. 간식, 네트워킹, 가벼운 휴식 시간"
         ],
+        disclaimer: "법인카드 1매 운영 → 타 조와 일정 중복 주의",
         keywords: ["회식", "점심", "다이닝", "밥", "식사", "해피아워", "간식", "금요일", "문화", "친목"]
       },
       {
@@ -353,9 +353,9 @@ export const HANDBOOK_CONTENT: SectionData[] = [
           "1. Spendit 앱 실행 > '지출' 탭 선택",
           "2. 카드 사용 내역 선택 (자동 연동됨)",
           "3. 적요(사용 목적) 및 참석자 상세 기입",
-          "4. '제출' 버튼 클릭하여 결재 상신",
-          "👉 영수증 실물은 별도 보관할 필요 없이, 앱 내 사진 첨부로 갈음합니다."
+          "4. '제출' 버튼 클릭하여 결재 상신"
         ],
+        disclaimer: "영수증 실물은 별도 보관할 필요 없이, 앱 내 사진 첨부로 갈음합니다.",
         keywords: ["지출결의", "스펜딧", "Spendit", "영수증", "마감", "결재", "경비"]
       }
     ]
@@ -382,11 +382,11 @@ export const HANDBOOK_CONTENT: SectionData[] = [
       {
         title: "팀단위로 구독하는 모든 프로그램은 아래 계정으로 로그인 가능합니다. (Figma 제외)",
         content: [
-          "👉 해당 계정으로 구독 중인 앱: `midjourney`",
           "- ID: appfrum.test@gmail.com",
           "- PW: 팀원에게 문의"
         ],
         codeBlock: "ID: appfrum.test@gmail.com\nPW: 팀원에게 문의",
+        disclaimer: "해당 계정으로 구독 중인 앱: `midjourney`",
         keywords: ["계정", "아이디", "비밀번호", "구독", "공용", "로그인", "미드저니"]
       }
     ]
