@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy, Hash } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 
@@ -258,8 +258,14 @@ const renderMarkdownContent = (content: string | string[]) => {
              if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            // 들여쓰기 52px 적용, lineHeight 1.6 -> 1.5로 수정
-            elements.push(<div key={i} style={{ display: 'flex', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', marginTop: '6px' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            // 수직 중앙 정렬 개선: alignItems: 'flex-start'와 lineHeight를 텍스트와 맞춤
+            // 상단 여백 제거
+            elements.push(
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}>
+                <span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span>
+                <span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span>
+              </div>
+            );
         }
         i++; continue;
     }
@@ -368,6 +374,36 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     onUpdateContent(newSubSections);
   };
 
+  // Scroll to section function
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    // 메인 스크롤 컨테이너 찾기 (App.tsx의 .main-content 참조)
+    const container = document.querySelector('.main-content');
+
+    if (element && container) {
+      const headerOffset = 80;
+      
+      // 요소의 뷰포트 상대 위치
+      const elementRect = element.getBoundingClientRect();
+      // 컨테이너의 뷰포트 상대 위치
+      const containerRect = container.getBoundingClientRect();
+      
+      // 컨테이너 내부에서의 상대 위치 = 요소 상단 - 컨테이너 상단
+      const relativeTop = elementRect.top - containerRect.top;
+      
+      // 현재 스크롤 위치에서 상대 위치를 더해 목표 스크롤 위치 계산
+      const targetScrollTop = container.scrollTop + relativeTop - headerOffset;
+
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: "smooth"
+      });
+    } else if (element) {
+        // Fallback (컨테이너를 못 찾았을 경우)
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // FAQ 뷰
   if (isFAQ) {
     return (
@@ -444,13 +480,88 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
           </button>
         )}
       </header>
+
+      {/* Anchor Links (TOC) - Sticky/Floating */}
+      {!isWelcome && !isFAQ && safeSubSections.length > 0 && (
+        <>
+          <style>{`
+            .toc-sticky-bar {
+              position: sticky;
+              top: 0;
+              z-index: 40;
+              background: rgba(9, 9, 9, 0.85);
+              backdrop-filter: blur(12px);
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin: -20px -40px 40px -40px; /* Pull up to separate from header, push out to full width */
+              padding: 16px 40px;
+              overflow-x: auto;
+              white-space: nowrap;
+              -ms-overflow-style: none; /* IE and Edge */
+              scrollbar-width: none; /* Firefox */
+            }
+            .toc-sticky-bar::-webkit-scrollbar {
+              display: none;
+            }
+            .toc-sticky-bar button {
+              flex-shrink: 0;
+            }
+            /* Mobile adjustment */
+            @media (max-width: 768px) {
+              .toc-sticky-bar {
+                top: 70px; /* Height of mobile header approx */
+                margin: -10px -20px 30px -20px;
+                padding: 12px 20px;
+              }
+            }
+          `}</style>
+          <div className="toc-sticky-bar">
+            {safeSubSections.map((sub, idx) => (
+              <button
+                key={`toc-${idx}`}
+                onClick={() => scrollToSection(sub.uuid || `section-${idx}`)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#ccc',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontWeight: 500
+                }}
+                onMouseEnter={(e) => {
+                   e.currentTarget.style.borderColor = '#E70012';
+                   e.currentTarget.style.color = '#fff';
+                   e.currentTarget.style.background = 'rgba(231,0,18,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                   e.currentTarget.style.color = '#ccc';
+                   e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                }}
+              >
+                {sub.title}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
           // Heuristic for full width based on content length or explicit layout
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
           return (
-             <div key={sub.uuid || index} className={`bento-card ${isFullWidth ? 'full-width' : ''}`}>
+             <div 
+                key={sub.uuid || index} 
+                id={sub.uuid || `section-${index}`}
+                className={`bento-card ${isFullWidth ? 'full-width' : ''}`}
+             >
                <div style={{ 
                  display: 'flex', 
                  justifyContent: 'space-between', 
