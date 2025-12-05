@@ -20,7 +20,7 @@ if (!firebase.apps.length) {
 }
 
 const app = firebase.app();
-let analytics;
+let analytics: firebase.analytics.Analytics | null = null;
 if (typeof window !== 'undefined') {
   analytics = firebase.analytics();
 }
@@ -52,46 +52,38 @@ export const logout = async () => {
   }
 };
 
-// Helper to track menu clicks
-export const trackMenuClick = (menuName: string) => {
+// Generic Event Tracker
+export const trackEvent = (eventName: string, params?: { [key: string]: any }) => {
   try {
     if (analytics) {
-      analytics.logEvent('select_content', {
-        content_type: 'menu',
-        item_id: menuName
-      });
+      analytics.logEvent(eventName, params);
+      console.log(`[Analytics] ${eventName}:`, params);
     }
-    console.log(`[Analytics] Tracked click: ${menuName}`);
   } catch (e) {
-    console.warn("[Analytics] Failed to log event", e);
+    console.warn("[Analytics] Error logging event:", e);
   }
+};
+
+// Helper to track menu clicks (Legacy wrapper, mapped to generic if needed, but kept for compatibility)
+export const trackMenuClick = (menuName: string) => {
+  trackEvent('select_content', {
+    content_type: 'menu',
+    item_id: menuName
+  });
 };
 
 // Helper to track screen views (SPA Page Views)
 export const trackScreenView = (screenName: string, screenClass: string) => {
-  try {
-    if (analytics) {
-      analytics.logEvent('screen_view', {
-        firebase_screen: screenName,
-        firebase_screen_class: screenClass
-      });
-    }
-  } catch (e) {
-    console.warn("[Analytics] Failed to log screen_view", e);
-  }
+  trackEvent('screen_view', {
+    firebase_screen: screenName,
+    firebase_screen_class: screenClass
+  });
 };
 
 // Helper to track anchor (hash) views
 export const trackAnchorView = (pageId: string, anchorId: string) => {
-  try {
-    if (analytics) {
-      analytics.logEvent('view_content_anchor', {
-        page: pageId,
-        anchor_id: anchorId
-      });
-      console.log(`[Analytics] Tracked Anchor: ${pageId}#${anchorId}`);
-    }
-  } catch (e) {
-    console.warn("[Analytics] Failed to log anchor view", e);
-  }
+  trackEvent('view_content_anchor', {
+    page: pageId,
+    anchor_id: anchorId
+  });
 };

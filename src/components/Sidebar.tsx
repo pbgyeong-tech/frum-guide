@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { ContentType } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { LogOut, X, ExternalLink } from 'lucide-react';
 import firebase from 'firebase/compat/app';
+import { trackEvent } from '../utils/firebase';
 
 interface SidebarProps {
   activeSection: ContentType;
@@ -45,7 +47,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             src="https://www.frum.co.kr/images/frum-logo-white.svg" 
             alt="FRUM" 
             style={{ height: '24px', cursor: 'pointer' }}
-            onClick={() => { setActiveSection(ContentType.WELCOME); setIsMobileOpen(false); }}
+            onClick={() => { 
+              trackEvent('click_menu', { menu_name: 'Logo', menu_id: 'logo' });
+              setActiveSection(ContentType.WELCOME); 
+              setIsMobileOpen(false); 
+            }}
           />
         </div>
 
@@ -58,7 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={section.id}
                 className={`nav-button ${isActive ? 'active' : ''}`}
-                onClick={() => { setActiveSection(section.id); setIsMobileOpen(false); }}
+                onClick={() => { 
+                  trackEvent('click_menu', { menu_name: section.title, menu_id: section.id });
+                  setActiveSection(section.id); 
+                  setIsMobileOpen(false); 
+                }}
               >
                 <Icon size={18} />
                 {section.title}
@@ -74,6 +84,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             rel="noreferrer"
             className="nav-button"
             style={{ textDecoration: 'none' }}
+            onClick={() => {
+              trackEvent('click_outbound', { 
+                link_name: 'Lunch Solution Center', 
+                link_url: 'https://lunch-solution-center.vercel.app/',
+                location: 'sidebar' 
+              });
+            }}
           >
             <ExternalLink size={18} />
             Lunch Solution Center
@@ -90,7 +107,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <button 
               className="nav-button"
-              onClick={onLogin} 
+              onClick={() => {
+                trackEvent('click_login', { method: 'google_popup' });
+                onLogin();
+              }} 
               style={{ color: '#666' }}
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#666' }}></div> Admin Login

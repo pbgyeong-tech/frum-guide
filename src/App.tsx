@@ -8,6 +8,7 @@ import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
 import { auth, loginWithGoogle, logout, trackScreenView, trackMenuClick } from './utils/firebase';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
+import { SEO } from './components/SEO'; // SEO 컴포넌트 임포트
 import firebase from 'firebase/compat/app';
 
 // Helper: Find Data recursively
@@ -48,7 +49,8 @@ const MainLayout: React.FC<{
 
   useEffect(() => {
     if (activeData) {
-      document.title = `${activeData.title} | FRUM Onboarding`;
+      // document.title 설정 로직은 이제 SEO 컴포넌트가 담당하므로 제거하거나 중복 사용 가능
+      // SEO 컴포넌트가 더 우선순위를 가집니다.
       trackScreenView(activeData.title, currentId);
     }
   }, [activeData, currentId]);
@@ -57,17 +59,29 @@ const MainLayout: React.FC<{
     onUpdateContent(currentId, newSubSections);
   };
 
+  // 현재 URL 생성 (HashRouter 고려)
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
   return (
-    <ContentRenderer
-      key={currentId}
-      data={activeData}
-      allContent={contentData}
-      onNavigate={onNavigate}
-      onUpdateContent={handleContentUpdate}
-      setIsDirty={setIsDirty}
-      isAdmin={isAdmin}
-      user={user}
-    />
+    <>
+      <SEO 
+        title={activeData.title}
+        description={activeData.description || `${activeData.title}에 대한 상세 가이드입니다.`}
+        // 대표 이미지가 heroImage로 있다면 사용, 없으면 기본값 사용
+        image={activeData.heroImage}
+        url={currentUrl}
+      />
+      <ContentRenderer
+        key={currentId}
+        data={activeData}
+        allContent={contentData}
+        onNavigate={onNavigate}
+        onUpdateContent={handleContentUpdate}
+        setIsDirty={setIsDirty}
+        isAdmin={isAdmin}
+        user={user}
+      />
+    </>
   );
 };
 

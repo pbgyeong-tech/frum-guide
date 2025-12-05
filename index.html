@@ -4,36 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FRUM Onboarding</title>
-    
-    <!-- 파비콘: 반드시 상대 경로(./) 사용 -->
-    <link rel="icon" type="image/png" href="./favicon.png" />
-    
-    <!-- 폰트 설정 -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
-
-    <script type="importmap">
+    <style>
+      :root { --bg-main: #000000; --text-primary: #ffffff; --accent-color: #E70012; --font-main: 'Pretendard', sans-serif; }
+      body { margin: 0; background-color: var(--bg-main); color: var(--text-primary); font-family: var(--font-main); }
+    </style>
+  <script type="importmap">
 {
   "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
     "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1",
     "vite": "https://aistudiocdn.com/vite@^7.2.6",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react-helmet-async": "https://aistudiocdn.com/react-helmet-async@^2.0.5"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
-    
-    <!-- 핵심 수정: importmap 제거하고, 로컬 파일 참조 -->
-    <script type="module" src="./index.tsx"></script>
+    <!-- ▼▼▼ 핵심: src 폴더 안의 파일을 바라보도록 경로 수정 ▼▼▼ -->
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
