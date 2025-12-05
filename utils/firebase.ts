@@ -1,3 +1,4 @@
+
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
@@ -77,5 +78,20 @@ export const trackScreenView = (screenName: string, screenClass: string) => {
     }
   } catch (e) {
     console.warn("[Analytics] Failed to log screen_view", e);
+  }
+};
+
+// Helper to track anchor (hash) views
+export const trackAnchorView = (pageId: string, anchorId: string) => {
+  try {
+    if (analytics) {
+      analytics.logEvent('view_content_anchor', {
+        page: pageId,
+        anchor_id: anchorId
+      });
+      console.log(`[Analytics] Tracked Anchor: ${pageId}#${anchorId}`);
+    }
+  } catch (e) {
+    console.warn("[Analytics] Failed to log anchor view", e);
   }
 };

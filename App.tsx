@@ -85,8 +85,10 @@ const App: React.FC = () => {
 
   // [1] HashRouter 호환 섹션 감지 로직
   // window.location.hash를 직접 파싱하여 현재 섹션을 명확히 식별
+  // 기존 split('/')[0] 방식은 #이 포함된 경우(예: company#wifi)를 처리하지 못하므로,
+  // [?#] 정규식으로 해시나 쿼리스트링 시작 전까지만 잘라냅니다.
   const hashPath = typeof window !== 'undefined' 
-    ? window.location.hash.replace(/^#\//, '').split('/')[0] 
+    ? window.location.hash.replace(/^#\//, '').split(/[?#]/)[0] 
     : '';
 
   const activeSectionId = Object.values(ContentType).includes(hashPath as ContentType) 
@@ -143,11 +145,13 @@ const App: React.FC = () => {
 
   // 4. Scroll Reset on Navigation
   useEffect(() => {
+    // 앵커 링크(#) 이동 시에는 스크롤을 최상단으로 리셋하지 않도록,
+    // location.hash가 아닌 location.pathname(섹션 변경)만 감지합니다.
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
     setScrollProgress(0);
-  }, [location.pathname, location.hash]);
+  }, [location.pathname]);
 
   const handleScroll = () => {
     if (mainContentRef.current) {

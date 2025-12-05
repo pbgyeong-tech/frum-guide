@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy, Hash } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
+import { trackAnchorView } from '../utils/firebase';
 
 // ----------------------------------------------------------------------
 // 1. 스타일 & 유틸리티 (뱃지 색상 등)
@@ -317,6 +319,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
 
   // [Defensive Coding] subSections가 배열이 아닌 경우 빈 배열로 대체
@@ -375,7 +380,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   };
 
   // Scroll to section function
-  const scrollToSection = (id: string) => {
+  const executeScroll = (id: string) => {
     const element = document.getElementById(id);
     // 메인 스크롤 컨테이너 찾기 (App.tsx의 .main-content 참조)
     const container = document.querySelector('.main-content');
@@ -402,6 +407,26 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         // Fallback (컨테이너를 못 찾았을 경우)
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  // Effect: Deep Link Scroll & Analytics Logic
+  // URL 해시가 변경될 때마다 해당 섹션으로 스크롤 이동 및 로그 전송
+  useEffect(() => {
+    if (location.hash) {
+      // # 제거
+      const id = location.hash.replace('#', '');
+      
+      // 1. Scroll Logic
+      setTimeout(() => executeScroll(id), 100);
+
+      // 2. Analytics Tracking (view_content_anchor)
+      trackAnchorView(data.id, id);
+    }
+  }, [location.hash, data.id]);
+
+  const handleTocClick = (id: string) => {
+    // navigate를 사용해 URL의 해시를 변경 (Deep Linking)
+    navigate(`#${id}`);
   };
 
   // FAQ 뷰
@@ -518,48 +543,72 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             }
           `}</style>
           <div className="toc-sticky-bar">
-            {safeSubSections.map((sub, idx) => (
+            {safeSubSections.map((sub, idx) => {
+              // Priority: slug > uuid > fallback index
+              const sectionId = sub.slug || sub.uuid || `section-${idx}`;
+              // URL 해시와 현재 섹션 ID가 일치하는지 확인
+              const isActive = location.hash === `#${sectionId}`;
+              
+              return (
               <button
                 key={`toc-${idx}`}
-                onClick={() => scrollToSection(sub.uuid || `section-${idx}`)}
+                onClick={() => handleTocClick(sectionId)}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '20px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#ccc',
+                  // Active 상태일 때 스타일 적용
+                  ...(isActive ? {
+                      borderColor: '#E70012',
+                      color: '#fff',
+                      background: 'rgba(231,0,18,0.1)'
+                  } : {
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      color: '#ccc',
+                      background: 'rgba(255,255,255,0.05)'
+                  }),
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
                   fontSize: '0.85rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   fontWeight: 500
                 }}
                 onMouseEnter={(e) => {
-                   e.currentTarget.style.borderColor = '#E70012';
-                   e.currentTarget.style.color = '#fff';
-                   e.currentTarget.style.background = 'rgba(231,0,18,0.1)';
+                   // Active가 아닐 때만 호버 효과 적용
+                   if (!isActive) {
+                       e.currentTarget.style.borderColor = '#E70012';
+                       e.currentTarget.style.color = '#fff';
+                       e.currentTarget.style.background = 'rgba(231,0,18,0.1)';
+                   }
                 }}
                 onMouseLeave={(e) => {
-                   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                   e.currentTarget.style.color = '#ccc';
-                   e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                   // Active가 아닐 때만 원래 스타일로 복구
+                   if (!isActive) {
+                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                       e.currentTarget.style.color = '#ccc';
+                       e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                   }
                 }}
               >
                 {sub.title}
               </button>
-            ))}
+            );
+            })}
           </div>
         </>
       )}
 
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
+          // Priority: slug > uuid > fallback index
+          const sectionId = sub.slug || sub.uuid || `section-${index}`;
           // Heuristic for full width based on content length or explicit layout
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
           return (
              <div 
                 key={sub.uuid || index} 
-                id={sub.uuid || `section-${index}`}
+                id={sectionId}
                 className={`bento-card ${isFullWidth ? 'full-width' : ''}`}
              >
                <div style={{ 
@@ -570,7 +619,12 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                  borderBottom: '1px solid rgba(255,255,255,0.15)', 
                  paddingBottom: '20px' 
                }}>
-                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>
+                    {isAdmin && isEditMode && sub.slug && (
+                        <span style={{ fontSize: '0.75rem', color: '#666', fontFamily: 'monospace' }}>#{sub.slug}</span>
+                    )}
+                 </div>
                  
                  {/* -------------------- UPDATED EDIT CONTROLS -------------------- */}
                  {isAdmin && isEditMode && (

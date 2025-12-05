@@ -15,6 +15,7 @@ export enum ContentType {
 
 export interface SubSection {
   uuid?: string; // Unique ID for deletion/editing stability
+  slug?: string; // URL Anchor ID (e.g., 'wifi-setup')
   title: string;
   content: string | string[]; // Can be a paragraph or a list
   codeBlock?: string; // For things like signatures or wifi passwords
