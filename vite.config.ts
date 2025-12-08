@@ -3,14 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  // base: './',  <-- 이 줄은 삭제했습니다. (Vercel 배포 시 기본값 '/' 권장)
   server: {
     host: true,
     port: 5173,
-    strictPort: true,
-    cors: false, // 보안 검사 끄기
-    hmr: {
-      clientPort: 443 // 클라우드 환경에서 HMR 연결 문제 해결
-    }
   }
 });
