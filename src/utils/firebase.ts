@@ -24,6 +24,11 @@ if (typeof window !== 'undefined') {
   analytics = firebase.analytics();
 }
 
+console.log(
+  '[FirebaseConfig] projectId =',
+  (firebase.app().options as any).projectId
+);
+
 export const db = firebase.firestore();
 export const auth = firebase.auth();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
@@ -109,4 +114,5 @@ export const trackAnchorView = (pageId: string, anchorId: string) => {
     page: pageId,
     anchor_id: anchorId
   });
+  
 };
