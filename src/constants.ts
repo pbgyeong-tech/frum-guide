@@ -33,7 +33,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.COMPANY,
-    title: "회사 & 조직",
+    title: "회사 소개",
     icon: Building2,
     description: "프럼의 비즈니스 영역과 사무실 안내",
     subSections: [
@@ -110,7 +110,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.IT_SETUP,
-    title: "업무 시작 세팅",
+    title: "업무 시작 가이드",
     icon: Wifi,
     description: "무선네트워크 연결과 이메일 설정",
     subSections: [
@@ -158,7 +158,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.WELFARE,
-    title: "복지 소개",
+    title: "복지 & 혜택",
     icon: Coffee,
     description: "프럼의 복리후생 제도 및 조직 문화 안내",
     subSections: [
@@ -254,8 +254,59 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     ]
   },
   {
+    id: ContentType.CULTURE,
+    title: "일하는 문화",
+    icon: Users,
+    description: "프럼의 조직 문화 프로그램",
+    subSections: [
+      {
+        title: "4. 조직 문화 프로그램",
+        content: [
+            "**1) 프럼 다이닝 (Froom Dining)**",
+            "2개월마다 랜덤으로 1인당 최대 10만원의 팀 식사비를 지원합니다.",
+            "1. 2개월마다 새로운 조 편성",
+            "2. 각 조는 랜덤으로 선정된 조장이 리드",
+            "3. 식당·일정 조율",
+            "4. 해당 날 카드 수령 → 결제 → 영수증 제출",
+            "[자세히 보기](https://docs.google.com/spreadsheets/d/1UVeggMBHTAObqB-F-3Koenxb8oP-87YD-KPK1yg8si4/edit?gid=1304888920#gid=1304888920)",
+            "\n",
+            "**2) 해피아워 (Happy Hour)**",
+            "격주 금요일 오후 진행되는 사내 리프레시 프로그램입니다.",
+            "1. 사원·선임 주도 준비",
+            "2. 2층 레인보우룸에서 전직원이 함께 참여",
+            "3. 간식, 네트워킹, 가벼운 휴식 시간"
+        ],
+        disclaimer: "법인카드 1매 운영 → 타 조와 일정 중복 주의",
+        keywords: ["회식", "점심", "다이닝", "밥", "식사", "해피아워", "간식", "금요일", "문화", "친목"]
+      },
+      {
+        title: "5. 근무 지원 제도",
+        content: [
+            "**야근 식대 & 택시비 지원**",
+            "야근 식대: 1인 15,000원",
+            "택시비: 오후 11시 이후 퇴근 시 거리 제한 없이 지원",
+            "\n",
+            "**청구 방법 (Spendit 앱 사용)**",
+            "1. Spendit 가입 → 앱 다운로드",
+            "2. 매달 말일에 1개월분 청구",
+            "3. Spendit · 지출 > 셀프 > 금액·상호·날짜 등 입력 후 저장",
+            "4. 영수증 또는 카드 승인내역 화면 첨부",
+            "5. 폴리시는 오한샘 수석에게 요청",
+            "6. 보고서 생성 후 제출 (보고서명 예시: 폴리시명-YYYYMMDD-이름)",
+            "\n",
+            "**관련 가이드**",
+            "[`지출 등록 방법(카드 승인 내역)`](https://help.spendit.kr/hc/ko)",
+            "[`지출 등록 방법(셀프 등록)`](https://help.spendit.kr/hc/ko)",
+            "[`참석자 등록 방법`](https://help.spendit.kr/hc/ko)",
+            "[`보고서 작성 및 제출`](https://help.spendit.kr/hc/ko)"
+        ],
+        keywords: ["야근", "식대", "저녁", "택시", "교통비", "스펜딧", "spendit", "영수증", "청구", "지출", "법인카드", "비용"]
+      }
+    ]
+  },
+  {
     id: ContentType.COMMUTE,
-    title: "업무 및 휴게시간",
+    title: "근무 제도",
     icon: Clock,
     description: "근무 시간 및 사무실 이용 가이드",
     subSections: [
@@ -320,7 +371,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.EXPENSE,
-    title: "비용",
+    title: "비용 처리 안내",
     icon: CreditCard,
     description: "경비 처리 및 법인카드 사용 가이드",
     subSections: [
@@ -361,7 +412,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.TOOLS,
-    title: "업무를 도와주는 툴",
+    title: "업무 도구",
     icon: Laptop,
     description: "업무에 도움이 되는 앱 다운로드",
     subSections: [
@@ -392,7 +443,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
   },
   {
     id: ContentType.OFFICE_GUIDE,
-    title: "기타",
+    title: "기타 안내",
     icon: KeyRound,
     description: "기타 업무 매뉴얼",
     subSections: [
