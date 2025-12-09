@@ -136,9 +136,30 @@ export const deleteDocument = async (id: string): Promise<void> => {
 // [LOG] 편집 로그 저장
 export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
   try {
-    const cleanLog = removeUndefined(log);
+    // 1. 읽기 쉬운 날짜 포맷 생성 (한국 시간)
+    const readableDate = new Date(log.timestamp).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    // 2. 기존 로그 데이터에 날짜 필드 추가
+    const logWithDate = {
+      ...log,
+      formatted_date: readableDate // 예: "2024. 12. 09. 14:30:00"
+    };
+
+    // 3. undefined 값 제거 (기존 로직 유지)
+    const cleanLog = removeUndefined(logWithDate);
+
+    // 4. 저장
     await db.collection(LOG_COLLECTION_NAME).add(cleanLog);
-    console.log("Edit log saved");
+    console.log("Edit log saved:", readableDate);
   } catch (e) {
     console.error("Failed to add edit log", e);
   }
