@@ -267,6 +267,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         
         // Fix: Map SubSection to ContentSnapshot shape for logging
         const snapshot = {
+            slug: newData.slug || '',
             title: newData.title,
             body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content,
             media: newData.imagePlaceholder || '',
@@ -299,6 +300,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     if (user && user.email && targetItem) {
         // Fix: Map SubSection to ContentSnapshot shape for logging
         const snapshot = {
+           slug: targetItem.slug || '',
            title: targetItem.title,
            body_content: Array.isArray(targetItem.content) ? targetItem.content.join('\n') : targetItem.content,
            media: targetItem.imagePlaceholder || '',

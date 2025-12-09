@@ -46,6 +46,7 @@ export interface ChatMessage {
 }
 
 export interface ContentSnapshot {
+  slug?: string; // ✨ [추가됨] URL ID (Slug) 필드 추가
   title: string;
   body_content: string;
   media: string;
