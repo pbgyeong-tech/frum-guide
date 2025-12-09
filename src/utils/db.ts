@@ -132,9 +132,18 @@ export const addEditLog = async (log: Omit<EditLog, 'id'>) => {
       formatted_date: readableDate
     };
 
+    // 1. undefined 값 제거 (기본 JS 객체만 처리)
     const cleanLog = removeUndefined(logWithDate);
-    await db.collection(LOG_COLLECTION_NAME).add(cleanLog);
-    console.log("✅ Edit log saved successfully:", readableDate);
+
+    // 2. 서버 타임스탬프 추가 (removeUndefined 이후에 추가하여 객체 깨짐 방지)
+    // Firestore의 serverTimestamp()는 특수 객체(Sentinel)라 가공하면 안 됩니다.
+    cleanLog.server_timestamp = firebase.firestore.FieldValue.serverTimestamp();
+
+    // 3. 저장 및 Document Reference 획득
+    const docRef = await db.collection(LOG_COLLECTION_NAME).add(cleanLog);
+    
+    // 4. 생성된 문서 ID를 콘솔에 출력 (디버깅용)
+    console.log(`✅ Edit log saved successfully! Doc ID: ${docRef.id}, Time: ${readableDate}`);
 
   } catch (e) {
     console.error("❌ Failed to add edit log", e);
