@@ -38,7 +38,7 @@ export interface SectionData {
   children?: SectionData[];
 }
 
-// ✨ [복구됨] 이 부분이 없어서 빌드 에러가 났었습니다!
+// ✨ [중요] 이 부분이 없어서 Vercel이 에러를 내는 겁니다! 꼭 있어야 해요!
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -61,7 +61,7 @@ export interface EditLog {
   sectionId: string;
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
-  formatted_date?: string; // ✨ 날짜 포맷 필드
+  formatted_date?: string; 
   details: {
     before?: ContentSnapshot;
     after?: ContentSnapshot;
