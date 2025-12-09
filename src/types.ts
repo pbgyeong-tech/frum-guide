@@ -14,17 +14,17 @@ export enum ContentType {
 }
 
 export interface SubSection {
-  uuid?: string; // Unique ID for deletion/editing stability
-  slug?: string; // URL Anchor ID (e.g., 'wifi-setup')
+  uuid?: string;
+  slug?: string;
   title: string;
-  content: string | string[]; // Can be a paragraph or a list
-  codeBlock?: string; // For things like signatures or wifi passwords
+  content: string | string[];
+  codeBlock?: string;
   imagePlaceholder?: string;
   link?: string;
-  disclaimer?: string; // Explicit field for the red info box
-  keywords?: string[]; // Added for natural language search scoring
-  lastEditedBy?: string; // Email of the last editor
-  lastEditedAt?: number; // Timestamp of the last edit
+  disclaimer?: string;
+  keywords?: string[];
+  lastEditedBy?: string;
+  lastEditedAt?: number;
 }
 
 export interface SectionData {
@@ -38,15 +38,8 @@ export interface SectionData {
   children?: SectionData[];
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  text: string;
-  timestamp: number;
-}
-
 export interface ContentSnapshot {
-  slug?: string; // ✨ [추가됨] URL ID (Slug) 필드 추가
+  slug: string; // ✨ 필수 항목으로 변경 (값이 없으면 빈 문자열이라도 넣음)
   title: string;
   body_content: string;
   media: string;
@@ -60,6 +53,7 @@ export interface EditLog {
   sectionId: string;
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
+  formatted_date?: string; // ✨ 날짜 필드 명시
   details: {
     before?: ContentSnapshot;
     after?: ContentSnapshot;

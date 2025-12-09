@@ -8,6 +8,7 @@ import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { trackAnchorView, trackEvent } from '../utils/firebase';
 import { addEditLog } from '../utils/db';
+import firebase from 'firebase/compat/app';
 
 // --- Badge Style Logic ---
 const BADGE_PALETTE = [
@@ -99,6 +100,7 @@ const parseInlineMarkdown = (text: string) => {
   );
 };
 
+// ✨ [아까 누락되었던 TableBlock 다시 포함]
 const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const rows = text.trim().split('\n').filter(r => r.trim() !== '');
   const headerRow = rows[0];
@@ -163,6 +165,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+// ✨ [아까 누락되었던 renderMarkdownContent 함수 다시 포함]
 const renderMarkdownContent = (content: string | string[]) => {
   const lines = Array.isArray(content) ? content : content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -228,7 +231,7 @@ const renderMarkdownContent = (content: string | string[]) => {
 };
 
 // ----------------------------------------------------------------------
-// 4. 메인 컴포넌트 렌더러 (무한 루프 방지: ScrollSpy 로직 제거 버전)
+// 4. 메인 컴포넌트 렌더러
 // ----------------------------------------------------------------------
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
   const isWelcome = data.id === ContentType.WELCOME;
@@ -257,17 +260,23 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   
   const handleDeleteTrigger = (uuid: string) => { setDeleteTargetId(uuid); setDeleteModalOpen(true); };
 
-  const handleSaveModal = (newData: SubSection) => {
-    // ... (저장 로직 유지)
+  const handleSaveModal = async (newData: SubSection) => {
+    // 🛡️ 로그인 체크 (로그인이 안 되어 있으면 저장 차단)
+    if (!user || !user.email) {
+        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+        return;
+    }
+
     const currentList = Array.isArray(data.subSections) ? data.subSections : [];
     let newSubSections = [...currentList];
-    if (user && user.email) {
-        newData.lastEditedBy = user.email;
-        newData.lastEditedAt = Date.now();
-        
-        // Fix: Map SubSection to ContentSnapshot shape for logging
+
+    // 로그 생성 시도
+    if (user) {
+        console.log("Creating edit log..."); 
+        const userEmail = user.email || 'unknown_user';
+
         const snapshot = {
-            slug: newData.slug || '',
+            slug: newData.slug || '', 
             title: newData.title,
             body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content,
             media: newData.imagePlaceholder || '',
@@ -275,15 +284,19 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             disclaimer_note: newData.disclaimer || ''
         };
 
-        addEditLog({ 
+        await addEditLog({ 
             timestamp: Date.now(), 
-            userEmail: user.email, 
+            userEmail: userEmail, 
             sectionId: data.id, 
             subSectionTitle: newData.title, 
             action: editingItemId ? 'update' : 'create', 
             details: { after: snapshot } 
         });
     }
+
+    newData.lastEditedBy = user?.email || 'admin';
+    newData.lastEditedAt = Date.now();
+
     if (editingItemId) {
       newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? { ...newData, uuid: editingItemId } : sub);
     } else {
@@ -294,11 +307,11 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   };
 
   const executeDelete = async () => {
-    // ... (삭제 로직 유지)
     if (!deleteTargetId) return;
     const targetItem = safeSubSections.find(s => s.uuid === deleteTargetId);
-    if (user && user.email && targetItem) {
-        // Fix: Map SubSection to ContentSnapshot shape for logging
+    
+    if (user && targetItem) {
+        const userEmail = user.email || 'unknown_user';
         const snapshot = {
            slug: targetItem.slug || '',
            title: targetItem.title,
@@ -308,15 +321,16 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
            disclaimer_note: targetItem.disclaimer || ''
         };
 
-        addEditLog({ 
+        await addEditLog({ 
             timestamp: Date.now(), 
-            userEmail: user.email, 
+            userEmail: userEmail, 
             sectionId: data.id, 
             subSectionTitle: targetItem.title, 
             action: 'delete', 
             details: { after: snapshot } 
         });
     }
+
     const newSubSections = safeSubSections.filter(s => s.uuid !== deleteTargetId);
     onUpdateContent(newSubSections);
     setDeleteTargetId(null);
@@ -354,7 +368,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
   };
 
-  // Effect 1: URL Hash 변경 시 (클릭에 의한 이동) 처리
   useEffect(() => {
     if (location.hash) {
       const id = location.hash.replace('#', '');
@@ -365,8 +378,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
   }, [location.hash, data.id]);
 
-  // Effect 2: 스크롤 스파이 & URL 자동 업데이트
-  // (기존 코드를 지우고 이 코드로 덮어씌우세요)
   useEffect(() => {
     const container = document.querySelector('.main-content');
     if (!container) return;
@@ -384,7 +395,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
               const rect = element.getBoundingClientRect();
               const containerRect = container.getBoundingClientRect();
               const relativeTop = rect.top - containerRect.top;
-              // 헤더 오프셋보다 조금 더 아래(10px)까지 여유를 둠
               if (relativeTop < headerOffset + 10) {
                   newActiveId = id;
               }
@@ -392,16 +402,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       });
 
       if (newActiveId && newActiveId !== activeSectionIdRef.current) {
-        // 1. 상태 업데이트 (UI 메뉴 하이라이트용)
         setActiveSectionId(newActiveId);
         activeSectionIdRef.current = newActiveId;
-        
-        // 2. URL 업데이트 (브라우저 주소창 변경)
-        // history.pushState 대신 replaceState를 써야 '뒤로가기'가 꼬이지 않습니다.
-        // 형식 예시: #/it_setup#wifi-setup
         const targetHash = `#/${data.id}#${newActiveId}`;
-        
-        // 현재 주소와 다를 때만 변경 (무한 루프 방지)
         if (window.location.hash !== targetHash) {
             window.history.replaceState(null, '', targetHash);
         }
@@ -413,7 +416,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             timeoutId = setTimeout(() => {
                 handleScroll();
                 timeoutId = null;
-            }, 100); // 0.1초마다 체크 (성능 최적화)
+            }, 100);
         }
     }
 
@@ -427,15 +430,11 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   const handleTocClick = (id: string) => {
     setActiveSectionId(id);
     activeSectionIdRef.current = id;
-    
     trackEvent('click_toc', { anchor_id: id, section: data.title });
-    
-    // 클릭했을 때만 URL 변경 (안전함)
     navigate(`#${id}`);
     executeScroll(id);
   };
 
-  // ... (이후 렌더링 코드는 동일) ...
   if (isFAQ) {
     return (
       <div className="animate-enter">
@@ -491,7 +490,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
-          // ... (기존 렌더링 로직 유지: bento-card, 버튼들 등)
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
