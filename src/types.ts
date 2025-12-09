@@ -38,8 +38,16 @@ export interface SectionData {
   children?: SectionData[];
 }
 
+// ✨ [복구됨] 이 부분이 없어서 빌드 에러가 났었습니다!
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: number;
+}
+
 export interface ContentSnapshot {
-  slug: string; // ✨ 필수 항목으로 변경 (값이 없으면 빈 문자열이라도 넣음)
+  slug: string; 
   title: string;
   body_content: string;
   media: string;
@@ -53,7 +61,7 @@ export interface EditLog {
   sectionId: string;
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
-  formatted_date?: string; // ✨ 날짜 필드 명시
+  formatted_date?: string; // ✨ 날짜 포맷 필드
   details: {
     before?: ContentSnapshot;
     after?: ContentSnapshot;
