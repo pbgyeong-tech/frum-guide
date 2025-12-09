@@ -233,7 +233,7 @@ const renderMarkdownContent = (content: string | string[]) => {
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
   const isWelcome = data.id === ContentType.WELCOME;
   const isFAQ = data.id === ContentType.FAQ;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.CULTURE, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
