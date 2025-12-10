@@ -435,15 +435,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     executeScroll(id);
   };
 
-  if (isFAQ) {
-    return (
-      <div className="animate-enter">
-        <header className="page-header"><h1 className="hero-title">{data.title}</h1><p className="hero-desc">{data.description}</p></header>
-        <FaqSearch onNavigate={onNavigate} content={allContent} />
-      </div>
-    );
-  }
-
   if (isWelcome) {
       return (
         <div className="animate-enter">
@@ -472,6 +463,13 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
         {isAdmin && (<button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(!isEditMode); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: isEditMode ? '#E70012' : 'transparent', color: isEditMode ? '#fff' : '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} />{isEditMode ? 'Done Editing' : 'Edit Page'}</button>)}
       </header>
+
+      {/* FAQ Search Bar (Moved from early return to main flow) */}
+      {isFAQ && (
+        <div style={{ marginBottom: '40px' }}>
+          <FaqSearch onNavigate={onNavigate} content={allContent} />
+        </div>
+      )}
 
       {!isWelcome && !isFAQ && safeSubSections.length > 0 && (
         <>
