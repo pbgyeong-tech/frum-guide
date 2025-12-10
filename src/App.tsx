@@ -55,10 +55,6 @@ const MainLayout: React.FC<{
     }
   }, [activeData, currentId]);
 
-  const handleContentUpdate = (newSubSections: SubSection[]) => {
-    onUpdateContent(currentId, newSubSections);
-  };
-
   // 현재 URL 생성 (HashRouter 고려)
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
@@ -76,7 +72,7 @@ const MainLayout: React.FC<{
         data={activeData}
         allContent={contentData}
         onNavigate={onNavigate}
-        onUpdateContent={handleContentUpdate}
+        onUpdateContent={onUpdateContent}
         setIsDirty={setIsDirty}
         isAdmin={isAdmin}
         user={user}

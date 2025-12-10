@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronRight, ChevronDown, ArrowUpRight } from 'lucide-react';
 import { SectionData, ContentType } from '../types';
 import { trackMenuClick } from '../utils/firebase';
+import { useLocation } from 'react-router-dom';
 
 interface FaqSearchProps {
   onNavigate: (id: ContentType) => void;
@@ -12,16 +13,16 @@ interface FaqSearchProps {
 interface SearchResultItem {
   sectionId: ContentType;
   sectionTitle: string;
-  title: string; // SubSection title (Question or Topic)
+  title: string; 
   content: string | string[];
   keywords: string[];
   score: number;
+  slug?: string; // URL linking용 ID 추가
+  uuid?: string; // Fallback ID
 }
 
-// Korean particle removal for natural language processing
 const removeKoreanParticles = (text: string) => {
   if (!text) return "";
-  // Removes common particles: 은,는,이,가,을,를,에,게,서,의,도,만,로,으로,하고,한
   return text.replace(/[은는이가을를에게서의도만]|(로)|(으로)|(하고)|(한)/g, "");
 };
 
@@ -33,32 +34,33 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  
+  const location = useLocation();
 
-  // 1. Build Search Index (Flattening the Handbook Content)
+  // 1. Build Search Index
   const searchIndex = useMemo(() => {
     const index: SearchResultItem[] = [];
 
     const traverse = (sections: SectionData[]) => {
-      // Defensive check: Ensure sections is an array
       if (!Array.isArray(sections)) return;
 
       sections.forEach(section => {
-        // Defensive check: Ensure subSections is an array before iterating
         if (Array.isArray(section.subSections)) {
           section.subSections.forEach(sub => {
-            if (!sub) return; // Skip null/undefined items
+            if (!sub) return;
             index.push({
               sectionId: section.id,
               sectionTitle: section.title || "",
               title: sub.title || "",
               content: sub.content || "",
               keywords: Array.isArray(sub.keywords) ? sub.keywords : [],
-              score: 0
+              score: 0,
+              slug: sub.slug,
+              uuid: sub.uuid
             });
           });
         }
         
-        // Recurse if it has children and children is an array
         if (section.children && Array.isArray(section.children)) {
           traverse(section.children);
         }
@@ -69,89 +71,94 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
     return index;
   }, [content]);
 
-  // 2. Search Algorithm
+  // 2. Search & Filter
   useEffect(() => {
-    // If query is empty, show default FAQ items (ContentType.FAQ sections)
     if (!query.trim()) {
-      const defaultFaqItems = searchIndex.filter(item => item.sectionId === ContentType.FAQ);
-      setResults(defaultFaqItems);
-      setOpenIndex(null); // Collapse all by default when showing full list
+      // FAQ 섹션이 아닐 수도 있으니, 넘어온 content 범위 내 모든 아이템 표시
+      // (ContentRenderer에서 [data]만 넘기면 해당 섹션 전체가 보임)
+      setResults(searchIndex);
+      // Hash check logic will handle opening
       return;
     }
 
-    // Tokenize Query
     const rawTokens = query.toLowerCase().split(/\s+/);
     const tokens = rawTokens.map(t => ({
       origin: t,
       refined: removeKoreanParticles(t)
     })).filter(t => t.origin.length > 0);
 
-    // Score Items
     const scoredItems = searchIndex.map(item => {
       let score = 0;
       const safeTitle = item.title || "";
       const normTitle = normalize(safeTitle);
-      
       const contentStr = Array.isArray(item.content) ? item.content.join(" ") : (item.content || "");
       const normContent = normalize(contentStr as string);
-      
       const lowerQuery = query.toLowerCase();
 
-      // A. Exact Phrase Match (Highest Priority)
       if (safeTitle.toLowerCase().includes(lowerQuery)) score += 50;
       if ((contentStr as string).toLowerCase().includes(lowerQuery)) score += 20;
 
-      // B. Token & Keyword Matching
       tokens.forEach(token => {
         if (token.refined.length < 1) return;
-
-        // Title Match (High)
-        if (normTitle.includes(token.origin) || normTitle.includes(token.refined)) {
-          score += 15;
-        }
-
-        // Keyword Match (Very High - semantic understanding)
+        if (normTitle.includes(token.origin) || normTitle.includes(token.refined)) score += 15;
         const keywordMatch = item.keywords.some(k => {
             const normK = normalize(k);
             return normK.includes(token.origin) || normK.includes(token.refined);
         });
         if (keywordMatch) score += 25;
-
-        // Content Match (Medium)
-        if (normContent.includes(token.origin) || normContent.includes(token.refined)) {
-          score += 5;
-        }
-        
-        // Section Title Match (Context)
-        if (normalize(item.sectionTitle).includes(token.origin)) {
-            score += 5;
-        }
+        if (normContent.includes(token.origin) || normContent.includes(token.refined)) score += 5;
+        if (normalize(item.sectionTitle).includes(token.origin)) score += 5;
       });
 
       return { ...item, score };
     });
 
-    // Sort & Filter
     const filtered = scoredItems
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 20); // Limit results
+      .slice(0, 20);
 
     setResults(filtered);
     setOpenIndex(filtered.length > 0 ? 0 : null); 
   }, [query, searchIndex]);
 
-  const toggleItem = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
+  // 3. Handle URL Hash (Auto Open)
+  useEffect(() => {
+    // Hash format: #/faq#wifi-password -> location.hash is "#wifi-password"
+    // HashRouter handles the first part.
+    if (location.hash && results.length > 0) {
+      const targetId = location.hash.replace('#', ''); // remove '#'
+      const idx = results.findIndex(r => r.slug === targetId || r.uuid === targetId);
+      
+      if (idx !== -1) {
+        setOpenIndex(idx);
+        // Scroll logic could be added here if needed
+        const element = document.getElementById(`faq-item-${idx}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+  }, [location.hash, results]); // Depend on results so it runs after data is loaded/filtered
+
+  const toggleItem = (index: number, item: SearchResultItem) => {
+    const isOpen = openIndex === index;
+    setOpenIndex(isOpen ? null : index);
+    
+    // URL Hash Update (without page reload or routing)
+    if (!isOpen && (item.slug || item.uuid)) {
+        const id = item.slug || item.uuid;
+        // HashRouter path + Anchor hash
+        // e.g., current: #/faq, target: #/faq#wifi
+        const currentPath = location.pathname;
+        window.history.replaceState(null, '', `#${currentPath}#${id}`);
+    }
   };
 
   return (
     <div className="faq-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
       {/* Search Input */}
-      <div style={{ 
-        position: 'relative', 
-        marginBottom: '40px' 
-      }}>
+      <div style={{ position: 'relative', marginBottom: '40px' }}>
         <div style={{
           position: 'absolute',
           left: '20px',
@@ -195,15 +202,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
       {/* Results List */}
       <div className="faq-list">
         {query.trim() && results.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '60px 0', 
-            color: '#666',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#666', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <Search size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
             <p>검색 결과가 없습니다.<br/>다른 키워드로 검색해 보세요.</p>
           </div>
@@ -213,6 +212,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
             return (
               <div 
                 key={index} 
+                id={`faq-item-${index}`}
                 style={{ 
                   marginBottom: '16px',
                   borderRadius: '12px',
@@ -223,7 +223,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                 }}
               >
                 <button
-                  onClick={() => toggleItem(index)}
+                  onClick={() => toggleItem(index, item)}
                   style={{
                     width: '100%',
                     display: 'flex',
@@ -240,19 +240,13 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {/* Source Badge */}
-                    <span style={{ 
-                        fontSize: '0.8rem', 
-                        color: '#666', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                    }}>
-                        <span style={{ width: '6px', height: '6px', background: '#E70012', borderRadius: '50%' }}></span>
-                        {item.sectionTitle}
-                    </span>
+                    {/* Source Badge - Hide if redundant (e.g. within same section) */}
+                    {item.sectionId !== ContentType.FAQ && (
+                        <span style={{ fontSize: '0.8rem', color: '#666', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span style={{ width: '6px', height: '6px', background: '#E70012', borderRadius: '50%' }}></span>
+                            {item.sectionTitle}
+                        </span>
+                    )}
                     <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {item.title}
                     </span>
@@ -275,7 +269,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                     </div>
                     
                     {/* Navigate Button - Only show if not already on that section */}
-                    {item.sectionId !== ContentType.FAQ && (
+                    {item.sectionId !== ContentType.FAQ && item.sectionId !== content[0]?.id && (
                       <button 
                           onClick={() => {
                             trackMenuClick(`GoToMenu: ${item.sectionTitle}`);
@@ -296,8 +290,6 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                               border: 'none',
                               cursor: 'pointer'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.2)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(231,0,18,0.1)'}
                       >
                           해당 메뉴로 이동하기 <ArrowUpRight size={16} />
                       </button>
