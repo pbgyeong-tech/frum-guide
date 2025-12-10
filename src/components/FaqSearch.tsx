@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, ChevronRight, ChevronDown, ArrowUpRight } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown } from 'lucide-react';
 import { SectionData, ContentType } from '../types';
-import { trackMenuClick } from '../utils/firebase';
 import { useLocation } from 'react-router-dom';
 
 interface FaqSearchProps {
   onNavigate: (id: ContentType) => void;
   content: SectionData[];
+  limitToSectionId?: ContentType;
 }
 
 interface SearchResultItem {
@@ -17,8 +17,8 @@ interface SearchResultItem {
   content: string | string[];
   keywords: string[];
   score: number;
-  slug?: string; // URL linking용 ID 추가
-  uuid?: string; // Fallback ID
+  slug?: string;
+  uuid?: string;
 }
 
 const removeKoreanParticles = (text: string) => {
@@ -30,7 +30,7 @@ const normalize = (text: string) => {
   return (text || "").toLowerCase().replace(/[\s\p{P}]/gu, "");
 };
 
-export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => {
+export const FaqSearch: React.FC<FaqSearchProps> = ({ content, limitToSectionId }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -45,6 +45,11 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
       if (!Array.isArray(sections)) return;
 
       sections.forEach(section => {
+        // Enforce strict section filtering if limitToSectionId is provided
+        if (limitToSectionId && section.id !== limitToSectionId) {
+            return; 
+        }
+
         if (Array.isArray(section.subSections)) {
           section.subSections.forEach(sub => {
             if (!sub) return;
@@ -69,15 +74,13 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
 
     traverse(content);
     return index;
-  }, [content]);
+  }, [content, limitToSectionId]);
 
   // 2. Search & Filter
   useEffect(() => {
     if (!query.trim()) {
-      // FAQ 섹션이 아닐 수도 있으니, 넘어온 content 범위 내 모든 아이템 표시
-      // (ContentRenderer에서 [data]만 넘기면 해당 섹션 전체가 보임)
+      // Show all items if query is empty (filtered by section via props)
       setResults(searchIndex);
-      // Hash check logic will handle opening
       return;
     }
 
@@ -107,7 +110,6 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
         });
         if (keywordMatch) score += 25;
         if (normContent.includes(token.origin) || normContent.includes(token.refined)) score += 5;
-        if (normalize(item.sectionTitle).includes(token.origin)) score += 5;
       });
 
       return { ...item, score };
@@ -124,32 +126,26 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
 
   // 3. Handle URL Hash (Auto Open)
   useEffect(() => {
-    // Hash format: #/faq#wifi-password -> location.hash is "#wifi-password"
-    // HashRouter handles the first part.
     if (location.hash && results.length > 0) {
-      const targetId = location.hash.replace('#', ''); // remove '#'
+      const targetId = location.hash.replace('#', ''); 
       const idx = results.findIndex(r => r.slug === targetId || r.uuid === targetId);
       
       if (idx !== -1) {
         setOpenIndex(idx);
-        // Scroll logic could be added here if needed
         const element = document.getElementById(`faq-item-${idx}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
     }
-  }, [location.hash, results]); // Depend on results so it runs after data is loaded/filtered
+  }, [location.hash, results]); 
 
   const toggleItem = (index: number, item: SearchResultItem) => {
     const isOpen = openIndex === index;
     setOpenIndex(isOpen ? null : index);
     
-    // URL Hash Update (without page reload or routing)
     if (!isOpen && (item.slug || item.uuid)) {
         const id = item.slug || item.uuid;
-        // HashRouter path + Anchor hash
-        // e.g., current: #/faq, target: #/faq#wifi
         const currentPath = location.pathname;
         window.history.replaceState(null, '', `#${currentPath}#${id}`);
     }
@@ -209,6 +205,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
         ) : (
           results.map((item, index) => {
             const isOpen = openIndex === index;
+
             return (
               <div 
                 key={index} 
@@ -240,13 +237,6 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {/* Source Badge - Hide if redundant (e.g. within same section) */}
-                    {item.sectionId !== ContentType.FAQ && (
-                        <span style={{ fontSize: '0.8rem', color: '#666', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <span style={{ width: '6px', height: '6px', background: '#E70012', borderRadius: '50%' }}></span>
-                            {item.sectionTitle}
-                        </span>
-                    )}
                     <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {item.title}
                     </span>
@@ -264,36 +254,9 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                     marginTop: '-8px',
                     paddingTop: '20px'
                   }}>
-                    <div style={{ whiteSpace: 'pre-wrap', marginBottom: '20px' }}>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>
                         {Array.isArray(item.content) ? item.content.join('\n') : item.content}
                     </div>
-                    
-                    {/* Navigate Button - Only show if not already on that section */}
-                    {item.sectionId !== ContentType.FAQ && item.sectionId !== content[0]?.id && (
-                      <button 
-                          onClick={() => {
-                            trackMenuClick(`GoToMenu: ${item.sectionTitle}`);
-                            onNavigate(item.sectionId);
-                          }}
-                          style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              color: '#E70012',
-                              fontSize: '0.9rem',
-                              fontWeight: 600,
-                              padding: '8px 16px',
-                              background: 'rgba(231,0,18,0.1)',
-                              borderRadius: '8px',
-                              marginLeft: 'auto',
-                              transition: 'background 0.2s',
-                              border: 'none',
-                              cursor: 'pointer'
-                          }}
-                      >
-                          해당 메뉴로 이동하기 <ArrowUpRight size={16} />
-                      </button>
-                    )}
                   </div>
                 )}
               </div>

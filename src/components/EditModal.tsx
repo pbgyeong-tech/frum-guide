@@ -169,7 +169,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           borderBottom: '1px solid #333',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexShrink: 0
         }}>
           <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 700 }}>
             {initialData ? 'Edit Content Block' : 'Add Content Block'}
@@ -178,7 +179,15 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         </div>
 
         {/* Body */}
-        <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ 
+            padding: '24px', 
+            overflowY: 'auto', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '20px',
+            flex: 1, // Ensure this consumes available space for scrolling
+            minHeight: 0
+        }}>
           
           {/* Title */}
           <div>
@@ -324,7 +333,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           borderTop: '1px solid #333',
           display: 'flex',
           justifyContent: 'flex-end',
-          gap: '12px'
+          gap: '12px',
+          flexShrink: 0
         }}>
           <button 
             onClick={handleClose}
