@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronRight, ChevronDown } from 'lucide-react';
 import { SectionData, ContentType } from '../types';
 import { useLocation } from 'react-router-dom';
 
 interface FaqSearchProps {
-  onNavigate: (id: ContentType) => void;
   content: SectionData[];
   limitToSectionId?: ContentType;
 }
@@ -45,7 +43,8 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ content, limitToSectionId 
       if (!Array.isArray(sections)) return;
 
       sections.forEach(section => {
-        // Enforce strict section filtering if limitToSectionId is provided
+        // Enforce strict section filtering
+        // If limitToSectionId is set, we ONLY process that specific section.
         if (limitToSectionId && section.id !== limitToSectionId) {
             return; 
         }
@@ -66,6 +65,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ content, limitToSectionId 
           });
         }
         
+        // Recursive check for children (though FAQ usually doesn't have children)
         if (section.children && Array.isArray(section.children)) {
           traverse(section.children);
         }
@@ -79,7 +79,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ content, limitToSectionId 
   // 2. Search & Filter
   useEffect(() => {
     if (!query.trim()) {
-      // Show all items if query is empty (filtered by section via props)
+      // Show all items if query is empty
       setResults(searchIndex);
       return;
     }

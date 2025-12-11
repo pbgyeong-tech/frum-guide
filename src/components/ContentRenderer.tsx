@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection } from '../types';
@@ -300,7 +299,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
       newSubSections.push({ ...newData, uuid: newUuid });
     }
-    onUpdateContent(newSubSections);
+    onUpdateContent(data.id, newSubSections);
   };
 
   const executeDelete = async () => {
@@ -329,7 +328,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
 
     const newSubSections = safeSubSections.filter(s => s.uuid !== deleteTargetId);
-    onUpdateContent(newSubSections);
+    onUpdateContent(data.id, newSubSections);
     setDeleteTargetId(null);
     setDeleteModalOpen(false);
   };
@@ -339,7 +338,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length) return;
     [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
-    onUpdateContent(newSubSections);
+    onUpdateContent(data.id, newSubSections);
   };
 
   const handleMoveDown = (index: number) => {
@@ -347,7 +346,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length - 1) return;
     [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
-    onUpdateContent(newSubSections);
+    onUpdateContent(data.id, newSubSections);
   };
 
   const executeScroll = (id: string) => {
@@ -432,34 +431,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     executeScroll(id);
   };
 
-  if (isFAQ) {
-    return (
-      <div className="animate-enter">
-        {/* Custom Header Layout for FAQ to ensure vertical stacking */}
-        <div style={{ marginBottom: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <h1 className="hero-title" style={{ marginBottom: '16px' }}>{data.title}</h1>
-          <p className="hero-desc" style={{ 
-              borderLeft: '2px solid #E70012', 
-              paddingLeft: '16px', 
-              color: '#E0E0E0',
-              fontSize: '1.25rem',
-              margin: 0,
-              lineHeight: 1.5
-          }}>
-            {data.description}
-          </p>
-        </div>
-        
-        {/* Enforce strict filtering to the current section ID (FAQ) */}
-        <FaqSearch 
-            onNavigate={onNavigate} 
-            content={[data]} 
-            limitToSectionId={data.id} 
-        />
-      </div>
-    );
-  }
-
   if (isWelcome) {
       return (
         <div className="animate-enter">
@@ -489,6 +460,12 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         {isAdmin && (<button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(!isEditMode); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: isEditMode ? '#E70012' : 'transparent', color: isEditMode ? '#fff' : '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} />{isEditMode ? 'Done Editing' : 'Edit Page'}</button>)}
       </header>
 
+      {/* FAQ Search - Shown only when NOT editing on FAQ page */}
+      {isFAQ && !isEditMode && (
+         <FaqSearch content={[data]} limitToSectionId={data.id} />
+      )}
+
+      {/* TOC (Table of Contents) - Shown for standard pages (not Welcome, not FAQ) */}
       {!isWelcome && !isFAQ && safeSubSections.length > 0 && (
         <>
           <style>{`.toc-sticky-bar { position: sticky; top: 0; z-index: 40; background: rgba(9, 9, 9, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 8px; margin: -20px -40px 40px -40px; padding: 16px 40px; overflow-x: auto; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none; } .toc-sticky-bar::-webkit-scrollbar { display: none; } .toc-sticky-bar button { flex-shrink: 0; } @media (max-width: 768px) { .toc-sticky-bar { top: 70px; margin: -10px -20px 30px -20px; padding: 12px 20px; } }`}</style>
@@ -504,6 +481,8 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         </>
       )}
 
+      {/* Grid Layout - Shown for standard pages OR when editing FAQ */}
+      {(!isFAQ || isEditMode) && (
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
@@ -537,6 +516,8 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         })}
         {isAdmin && (<button onClick={handleAddNew} className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', borderStyle: 'dashed', borderColor: '#333', background: 'transparent', cursor: 'pointer', color: '#666', gap: '12px' }}><div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={24} /></div><span style={{ fontWeight: 600 }}>Add Content Block</span></button>)}
       </div>
+      )}
+
       <EditModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
       <ConfirmModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={executeDelete} />
     </div>

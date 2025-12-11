@@ -5,7 +5,7 @@ import { ContentRenderer } from './components/ContentRenderer';
 import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
-import { seedDB, saveContent } from './utils/db';
+import { seedDB, saveContent, ensureUUID } from './utils/db';
 import { auth, loginWithGoogle, logout, trackScreenView, trackMenuClick } from './utils/firebase';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
 import { SEO } from './components/SEO'; // SEO 컴포넌트 임포트
@@ -83,7 +83,8 @@ const MainLayout: React.FC<{
 
 // Root App Component
 const App: React.FC = () => {
-  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
+  // ensureUUID를 사용하여 초기 상태에도 UUID가 반드시 존재하도록 보장 (편집/삭제 버그 수정)
+  const [contentData, setContentData] = useState<SectionData[]>(ensureUUID(HANDBOOK_CONTENT));
   const [user, setUser] = useState<firebase.User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -134,8 +135,8 @@ const App: React.FC = () => {
         setContentData(mergedData);
       } catch (e) {
         console.error("DB Load Error", e);
-        // Fallback to local constant if DB fails
-        setContentData(HANDBOOK_CONTENT);
+        // Fallback to local constant if DB fails (UUID 보장)
+        setContentData(ensureUUID(HANDBOOK_CONTENT));
       }
     };
     loadData();

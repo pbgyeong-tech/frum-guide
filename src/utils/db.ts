@@ -17,7 +17,7 @@ export const generateUUID = () => {
   });
 };
 
-const ensureUUID = (data: any): any => {
+export const ensureUUID = (data: any): any => {
   if (Array.isArray(data)) {
     return data.map(item => ensureUUID(item));
   }
