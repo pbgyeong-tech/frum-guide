@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Save, AlertCircle, Link, Hash } from 'lucide-react';
@@ -308,11 +307,11 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffaaaa', marginBottom: '8px', fontSize: '0.9rem' }}>
               <AlertCircle size={14} /> Disclaimer / Note
             </label>
-            <input 
-              type="text" 
+            <textarea 
               value={disclaimer}
               onChange={(e) => handleInputChange(setDisclaimer, e.target.value)}
               placeholder="Important note or warning text"
+              rows={3}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -320,7 +319,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                 border: '1px solid #444',
                 borderRadius: '8px',
                 color: '#ffaaaa',
-                outline: 'none'
+                outline: 'none',
+                resize: 'vertical',
+                lineHeight: '1.5'
               }}
             />
           </div>
