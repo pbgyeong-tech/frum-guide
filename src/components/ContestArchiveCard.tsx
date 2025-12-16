@@ -1,8 +1,31 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { SubSection } from '../types';
-import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee } from 'lucide-react';
+import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
+
+// --- Badge Style Logic ---
+const BADGE_PALETTE = [
+  { bg: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(185, 28, 28, 0.5)' },
+  { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' },
+  { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' },
+  { bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' },
+  { bg: 'rgba(245, 158, 11, 0.2)', color: '#fcd34d', border: '1px solid rgba(180, 83, 9, 0.5)' },
+];
+
+const getBadgeStyle = (text: string) => {
+  if (!text) return BADGE_PALETTE[0];
+  const t = text.trim();
+  if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
+  if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
+  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
+  if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
+  if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
+  
+  let hash = 0;
+  for (let i = 0; i < t.length; i++) hash = ((hash << 5) - hash) + t.charCodeAt(i);
+  return BADGE_PALETTE[Math.abs(hash) % BADGE_PALETTE.length];
+};
 
 // --- Markdown Helpers ---
 const handleContentOutboundClick = (name: string, url: string) => {
@@ -18,6 +41,16 @@ const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) =
     <ArrowRight size={18} color="#E70012" />
   </a>
 );
+
+const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '1rem', fontWeight: 600 }}><span>{title}</span>{isOpen ? <ChevronDown size={18} color="#888" /> : <ChevronRight size={18} color="#888" />}</button>
+      {isOpen && <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>{children}</div>}
+    </div>
+  );
+};
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
   <div style={{ background: '#050505', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontFamily: 'monospace', fontSize: '0.85rem', color: '#E0E0E0', margin: '16px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
@@ -54,6 +87,70 @@ const parseInlineMarkdown = (text: string) => {
   );
 };
 
+const TableBlock: React.FC<{ text: string }> = ({ text }) => {
+  const rows = text.trim().split('\n').filter(r => r.trim() !== '');
+  const headerRow = rows[0];
+  const headers = headerRow.split('|').map(c => c.trim()).filter(c => c);
+  const bodyRows = rows.slice(1).filter(r => !/^[\s\|\-:]+$/.test(r));
+  
+  const groupColumnIndex = headers.findIndex(h => h.includes('사업부'));
+  
+  const renderCell = (cell: string, header: string) => {
+    if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액') || header.includes('조장')) {
+      const style = getBadgeStyle(cell);
+      return <span style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
+    }
+    if (header.includes('이메일')) return <a href={`mailto:${cell}`} style={{ color: '#aaa' }}>{cell}</a>;
+    return parseInlineMarkdown(cell);
+  };
+
+  if (groupColumnIndex !== -1) {
+    const grouped: Record<string, string[][]> = {};
+    bodyRows.forEach(row => {
+      const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
+      if(cells.length <= groupColumnIndex) return;
+      const groupKey = cells[groupColumnIndex];
+      if (!grouped[groupKey]) grouped[groupKey] = [];
+      grouped[groupKey].push(cells);
+    });
+    const displayHeaders = headers.filter((_, i) => i !== groupColumnIndex);
+    return (
+      <div style={{ margin: '24px 0' }}>
+        {Object.entries(grouped).map(([groupName, groupRows], i) => (
+          <AccordionItem key={i} title={groupName} defaultOpen={i === 0}>
+            <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead><tr style={{ background: 'rgba(0,0,0,0.3)' }}>{displayHeaders.map((h, k) => <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {groupRows.map((rowCells, rIdx) => {
+                    const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
+                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </AccordionItem>
+        ))}
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+        <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+        <tbody>
+          {bodyRows.map((row, i) => {
+            const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
+            while (cells.length < headers.length) cells.push('');
+            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const renderMarkdownContent = (content: string | string[]) => {
   const lines = Array.isArray(content) ? content : content.split(/\r?\n/);
   const elements: React.ReactNode[] = [];
@@ -69,6 +166,14 @@ const renderMarkdownContent = (content: string | string[]) => {
       while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
+    }
+
+    // Table Block
+    if (trimmedLine.startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) { tableLines.push(lines[i]); i++; }
+      elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />);
+      continue;
     }
     
     // Images
