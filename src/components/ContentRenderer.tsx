@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
@@ -255,14 +254,32 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
   useEffect(() => { setIsEditMode(false); }, [data.id]);
   
-  const handleEdit = (uuid: string) => { setEditingItemId(uuid); setIsModalOpen(true); };
+  const handleEdit = (uuid: string) => { 
+      if (!uuid) {
+          console.warn("Attempted to edit item without UUID");
+          return;
+      }
+      setEditingItemId(uuid); 
+      setIsModalOpen(true); 
+  };
   const handleAddNew = () => { setEditingItemId(null); setIsModalOpen(true); };
   
-  const handleDeleteTrigger = (uuid: string) => { setDeleteTargetId(uuid); setDeleteModalOpen(true); };
+  const handleDeleteTrigger = (uuid: string) => { 
+      if (!uuid) {
+          console.warn("Attempted to delete item without UUID");
+          return;
+      }
+      setDeleteTargetId(uuid); 
+      setDeleteModalOpen(true); 
+  };
 
   const handleSaveModal = (newData: SubSection) => {
     const currentList = Array.isArray(data.subSections) ? data.subSections : [];
     let newSubSections = [...currentList];
+    
+    // UUID Generation moved here if missing to ensure stability
+    const newUuid = newData.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
+    
     if (user && user.email) {
         newData.lastEditedBy = user.email;
         newData.lastEditedAt = Date.now();
@@ -286,12 +303,14 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             details: { after: snapshot } 
         });
     }
+
     if (editingItemId) {
       newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? { ...newData, uuid: editingItemId } : sub);
     } else {
-      const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
       newSubSections.push({ ...newData, uuid: newUuid });
     }
+    
+    console.log("Saving new subsections:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -317,7 +336,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             details: { after: snapshot } 
         });
     }
-    const newSubSections = safeSubSections.filter(s => s.uuid !== deleteTargetId);
+    // Strict filtering: ensure we are filtering by valid UUIDs
+    const newSubSections = safeSubSections.filter(s => s.uuid && s.uuid !== deleteTargetId);
+    console.log("Deleting item, new list:", newSubSections);
     onUpdateContent(newSubSections);
     setDeleteTargetId(null);
     setDeleteModalOpen(false);
@@ -328,6 +349,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length) return;
     [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
+    console.log("Moving UP:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -336,6 +358,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length - 1) return;
     [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
+    console.log("Moving DOWN:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -481,6 +504,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 </div>
                 <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Use fallback empty string for uuid to prevent crash but logic handles it */}
                 <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#333'} onMouseLeave={(e) => e.currentTarget.style.background = '#1a1a1a'}><Edit3 size={16} /></button>
                 <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.2)'; e.currentTarget.style.borderColor = '#E70012'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.1)'; e.currentTarget.style.borderColor = 'rgba(231,0,18,0.3)'; }}><Trash2 size={16} /></button>
                 </div>
