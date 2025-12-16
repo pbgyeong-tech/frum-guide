@@ -530,8 +530,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             </div>
           ) : null;
 
-          if (sub.slug === 'aicontest') {
-             // 3. Pass id here
+          // Check for Archive-type slugs
+          const isArchiveType = ['aicontest', 'frum-dining', 'coffee-chat'].includes(sub.slug || '');
+          if (isArchiveType) {
              return <ContestArchiveCard key={sub.uuid || index} id={sectionId} data={sub} adminControls={adminControls} />;
           }
 

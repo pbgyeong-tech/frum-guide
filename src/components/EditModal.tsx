@@ -22,6 +22,8 @@ const safeJsonParse = (str: string | undefined) => {
   }
 };
 
+const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
+
 export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, initialData, onDirty }) => {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -30,8 +32,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   const [link, setLink] = useState('');
   const [disclaimer, setDisclaimer] = useState('');
 
-  // Contest Specific State
-  const [isContestMode, setIsContestMode] = useState(false);
+  // Contest/Archive Specific State
+  const [isArchiveMode, setIsArchiveMode] = useState(false);
   const [contestData, setContestData] = useState<any>({});
   const [cYear, setCYear] = useState(2025);
   const [cMonth, setCMonth] = useState(new Date().getMonth() + 1);
@@ -49,9 +51,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setTitle(initialData.title);
         setSlug(initialData.slug || '');
         
-        // Detect Contest Mode based on slug
-        const isContest = initialData.slug === 'aicontest';
-        setIsContestMode(isContest);
+        // Detect Archive Mode based on slug
+        const isArchive = ARCHIVE_SLUGS.includes(initialData.slug || '');
+        setIsArchiveMode(isArchive);
 
         let contentArr = Array.isArray(initialData.content) 
           ? [...initialData.content] 
@@ -73,8 +75,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setMediaUrl(initialData.imagePlaceholder || '');
         setLink(initialData.link || '');
 
-        // Load Contest Data from codeBlock if in contest mode
-        if (isContest) {
+        // Load Contest Data from codeBlock if in archive mode
+        if (isArchive) {
            const parsedData = safeJsonParse(initialData.codeBlock);
            setContestData(parsedData);
            // Load current selection
@@ -97,7 +99,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setMediaUrl('');
         setLink('');
         setDisclaimer('');
-        setIsContestMode(false);
+        setIsArchiveMode(false);
         setContestData({});
       }
       setLoaded(true);
@@ -116,15 +118,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   const handleSlugChange = (value: string) => {
     const formatted = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     handleInputChange(setSlug, formatted);
-    if (formatted === 'aicontest') setIsContestMode(true);
-    else if (isContestMode && formatted !== 'aicontest') setIsContestMode(false);
+    const isArchive = ARCHIVE_SLUGS.includes(formatted);
+    setIsArchiveMode(isArchive);
   };
 
   const handleTitleBlur = () => {
     if (!slug.trim() && title.trim()) {
       const suggested = title.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       handleInputChange(setSlug, suggested);
-      if (suggested === 'aicontest') setIsContestMode(true);
+      const isArchive = ARCHIVE_SLUGS.includes(suggested);
+      setIsArchiveMode(isArchive);
     }
   };
 
@@ -171,13 +174,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     const uuid = initialData?.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
 
     let finalCodeBlock = initialData?.codeBlock;
-    if (isContestMode) {
+    if (isArchiveMode) {
         // Prepare the final JSON. 
-        // Note: contestData is already updated via updateContestEntry on each keystroke.
-        // We do a final merge of current inputs just in case (e.g. if text was pasted and state didn't update in time? unlikely but safe).
-        // Actually, sticking to contestData is safer if updateContestEntry works correctly.
-        // But to be 100% sure we capture the current input fields for the *current* selection:
-        
         const newData = { ...contestData };
         // Ensure structure exists
         if (!newData[cYear]) newData[cYear] = {};
@@ -218,6 +216,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   };
 
   const isValid = title.trim().length > 0 && slug.trim().length > 0;
+  const showWinnerInput = slug === 'aicontest';
 
   return createPortal(
     <div style={{
@@ -264,7 +263,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <div style={{ position: 'relative' }}>
               <input type="text" value={slug} onChange={(e) => handleSlugChange(e.target.value)} placeholder="e.g. wifi-setup (lowercase, numbers, hyphen only)" style={{ width: '100%', padding: '12px', background: 'rgba(231,0,18,0.05)', border: slug.trim() ? '1px solid rgba(231,0,18,0.3)' : '1px solid #E70012', borderRadius: '8px', color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
             </div>
-            {isContestMode && <p style={{ marginTop: '6px', fontSize: '0.8rem', color: '#4ade80' }}>✨ Contest Mode Active: Using extended editor.</p>}
+            {isArchiveMode && <p style={{ marginTop: '6px', fontSize: '0.8rem', color: '#4ade80' }}>✨ Archive/Contest Mode Active: Using extended calendar editor.</p>}
           </div>
 
           {/* Body Content */}
@@ -274,9 +273,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           </div>
 
           {/* CONTEST SPECIFIC UI */}
-          {isContestMode && (
+          {isArchiveMode && (
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '12px', padding: '20px' }}>
-                  <h4 style={{ color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Trophy size={16} color="#E70012"/> Contest Entry Management</h4>
+                  <h4 style={{ color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Trophy size={16} color="#E70012"/> Archive Entry Management</h4>
                   
                   {/* Selector */}
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
@@ -297,8 +296,13 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                   </div>
 
                   <div style={{ display: 'grid', gap: '12px' }}>
-                      <input type="text" placeholder="Entry Title (e.g. Cyberpunk Office)" value={cTitle} onChange={(e) => updateContestEntry('title', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
-                      <input type="text" placeholder="Winner Name (e.g. Creative Sol. Team)" value={cWinner} onChange={(e) => updateContestEntry('winner', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                      <input type="text" placeholder="Entry Title (e.g. October Gathering)" value={cTitle} onChange={(e) => updateContestEntry('title', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                      
+                      {/* Only show Winner for aicontest */}
+                      {showWinnerInput && (
+                        <input type="text" placeholder="Winner Name (e.g. Creative Sol. Team)" value={cWinner} onChange={(e) => updateContestEntry('winner', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                      )}
+
                       <input type="text" placeholder="Image URL" value={cImage} onChange={(e) => updateContestEntry('image', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
                       <textarea placeholder="Description (Supports Markdown)" rows={6} value={cDesc} onChange={(e) => updateContestEntry('desc', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
                   </div>
@@ -306,7 +310,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           )}
 
           {/* Standard Fields (Hidden or less emphasized in contest mode if needed, but keeping for compatibility) */}
-          {!isContestMode && (
+          {!isArchiveMode && (
             <>
               <div>
                 <label style={{ display: 'block', color: '#888', marginBottom: '8px', fontSize: '0.9rem' }}>Media (Image/Video URL)</label>

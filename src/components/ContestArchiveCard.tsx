@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { SubSection } from '../types';
-import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb } from 'lucide-react';
+import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
 // --- Markdown Helpers ---
@@ -127,7 +127,7 @@ interface ArchiveData {
   [year: number]: {
     [month: number]: {
       title: string;
-      winner: string;
+      winner?: string; // Optional for non-contest cards
       imageUrl?: string;
       description?: string;
     };
@@ -138,10 +138,9 @@ interface ArchiveData {
 const ARCHIVE_MOCK_DATA: ArchiveData = {
   2025: {
     1: {
-      title: "Cyberpunk Office Life",
-      winner: "Creative Sol. Team",
-      description: "미래지향적인 오피스 환경을 사이버펑크 스타일로 재해석한 작품입니다.",
-      imageUrl: "https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/47b39e7f0ae783f5f387bdea4888f0b9750b5e1fa6f9dd08dbeb458f2c24d451.png" 
+      title: "Sample Entry",
+      winner: "Winner Name",
+      description: "Description here...",
     }
   }
 };
@@ -176,6 +175,11 @@ const getLatestDate = (archive: ArchiveData) => {
 };
 
 export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
+  // Determine if this is a contest (affects badges and fields)
+  const isContest = data.slug === 'aicontest';
+  const isDining = data.slug === 'frum-dining';
+  const isCoffee = data.slug === 'coffee-chat';
+
   // 1. Parse Data Memoized
   const archiveData = useMemo(() => {
     if (data.codeBlock) {
@@ -186,7 +190,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             // ignore
         }
     }
-    return ARCHIVE_MOCK_DATA;
+    return {};
   }, [data.codeBlock]);
 
   // 2. Initialize State with Latest Date
@@ -195,13 +199,16 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const [selectedYear, setSelectedYear] = useState<number>(latest.year);
   const [selectedMonth, setSelectedMonth] = useState<number>(latest.month);
 
-  // Sync state when data actually changes (important for async loading)
+  // Sync state when data actually changes
   useEffect(() => {
     setSelectedYear(latest.year);
     setSelectedMonth(latest.month);
   }, [latest]);
 
   const currentData = archiveData[selectedYear]?.[selectedMonth];
+
+  // Determine Icon based on slug
+  const HeaderIcon = isDining ? Utensils : (isCoffee ? Coffee : Trophy);
 
   return (
     <div id={id} className="bento-card full-width" style={{ padding: 0, overflow: 'hidden' }}>
@@ -210,7 +217,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ padding: '8px', background: 'rgba(231,0,18,0.1)', borderRadius: '8px' }}>
-                    <Trophy color="#E70012" size={20} />
+                    <HeaderIcon color="#E70012" size={20} />
                 </div>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>{data.title}</h3>
             </div>
@@ -292,7 +299,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
       <div style={{ padding: '32px', minHeight: '300px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', color: '#666', fontSize: '0.9rem', fontWeight: 600 }}>
           <Calendar size={16} />
-          <span>{selectedYear}년 {selectedMonth}월 출품작</span>
+          <span>{selectedYear}년 {selectedMonth}월</span>
         </div>
 
         {currentData && hasContent(currentData) ? (
@@ -309,31 +316,37 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                   position: 'relative'
                 }}>
                   <img src={currentData.imageUrl} alt={currentData.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '16px', 
-                    right: '16px', 
-                    background: '#E70012', 
-                    color: '#fff', 
-                    padding: '6px 12px', 
-                    borderRadius: '20px', 
-                    fontSize: '0.8rem', 
-                    fontWeight: 700,
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-                  }}>
-                    1st Place
-                  </div>
+                  {isContest && (
+                    <div style={{ 
+                        position: 'absolute', 
+                        top: '16px', 
+                        right: '16px', 
+                        background: '#E70012', 
+                        color: '#fff', 
+                        padding: '6px 12px', 
+                        borderRadius: '20px', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700,
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                    }}>
+                        1st Place
+                    </div>
+                  )}
                 </div>
             ) : null}
 
             <h4 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: '#fff' }}>{currentData.title}</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#888' }}>Winner:</span>
-                <span style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{currentData.winner || 'TBD'}</span>
-            </div>
+            
+            {/* Show Winner Row only for Contests */}
+            {isContest && currentData.winner && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#888' }}>Winner:</span>
+                    <span style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{currentData.winner}</span>
+                </div>
+            )}
             
             {/* Description with Markdown */}
-            <div style={{ color: '#ccc', lineHeight: '1.7', fontSize: '1rem' }}>
+            <div style={{ color: '#ccc', lineHeight: '1.7', fontSize: '1rem', marginTop: '16px' }}>
               {renderMarkdownContent(currentData.description || '')}
             </div>
           </div>
@@ -349,9 +362,9 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             borderRadius: '12px',
             background: 'rgba(255,255,255,0.01)'
           }}>
-            <Trophy size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
-            <p style={{ fontSize: '1rem', fontWeight: 500 }}>등록된 출품작이 없습니다.</p>
-            <p style={{ fontSize: '0.85rem' }}>작업물을 서버 폴더에 업로드 해주세요.</p>
+            <HeaderIcon size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
+            <p style={{ fontSize: '1rem', fontWeight: 500 }}>등록된 콘텐츠가 없습니다.</p>
+            <p style={{ fontSize: '0.85rem' }}>편집 버튼을 눌러 콘텐츠를 추가해주세요.</p>
           </div>
         )}
       </div>

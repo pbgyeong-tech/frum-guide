@@ -52,7 +52,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         title: "프럼의 사업부와 구성원을 소개할게요.",
         content: `| 사업부 | 이름 | 직급 | 이메일 |
 |---|---|---|---|
-| CEO | 김명진 | 대표 | mjkim@frum.co.kr |
 | Business Administrationg | 오한샘 | 수석 | hs.oh@frum.co.kr |
 | Creative Development | 홍채빈 | 수석 | cb.hong@frum.co.kr |
 | Creative Solution Center | 박영하 | 이사 | yh.park@frum.co.kr |
@@ -69,7 +68,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Creative Solution Center | 노유진 | 사원 | yj.noh@frum.co.kr |
 | Creative Solution Center | 최인화 | 사원 | ih.choi@frum.co.kr |
 | Creative Consulting | 권예훈 | 이사 | kwon@frum.co.kr |
-| Creative Consulting | 정지훈 | 선임 | jh.jeong@frum.co.kr |
 | Creative Consulting | 박도원 | 선임 | dw.park@frum.co.kr |
 | Creative Consulting | 정하영 | 사원 | hy.jung@frum.co.kr |
 | Marketing & Campain | 이재훈 | 이사 | jeff@frum.co.kr |
@@ -242,6 +240,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "프럼의 조직 문화와 행사",
     subSections: [
       {
+        slug: "frum-dining",
         title: "1. 프럼 다이닝 (Froom Dining)",
         content: [
             "2개월마다 랜덤으로 1인당 최대 10만원의 팀 식사비를 지원합니다.",
@@ -255,7 +254,13 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["회식", "점심", "다이닝", "밥", "식사", "문화", "친목"]
       },
       {
-        title: "2. 해피아워 (Happy Hour)",
+        slug: "coffee-chat",
+        title: "2. 커피챗 (Coffee Chat)",
+        content: "자유로운 분위기에서 동료들과 커피를 마시며 소통하는 시간입니다.",
+        keywords: ["커피", "소통", "대화", "친목", "휴식"]
+      },
+      {
+        title: "3. 해피아워 (Happy Hour)",
         content: [
             "격주 금요일 오후 진행되는 사내 리프레시 프로그램입니다.",
             "1. 사원·선임 주도 준비",
@@ -266,7 +271,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
       },
       {
         slug: "aicontest",
-        title: "3. FRUMPT Contest",
+        title: "4. FRUMPT Contest",
         content: "해피아워와 함께 진행되는 AI 콘테스트로, 매달 주어진 주제에 맞춰 다양한 AI 툴을 활용해 작업물을 자유롭게 제작하고 제출합니다.",
         keywords: ["AI", "Contest", "콘테스트", "공모전", "생성형", "이미지"]
       }
