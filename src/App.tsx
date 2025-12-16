@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
@@ -5,7 +6,7 @@ import { ContentRenderer } from './components/ContentRenderer';
 import { HANDBOOK_CONTENT } from './constants';
 import { ContentType, SectionData, SubSection } from './types';
 import { Menu } from 'lucide-react';
-import { seedDB, saveContent, ensureUUID } from './utils/db';
+import { seedDB, saveContent } from './utils/db';
 import { auth, loginWithGoogle, logout, trackScreenView, trackMenuClick } from './utils/firebase';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
 import { SEO } from './components/SEO'; // SEO 컴포넌트 임포트
@@ -49,11 +50,14 @@ const MainLayout: React.FC<{
 
   useEffect(() => {
     if (activeData) {
-      // document.title 설정 로직은 이제 SEO 컴포넌트가 담당하므로 제거하거나 중복 사용 가능
-      // SEO 컴포넌트가 더 우선순위를 가집니다.
       trackScreenView(activeData.title, currentId);
     }
   }, [activeData, currentId]);
+
+  const handleContentUpdate = (newSubSections: SubSection[]) => {
+    console.log(`[MainLayout] Requesting update for ${currentId}`, newSubSections);
+    onUpdateContent(currentId, newSubSections);
+  };
 
   // 현재 URL 생성 (HashRouter 고려)
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -63,16 +67,15 @@ const MainLayout: React.FC<{
       <SEO 
         title={activeData.title}
         description={activeData.description || `${activeData.title}에 대한 상세 가이드입니다.`}
-        // 대표 이미지가 heroImage로 있다면 사용, 없으면 기본값 사용
         image={activeData.heroImage}
         url={currentUrl}
       />
       <ContentRenderer
-        key={currentId}
+        key={`${currentId}-${activeData.subSections?.length || 0}`} // 강제 리렌더링을 위해 키 조합 변경
         data={activeData}
         allContent={contentData}
         onNavigate={onNavigate}
-        onUpdateContent={onUpdateContent}
+        onUpdateContent={handleContentUpdate}
         setIsDirty={setIsDirty}
         isAdmin={isAdmin}
         user={user}
@@ -83,8 +86,7 @@ const MainLayout: React.FC<{
 
 // Root App Component
 const App: React.FC = () => {
-  // ensureUUID를 사용하여 초기 상태에도 UUID가 반드시 존재하도록 보장 (편집/삭제 버그 수정)
-  const [contentData, setContentData] = useState<SectionData[]>(ensureUUID(HANDBOOK_CONTENT));
+  const [contentData, setContentData] = useState<SectionData[]>(HANDBOOK_CONTENT);
   const [user, setUser] = useState<firebase.User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -94,10 +96,6 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // [1] HashRouter 호환 섹션 감지 로직
-  // window.location.hash를 직접 파싱하여 현재 섹션을 명확히 식별
-  // 기존 split('/')[0] 방식은 #이 포함된 경우(예: company#wifi)를 처리하지 못하므로,
-  // [?#] 정규식으로 해시나 쿼리스트링 시작 전까지만 잘라냅니다.
   const hashPath = typeof window !== 'undefined' 
     ? window.location.hash.replace(/^#\//, '').split(/[?#]/)[0] 
     : '';
@@ -130,13 +128,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // seedDB now returns the merged data (Local + Firestore)
         const mergedData = await seedDB();
+        console.log("[App] Data loaded from DB:", mergedData);
         setContentData(mergedData);
       } catch (e) {
         console.error("DB Load Error", e);
-        // Fallback to local constant if DB fails (UUID 보장)
-        setContentData(ensureUUID(HANDBOOK_CONTENT));
+        setContentData(HANDBOOK_CONTENT);
       }
     };
     loadData();
@@ -156,8 +153,6 @@ const App: React.FC = () => {
 
   // 4. Scroll Reset on Navigation
   useEffect(() => {
-    // 앵커 링크(#) 이동 시에는 스크롤을 최상단으로 리셋하지 않도록,
-    // location.hash가 아닌 location.pathname(섹션 변경)만 감지합니다.
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
@@ -198,23 +193,29 @@ const App: React.FC = () => {
       return;
     }
 
-    // 1. Update Local State first for immediate feedback
+    console.log(`[App] Updating content for ${id}. Item count: ${newSubSections.length}`);
+
+    // 1. Update Local State immediately (Optimistic UI)
+    // Deep clone to ensure React detects state change
     const updatedContent = contentData.map(section => {
       if (section.id === id) {
-        return { ...section, subSections: newSubSections };
+        return { 
+            ...section, 
+            subSections: [...newSubSections] // Create new array reference
+        };
       }
       return section;
     });
+    
     setContentData(updatedContent);
 
     // 2. Persist to Firestore
-    // 정확히 해당 ID를 가진 섹션을 찾아서 저장
     const sectionToUpdate = updatedContent.find(s => s.id === id);
     if (sectionToUpdate) {
       try {
         await saveContent(sectionToUpdate);
         setIsDirty(false);
-        console.log(`Saved successfully: ${id}`);
+        console.log(`[App] DB Saved successfully: ${id}`);
       } catch (e) {
         console.error("Failed to save to DB:", e);
         alert("저장에 실패했습니다. 네트워크를 확인해주세요.");

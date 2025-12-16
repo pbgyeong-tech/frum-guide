@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
@@ -256,9 +257,10 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   
   const handleEdit = (uuid: string) => { 
       if (!uuid) {
-          console.warn("Attempted to edit item without UUID");
+          console.warn("[ContentRenderer] Attempted to edit item without UUID");
           return;
       }
+      console.log(`[ContentRenderer] Editing item: ${uuid}`);
       setEditingItemId(uuid); 
       setIsModalOpen(true); 
   };
@@ -266,7 +268,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   
   const handleDeleteTrigger = (uuid: string) => { 
       if (!uuid) {
-          console.warn("Attempted to delete item without UUID");
+          console.warn("[ContentRenderer] Attempted to delete item without UUID");
           return;
       }
       setDeleteTargetId(uuid); 
@@ -274,6 +276,8 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   };
 
   const handleSaveModal = (newData: SubSection) => {
+    console.log("[ContentRenderer] Saving Modal Data:", newData);
+    
     const currentList = Array.isArray(data.subSections) ? data.subSections : [];
     let newSubSections = [...currentList];
     
@@ -284,7 +288,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         newData.lastEditedBy = user.email;
         newData.lastEditedAt = Date.now();
         
-        // Log snapshot (explicit typing removed to avoid runtime type issues if types.ts lags)
         const snapshot = {
             slug: newData.slug || '',
             title: newData.title,
@@ -305,12 +308,19 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
 
     if (editingItemId) {
-      newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? { ...newData, uuid: editingItemId } : sub);
+      const index = newSubSections.findIndex(sub => sub.uuid === editingItemId);
+      if (index !== -1) {
+          newSubSections[index] = { ...newData, uuid: editingItemId };
+          console.log(`[ContentRenderer] Updated item at index ${index}`);
+      } else {
+          console.warn(`[ContentRenderer] Could not find item with UUID ${editingItemId} to update.`);
+      }
     } else {
       newSubSections.push({ ...newData, uuid: newUuid });
+      console.log(`[ContentRenderer] Added new item with UUID ${newUuid}`);
     }
     
-    console.log("Saving new subsections:", newSubSections);
+    console.log("[ContentRenderer] Sending new list to parent:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -338,7 +348,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     }
     // Strict filtering: ensure we are filtering by valid UUIDs
     const newSubSections = safeSubSections.filter(s => s.uuid && s.uuid !== deleteTargetId);
-    console.log("Deleting item, new list:", newSubSections);
+    console.log("[ContentRenderer] Deleting item, new list:", newSubSections);
     onUpdateContent(newSubSections);
     setDeleteTargetId(null);
     setDeleteModalOpen(false);
