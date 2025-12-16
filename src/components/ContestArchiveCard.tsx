@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SubSection } from '../types';
 import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
-// --- Markdown Helpers Local Copy (to support full rendering in Contest Card) ---
+// --- Markdown Helpers ---
 const handleContentOutboundClick = (name: string, url: string) => {
   trackEvent('click_outbound', { link_name: name, link_url: url, location: 'content' });
 };
@@ -55,48 +55,69 @@ const parseInlineMarkdown = (text: string) => {
 };
 
 const renderMarkdownContent = (content: string | string[]) => {
-  const lines = Array.isArray(content) ? content : content.split('\n');
+  const lines = Array.isArray(content) ? content : content.split(/\r?\n/);
   const elements: React.ReactNode[] = [];
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
-    if (line.startsWith('```')) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // Code Block
+    if (trimmedLine.startsWith('```')) {
       const codeLines = []; i++;
-      while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
+      while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
     }
+    
+    // Images
     if (line.includes('![') && line.includes(')')) {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
        if (imgMatch) {
-         if (line.startsWith('![') && line.endsWith(')')) {
+         if (trimmedLine.startsWith('![') && trimmedLine.endsWith(')')) {
             elements.push(<div key={i} style={{ margin: '24px 0' }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '8px', border: '1px solid #222' }} /></div>);
          } else {
-            elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc' }}>{parseInlineMarkdown(line)}</p>);
+            elements.push(<p key={i} style={{ marginBottom: '8px', color: '#ccc' }}>{parseInlineMarkdown(line)}</p>);
          }
          i++; continue;
        }
     }
-    if (line.startsWith('[') && line.endsWith(')') && !line.includes('!')) {
-       const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
+    
+    // Link Cards
+    if (trimmedLine.startsWith('[') && trimmedLine.endsWith(')') && !trimmedLine.includes('!')) {
+       const linkMatch = trimmedLine.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
-    const isOrdered = /^\d+\./.test(line);
-    const isUnordered = /^(\-|•|\*)\s/.test(line);
+    
+    // Lists (Ordered & Unordered) - lenient regex (space optional but preferred)
+    const isOrdered = /^\d+\./.test(trimmedLine);
+    const isUnordered = /^(\-|•|\*)/.test(trimmedLine);
     if (isOrdered || isUnordered) {
-        const text = line.replace(/^(\d+\.|(\-|•|\*))\s*/, '');
-        elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px', paddingLeft: '20px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
+        // Clean the marker
+        const text = trimmedLine.replace(/^(\d+\.|(\-|•|\*))\s?/, '');
+        elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', paddingLeft: '12px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
         i++; continue;
     }
-    if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '60px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
-    if (line.startsWith('>')) {
+    
+    // Horizontal Rule
+    if (/^-{3,}$/.test(trimmedLine)) { elements.push(<hr key={i} style={{ margin: '40px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
+    
+    // Blockquote
+    if (trimmedLine.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
         elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
         continue;
     }
-    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem' }}>{parseInlineMarkdown(line)}</p>); }
+    
+    // Standard Paragraph (preserves empty lines as spacers)
+    if (trimmedLine === '') {
+        elements.push(<div key={i} style={{ height: '12px' }} />);
+    } else {
+        // Use pre-wrap to preserve internal spacing/wrapping if any
+        elements.push(<p key={i} style={{ marginBottom: '16px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem', whiteSpace: 'pre-wrap' }}>{parseInlineMarkdown(line)}</p>);
+    }
     i++;
   }
   return elements;
@@ -115,7 +136,7 @@ interface ArchiveData {
   };
 }
 
-// Fallback Mock Data if codeBlock is empty
+// Fallback Mock Data
 const ARCHIVE_MOCK_DATA: ArchiveData = {
   2025: {
     1: {
@@ -133,29 +154,57 @@ interface ContestArchiveCardProps {
   id?: string;
 }
 
-export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
-  const [selectedYear, setSelectedYear] = useState<number>(2025);
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
-
-  // Use data from codeBlock (JSON) if available, otherwise mock
-  let archiveData = ARCHIVE_MOCK_DATA;
-  if (data.codeBlock) {
-    try {
-        const parsed = JSON.parse(data.codeBlock);
-        // Basic check to see if it looks like archive data
-        if (typeof parsed === 'object') {
-            archiveData = parsed;
-        }
-    } catch (e) {
-        // Fallback to mock if parse fails or it's not JSON
+// Helper: Determine latest year/month that actually has content
+const getLatestDate = (archive: ArchiveData) => {
+  const years = Object.keys(archive).map(Number).sort((a, b) => b - a);
+  
+  for (const year of years) {
+    const months = Object.keys(archive[year]).map(Number).sort((a, b) => b - a);
+    for (const month of months) {
+      const data = archive[year][month];
+      // Check if real data exists (title, winner, image, or description)
+      if (data && (data.title || data.imageUrl || data.winner || (data.description && data.description.trim().length > 0))) {
+        return { year, month };
+      }
     }
   }
+
+  // Fallback to current date if absolutely no data found
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+};
+
+export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
+  // 1. Parse Data Memoized
+  const archiveData = useMemo(() => {
+    if (data.codeBlock) {
+        try {
+            const parsed = JSON.parse(data.codeBlock);
+            if (typeof parsed === 'object') return parsed as ArchiveData;
+        } catch (e) {
+            // ignore
+        }
+    }
+    return ARCHIVE_MOCK_DATA;
+  }, [data.codeBlock]);
+
+  // 2. Initialize State with Latest Date
+  const latest = useMemo(() => getLatestDate(archiveData), [archiveData]);
+  
+  const [selectedYear, setSelectedYear] = useState<number>(latest.year);
+  const [selectedMonth, setSelectedMonth] = useState<number>(latest.month);
+
+  // Sync state when data actually changes (important for async loading)
+  useEffect(() => {
+    setSelectedYear(latest.year);
+    setSelectedMonth(latest.month);
+  }, [latest]);
 
   const currentData = archiveData[selectedYear]?.[selectedMonth];
 
   return (
     <div id={id} className="bento-card full-width" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* 1. Header Section (Full Markdown Rendering) */}
+      {/* 1. Header Section */}
       <div style={{ padding: '32px 32px 20px 32px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -164,23 +213,19 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                 </div>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>{data.title}</h3>
             </div>
-            {/* Admin Controls Area */}
             {adminControls && (
-                <div style={{ marginLeft: '16px' }}>
-                    {adminControls}
-                </div>
+                <div style={{ marginLeft: '16px' }}>{adminControls}</div>
             )}
         </div>
         
-        {/* Render Full Body Content Here */}
+        {/* Render Header Description */}
         <div style={{ color: '#ccc', lineHeight: '1.6', fontSize: '1rem', marginTop: '16px' }}>
           {renderMarkdownContent(data.content)}
         </div>
       </div>
 
-      {/* 2. Controls Section (Year Tabs & Month Grid) */}
+      {/* 2. Controls Section */}
       <div style={{ background: 'rgba(255,255,255,0.02)' }}>
-        {/* Year Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           {[2025, 2026, 2027].map(year => (
             <button
@@ -204,7 +249,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
           ))}
         </div>
 
-        {/* Month Selector */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(6, 1fr)', 
@@ -246,47 +290,47 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
           <span>{selectedYear}년 {selectedMonth}월 출품작</span>
         </div>
 
-        {currentData && (currentData.title || currentData.imageUrl) ? (
+        {currentData && (currentData.title || currentData.imageUrl || currentData.description) ? (
           <div className="animate-fade">
-            <div style={{ 
-              width: '100%', 
-              aspectRatio: '16/9', 
-              background: '#000', 
-              borderRadius: '12px', 
-              overflow: 'hidden', 
-              border: '1px solid rgba(255,255,255,0.1)',
-              marginBottom: '24px',
-              position: 'relative'
-            }}>
-              {currentData.imageUrl ? (
-                <img src={currentData.imageUrl} alt={currentData.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333' }}>
-                  <ImageIcon size={48} />
+            {currentData.imageUrl ? (
+                <div style={{ 
+                  width: '100%', 
+                  aspectRatio: '16/9', 
+                  background: '#000', 
+                  borderRadius: '12px', 
+                  overflow: 'hidden', 
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  marginBottom: '24px',
+                  position: 'relative'
+                }}>
+                  <img src={currentData.imageUrl} alt={currentData.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '16px', 
+                    right: '16px', 
+                    background: '#E70012', 
+                    color: '#fff', 
+                    padding: '6px 12px', 
+                    borderRadius: '20px', 
+                    fontSize: '0.8rem', 
+                    fontWeight: 700,
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                  }}>
+                    1st Place
+                  </div>
                 </div>
-              )}
-              <div style={{ 
-                position: 'absolute', 
-                top: '16px', 
-                right: '16px', 
-                background: '#E70012', 
-                color: '#fff', 
-                padding: '6px 12px', 
-                borderRadius: '20px', 
-                fontSize: '0.8rem', 
-                fontWeight: 700,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-              }}>
-                1st Place
-              </div>
-            </div>
+            ) : null}
 
             <h4 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: '#fff' }}>{currentData.title}</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
                 <span style={{ fontSize: '0.9rem', color: '#888' }}>Winner:</span>
-                <span style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{currentData.winner}</span>
+                <span style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{currentData.winner || 'TBD'}</span>
             </div>
-            <p style={{ color: '#ccc', lineHeight: '1.6' }}>{currentData.description}</p>
+            
+            {/* Description with Markdown */}
+            <div style={{ color: '#ccc', lineHeight: '1.7', fontSize: '1rem' }}>
+              {renderMarkdownContent(currentData.description || '')}
+            </div>
           </div>
         ) : (
           <div style={{ 

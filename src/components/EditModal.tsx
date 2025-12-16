@@ -300,7 +300,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                       <input type="text" placeholder="Entry Title (e.g. Cyberpunk Office)" value={cTitle} onChange={(e) => updateContestEntry('title', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
                       <input type="text" placeholder="Winner Name (e.g. Creative Sol. Team)" value={cWinner} onChange={(e) => updateContestEntry('winner', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
                       <input type="text" placeholder="Image URL" value={cImage} onChange={(e) => updateContestEntry('image', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
-                      <textarea placeholder="Description" rows={3} value={cDesc} onChange={(e) => updateContestEntry('desc', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                      <textarea placeholder="Description (Supports Markdown)" rows={6} value={cDesc} onChange={(e) => updateContestEntry('desc', e.target.value)} style={{ width: '100%', padding: '10px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
                   </div>
               </div>
           )}
