@@ -17,6 +17,32 @@ interface SidebarProps {
   user: firebase.User | null;
 }
 
+// 6. Magnetic Button Component - Motion Removed (Simplified to standard interaction)
+const NavItem: React.FC<{
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+  href?: string;
+  target?: string;
+  rel?: string;
+}> = ({ children, onClick, className, style, href, ...props }) => {
+  const Component = href ? 'a' : 'button';
+
+  return (
+    // @ts-ignore
+    <Component
+      className={className}
+      onClick={onClick}
+      href={href}
+      style={style}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeSection, 
   setActiveSection, 
@@ -61,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const isActive = activeSection === section.id;
             const Icon = section.icon;
             return (
-              <button
+              <NavItem
                 key={section.id}
                 className={`nav-button ${isActive ? 'active' : ''}`}
                 onClick={() => { 
@@ -71,14 +97,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
               >
                 <Icon size={18} />
-                {section.title}
-              </button>
+                <span className={isActive ? 'font-mono' : ''} style={{ letterSpacing: isActive ? '-0.02em' : 'normal' }}>
+                  {section.title}
+                </span>
+              </NavItem>
             );
           })}
         </nav>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <a 
+          <NavItem 
             href="https://lunch-solution-center.vercel.app/" 
             target="_blank" 
             rel="noreferrer"
@@ -94,18 +122,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <ExternalLink size={18} />
             Lunch Solution Center
-          </a>
+          </NavItem>
           
           {isAdmin ? (
-            <button 
+            <NavItem 
               className="nav-button"
               onClick={onLogout} 
               style={{ color: '#666' }}
             >
               <LogOut size={18} /> Admin Logout
-            </button>
+            </NavItem>
           ) : (
-            <button 
+            <NavItem 
               className="nav-button"
               onClick={() => {
                 trackEvent('click_login', { method: 'google_popup' });
@@ -114,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               style={{ color: '#666' }}
             >
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#666' }}></div> Admin Login
-            </button>
+            </NavItem>
           )}
         </div>
       </aside>

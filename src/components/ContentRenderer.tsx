@@ -11,36 +11,28 @@ import { ContestArchiveCard } from './ContestArchiveCard';
 import { trackAnchorView, trackEvent } from '../utils/firebase';
 import { addEditLog } from '../utils/db';
 
-// --- Badge Style Logic (Dynamic HSL Generation) ---
+// --- Badge Style Logic ---
 const getBadgeStyle = (text: string) => {
   if (!text) return { bg: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid #444' };
   const t = text.trim();
   
-  // Specific role overrides (Fixed colors for special roles)
-  if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
-  if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
-  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
-  if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
-  if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
+  if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.1)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
+  if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.1)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
+  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.1)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
+  if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
+  if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.1)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
   
-  // Dynamic Color Generation based on String Hash
   let hash = 0;
-  for (let i = 0; i < t.length; i++) {
-    hash = t.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  for (let i = 0; i < t.length; i++) { hash = t.charCodeAt(i) + ((hash << 5) - hash); }
 
-  // Generate HSL values
-  // Hue: 0-360 based on hash
   const h = Math.abs(hash) % 360;
-  // Saturation: Fixed at 75% for vibrancy
   const s = 75;
-  // Lightness: Fixed at 75% for good contrast on dark background
   const l = 75;
 
   return {
     color: `hsl(${h}, ${s}%, ${l}%)`,
-    bg: `hsla(${h}, ${s}%, ${l}%, 0.15)`,
-    border: `1px solid hsla(${h}, ${s}%, ${l}%, 0.35)`
+    bg: `hsla(${h}, ${s}%, ${l}%, 0.1)`,
+    border: `1px solid hsla(${h}, ${s}%, ${l}%, 0.3)`
   };
 };
 
@@ -48,10 +40,19 @@ const handleContentOutboundClick = (name: string, url: string) => {
   trackEvent('click_outbound', { link_name: name, link_url: url, location: 'content' });
 };
 
+// --- Spotlight Helper ---
+const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+  const { currentTarget, clientX, clientY } = e;
+  const { left, top } = currentTarget.getBoundingClientRect();
+  currentTarget.style.setProperty('--mouse-x', `${clientX - left}px`);
+  currentTarget.style.setProperty('--mouse-y', `${clientY - top}px`);
+};
+
 // --- Sub Components ---
+// 4. Use Monospace font for numbers
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
   <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
-    <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
+    <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
     <div style={{ flex: 1, lineHeight: 1.6, color: '#EAEAEA' }}>{children}</div>
   </div>
 );
@@ -60,7 +61,7 @@ const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) =
   <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px 24px', margin: '20px 0', textDecoration: 'none', cursor: 'pointer', transition: 'border 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E70012'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LinkIcon size={20} color="#fff" /></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{text}</span><span style={{ color: '#666', fontSize: '0.8rem' }}>{new URL(url).hostname}</span></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{text}</span><span className="font-mono" style={{ color: '#666', fontSize: '0.8rem' }}>{new URL(url).hostname}</span></div>
     </div>
     <ArrowRight size={18} color="#E70012" />
   </a>
@@ -77,7 +78,8 @@ const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaul
 };
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
-  <div style={{ background: '#050505', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontFamily: 'monospace', fontSize: '0.85rem', color: '#E0E0E0', margin: '16px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+  // 4. Monospace font for code
+  <div className="font-mono" style={{ background: '#050505', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontSize: '0.85rem', color: '#E0E0E0', margin: '16px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
     {text}
   </div>
 );
@@ -104,7 +106,7 @@ const parseInlineMarkdown = (text: string) => {
         const boldMatch = part.match(/^\*\*(.*?)\*\*$/);
         if (boldMatch) return <strong key={i} style={{ color: '#fff' }}>{boldMatch[1]}</strong>;
         const codeMatch = part.match(/^`(.*?)`$/);
-        if (codeMatch) return <code key={i} style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px', fontFamily: 'monospace' }}>{codeMatch[1]}</code>;
+        if (codeMatch) return <code key={i} className="font-mono" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>{codeMatch[1]}</code>;
         return part;
       })}
     </>
@@ -122,9 +124,10 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const renderCell = (cell: string, header: string) => {
     if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액') || header.includes('조장')) {
       const style = getBadgeStyle(cell);
-      return <span style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
+      // 4. Monospace for badges
+      return <span className="font-mono" style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
     }
-    if (header.includes('이메일')) return <a href={`mailto:${cell}`} style={{ color: '#aaa' }}>{cell}</a>;
+    if (header.includes('이메일')) return <a href={`mailto:${cell}`} className="font-mono" style={{ color: '#aaa', fontSize: '0.85rem' }}>{cell}</a>;
     return parseInlineMarkdown(cell);
   };
 
@@ -245,7 +248,6 @@ const renderMarkdownContent = (content: string | string[]) => {
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
   const isWelcome = data.id === ContentType.WELCOME;
   const isFAQ = data.id === ContentType.FAQ;
-  // Added ContentType.CULTURE to complex layout list
   const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.CULTURE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
   
   const [isEditMode, setIsEditMode] = useState(false);
@@ -266,38 +268,26 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   useEffect(() => { setIsEditMode(false); }, [data.id]);
   
   const handleEdit = (uuid: string) => { 
-      if (!uuid) {
-          console.warn("[ContentRenderer] Attempted to edit item without UUID");
-          return;
-      }
-      console.log(`[ContentRenderer] Editing item: ${uuid}`);
+      if (!uuid) return;
       setEditingItemId(uuid); 
       setIsModalOpen(true); 
   };
   const handleAddNew = () => { setEditingItemId(null); setIsModalOpen(true); };
   
   const handleDeleteTrigger = (uuid: string) => { 
-      if (!uuid) {
-          console.warn("[ContentRenderer] Attempted to delete item without UUID");
-          return;
-      }
+      if (!uuid) return;
       setDeleteTargetId(uuid); 
       setDeleteModalOpen(true); 
   };
 
   const handleSaveModal = (newData: SubSection) => {
-    console.log("[ContentRenderer] Saving Modal Data:", newData);
-    
     const currentList = Array.isArray(data.subSections) ? data.subSections : [];
     let newSubSections = [...currentList];
-    
-    // UUID Generation moved here if missing to ensure stability
     const newUuid = newData.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
     
     if (user && user.email) {
         newData.lastEditedBy = user.email;
         newData.lastEditedAt = Date.now();
-        
         const snapshot = {
             slug: newData.slug || '',
             title: newData.title,
@@ -306,7 +296,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             external_link: newData.link || '',
             disclaimer_note: newData.disclaimer || ''
         };
-
         addEditLog({ 
             timestamp: Date.now(), 
             userEmail: user.email, 
@@ -319,18 +308,10 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
     if (editingItemId) {
       const index = newSubSections.findIndex(sub => sub.uuid === editingItemId);
-      if (index !== -1) {
-          newSubSections[index] = { ...newData, uuid: editingItemId };
-          console.log(`[ContentRenderer] Updated item at index ${index}`);
-      } else {
-          console.warn(`[ContentRenderer] Could not find item with UUID ${editingItemId} to update.`);
-      }
+      if (index !== -1) newSubSections[index] = { ...newData, uuid: editingItemId };
     } else {
       newSubSections.push({ ...newData, uuid: newUuid });
-      console.log(`[ContentRenderer] Added new item with UUID ${newUuid}`);
     }
-    
-    console.log("[ContentRenderer] Sending new list to parent:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -346,7 +327,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
            external_link: targetItem.link || '',
            disclaimer_note: targetItem.disclaimer || ''
         };
-
         addEditLog({ 
             timestamp: Date.now(), 
             userEmail: user.email, 
@@ -356,9 +336,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             details: { after: snapshot } 
         });
     }
-    // Strict filtering: ensure we are filtering by valid UUIDs
     const newSubSections = safeSubSections.filter(s => s.uuid && s.uuid !== deleteTargetId);
-    console.log("[ContentRenderer] Deleting item, new list:", newSubSections);
     onUpdateContent(newSubSections);
     setDeleteTargetId(null);
     setDeleteModalOpen(false);
@@ -369,7 +347,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length) return;
     [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
-    console.log("Moving UP:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -378,7 +355,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length - 1) return;
     [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
-    console.log("Moving DOWN:", newSubSections);
     onUpdateContent(newSubSections);
   };
 
@@ -429,12 +405,9 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       if (newActiveId && newActiveId !== activeSectionIdRef.current) {
         setActiveSectionId(newActiveId);
         activeSectionIdRef.current = newActiveId;
-
-        // Update URL hash without triggering scroll logic
         const currentPath = location.pathname;
         const currentSearch = location.search;
         const newHash = `#${currentPath}${currentSearch}#${newActiveId}`;
-        
         if (window.location.hash !== newHash) {
            window.history.replaceState(null, '', newHash);
         }
@@ -453,7 +426,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       container.removeEventListener('scroll', throttledScroll);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [safeSubSections, data.id, location]); // Added location to dependency
+  }, [safeSubSections, data.id, location]);
 
   const handleTocClick = (id: string) => {
     setActiveSectionId(id);
@@ -499,7 +472,8 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 {quickLinkSections.map((section, index) => {
                   const SectionIcon = section.icon;
                   return (
-                    <button key={section.id} onClick={() => onNavigate(section.id)} className="bento-card" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}><div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><SectionIcon size={24} color="#E70012" /><h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{section.title}</h3></div><p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5', margin: 0 }}>{section.description}</p></button>
+                    // 1. Apply bento-card spotlight via handleMouseMove
+                    <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className="bento-card stagger-item" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', animationDelay: `${index * 100}ms` }}><div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><SectionIcon size={24} color="#E70012" /><h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{section.title}</h3></div><p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5', margin: 0 }}>{section.description}</p></button>
                   );
                 })}
             </div>
@@ -531,10 +505,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
-          // 1. Move sectionId calculation to the top of the loop
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
-
-          // 2. Common Admin Controls JSX Construction
           const adminControls = isAdmin && isEditMode ? (
             <div style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '4px' }}>
@@ -543,14 +514,12 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 </div>
                 <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                {/* Use fallback empty string for uuid to prevent crash but logic handles it */}
                 <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#333'} onMouseLeave={(e) => e.currentTarget.style.background = '#1a1a1a'}><Edit3 size={16} /></button>
                 <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.2)'; e.currentTarget.style.borderColor = '#E70012'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.1)'; e.currentTarget.style.borderColor = 'rgba(231,0,18,0.3)'; }}><Trash2 size={16} /></button>
                 </div>
             </div>
           ) : null;
 
-          // Check for Archive-type slugs
           const isArchiveType = ['aicontest', 'frum-dining', 'coffee-chat'].includes(sub.slug || '');
           if (isArchiveType) {
              return <ContestArchiveCard key={sub.uuid || index} id={sectionId} data={sub} adminControls={adminControls} />;
@@ -559,10 +528,10 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
           return (
-             <div key={sub.uuid || index} id={sectionId} className={`bento-card ${isFullWidth ? 'full-width' : ''}`}>
+             // 1. Spotlight Effect (onMouseMove) & 5. Scroll Stagger (stagger-item, animation-delay)
+             <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item ${isFullWidth ? 'full-width' : ''}`} style={{ animationDelay: `${index * 100}ms` }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '20px' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span style={{ fontSize: '0.75rem', color: '#666', fontFamily: 'monospace' }}>#{sub.slug}</span>)}</div>
-                 {/* Render Admin Controls */}
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
                  {adminControls}
                </div>
                {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
