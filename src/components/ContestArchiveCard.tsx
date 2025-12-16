@@ -91,11 +91,9 @@ const renderMarkdownContent = (content: string | string[]) => {
     }
     
     // Lists (Ordered & Unordered)
-    // Modified to require space after marker (e.g. "* item") so that "**bold**" is not treated as a list.
     const isOrdered = /^\d+\./.test(trimmedLine);
     const isUnordered = /^(\-|•|\*)\s/.test(trimmedLine); 
     if (isOrdered || isUnordered) {
-        // Clean the marker
         const text = trimmedLine.replace(/^(\d+\.|(\-|•|\*))\s?/, '');
         elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px', paddingLeft: '12px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
         i++; continue;
@@ -112,11 +110,10 @@ const renderMarkdownContent = (content: string | string[]) => {
         continue;
     }
     
-    // Standard Paragraph (preserves empty lines as spacers)
+    // Standard Paragraph
     if (trimmedLine === '') {
         elements.push(<div key={i} style={{ height: '12px' }} />);
     } else {
-        // Use pre-wrap to preserve internal spacing/wrapping if any
         elements.push(<p key={i} style={{ marginBottom: '16px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem', whiteSpace: 'pre-wrap' }}>{parseInlineMarkdown(line)}</p>);
     }
     i++;
@@ -155,6 +152,11 @@ interface ContestArchiveCardProps {
   id?: string;
 }
 
+// Helper: Check if data entry has content
+const hasContent = (data: any) => {
+  return !!(data && (data.title || data.imageUrl || data.winner || (data.description && data.description.trim().length > 0)));
+};
+
 // Helper: Determine latest year/month that actually has content
 const getLatestDate = (archive: ArchiveData) => {
   const years = Object.keys(archive).map(Number).sort((a, b) => b - a);
@@ -162,9 +164,7 @@ const getLatestDate = (archive: ArchiveData) => {
   for (const year of years) {
     const months = Object.keys(archive[year]).map(Number).sort((a, b) => b - a);
     for (const month of months) {
-      const data = archive[year][month];
-      // Check if real data exists (title, winner, image, or description)
-      if (data && (data.title || data.imageUrl || data.winner || (data.description && data.description.trim().length > 0))) {
+      if (hasContent(archive[year][month])) {
         return { year, month };
       }
     }
@@ -258,7 +258,11 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
           borderBottom: '1px solid rgba(255,255,255,0.1)' 
         }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-             const hasData = !!archiveData[selectedYear]?.[month];
+             const data = archiveData[selectedYear]?.[month];
+             // Hide month buttons if they have no content
+             const hasData = hasContent(data);
+             if (!hasData) return null;
+
              const isSelected = selectedMonth === month;
              
              return (
@@ -269,8 +273,8 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                   padding: '8px',
                   borderRadius: '6px',
                   border: isSelected ? '1px solid #E70012' : '1px solid rgba(255,255,255,0.1)',
-                  background: isSelected ? '#E70012' : (hasData ? 'rgba(255,255,255,0.05)' : 'transparent'),
-                  color: isSelected ? '#fff' : (hasData ? '#ccc' : '#444'),
+                  background: isSelected ? '#E70012' : 'rgba(255,255,255,0.05)',
+                  color: isSelected ? '#fff' : '#ccc',
                   fontSize: '0.85rem',
                   fontWeight: isSelected ? 700 : 400,
                   cursor: 'pointer',
@@ -291,7 +295,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
           <span>{selectedYear}년 {selectedMonth}월 출품작</span>
         </div>
 
-        {currentData && (currentData.title || currentData.imageUrl || currentData.description) ? (
+        {currentData && hasContent(currentData) ? (
           <div className="animate-fade">
             {currentData.imageUrl ? (
                 <div style={{ 
