@@ -419,6 +419,15 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       if (newActiveId && newActiveId !== activeSectionIdRef.current) {
         setActiveSectionId(newActiveId);
         activeSectionIdRef.current = newActiveId;
+
+        // Update URL hash without triggering scroll logic
+        const currentPath = location.pathname;
+        const currentSearch = location.search;
+        const newHash = `#${currentPath}${currentSearch}#${newActiveId}`;
+        
+        if (window.location.hash !== newHash) {
+           window.history.replaceState(null, '', newHash);
+        }
       }
     };
     const throttledScroll = () => {
@@ -434,7 +443,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       container.removeEventListener('scroll', throttledScroll);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [safeSubSections, data.id]);
+  }, [safeSubSections, data.id, location]); // Added location to dependency
 
   const handleTocClick = (id: string) => {
     setActiveSectionId(id);
