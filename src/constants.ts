@@ -1,3 +1,4 @@
+
 import { 
   Home, 
   Wifi, 
@@ -10,7 +11,8 @@ import {
   HelpCircle,
   Briefcase,
   Settings,
-  CreditCard
+  CreditCard,
+  Smile
 } from 'lucide-react';
 import { SectionData, ContentType } from './types';
 
@@ -41,13 +43,12 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         title: "안녕하세요.👋",
         imagePlaceholder: "https://www.frum.co.kr/_next/image?url=%2Fimages%2Fabout-frum.jpg&w=3840&q=75",
         content: [
-            "프럼은 디지털 에이전시로 UX 컨설팅 및 마케팅, 콘텐츠 발행, 사이트 운영 작업을 진행합니다. 주요 클라이언트는 현대자동차그룹, 삼성, LG등이 있습니다.",
+            "프럼은 디지털 에이전시로 UX 컨설팅 및 마케팅, 콘텐츠 발행, 사이트 운영 작업을 진행합니다. 주요 클라이언트는 현대자동차그룹, 삼성, LG등이 있으며 모빌리티 관련 프로젝트가 많습니다.",
             "[프럼 웹사이트에서 자세히 알아보기 >](https://www.frum.co.kr/ko/about)"
         ],
         keywords: ["비전", "사업", "클라이언트", "고객사", "하는일", "에이전시", "업종", "현대", "삼성"]
       },
       {
-        slug: "about-frum", // ✨ URL ID 고정
         title: "프럼의 사업부와 구성원을 소개할게요.",
         content: `| 사업부 | 이름 | 직급 | 이메일 |
 |---|---|---|---|
@@ -81,6 +82,7 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Contents Solution Center | 류민 | 수석 | m.ryu@frum.co.kr |
 | Contents Solution Center | 김장원 | 수석 | jw.kim@frum.co.kr |
 | Contents Solution Center | 이세환 | 수석 | sh.lee@frum.co.kr |
+| Contents Solution Center | 황은비 | 책임 | eb.hwang@frum.co.kr |
 | Contents Solution Center | 이인주 | 책임 | ij.lee@frum.co.kr |
 | Contents Solution Center | 윤현수 | 책임 | hs.yoon@frum.co.kr |
 | Contents Solution Center | 남도연 | 선임 | dy.nam@frum.co.kr |
@@ -89,7 +91,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["조직도", "구성원", "팀원", "연락처", "이메일", "전화번호", "담당자", "누구", "직급", "부서"]
       },
       {
-        slug: "office-map", // ✨ URL ID 고정
         title: "사무실은 이렇게 구성되어 있어요.",
         imagePlaceholder: "https://cdn.midjourney.com/u/27b81851-afbf-4e59-84eb-0a18c999df64/297f7ed436ba3b244718eb7afc34ca2e13960a7d97f310d59a8aa8f7f1203108.jpg",
         content: [
@@ -116,18 +117,17 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "무선네트워크 연결과 이메일 설정",
     subSections: [
       {
-        slug: "wifi-setup", // ✨ URL ID 고정
         title: "무선 인터넷 설정하기",
         content: [
             "다음 과정에 따라 무선 인터넷을 연결해주세요.",
             "1. `시스템 설정` > `Wi-Fi` > ‘FRUM’ 네트워크 연결",
             "2. 암호 입력: imagination_composer_2018"
         ],
+        codeBlock: "imagination_composer_2018",
         imagePlaceholder: "https://s.mj.run/_p_io4VsXxk",
         keywords: ["와이파이", "wifi", "비밀번호", "무선", "인터넷", "비번", "pw", "password", "연결", "접속"]
       },
       {
-        slug: "nas-setup", // ✨ URL ID 고정
         title: "프럼 서버 접속하기",
         content: [
             "프럼에서 제작되는 모든 산출물은 서버에 저장하며 관련 리소스를 확인할 수 있습니다.",
@@ -141,7 +141,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["서버", "nas", "접속", "주소", "파일", "공유", "아카이브", "폴더", "백업", "자료", "저장소"]
       },
       {
-        slug: "mail-signature", // ✨ URL ID 고정
         title: "메일 서명 만들기",
         content: [
             "발급받은 회사 메일 계정으로 로그인 후 다음 과정에 따라 서명을 만들어주세요.",
@@ -163,10 +162,9 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     id: ContentType.WELFARE,
     title: "복지 & 혜택",
     icon: Coffee,
-    description: "프럼의 복리후생 제도 및 조직 문화 안내",
+    description: "프럼의 복리후생 제도",
     subSections: [
       {
-        slug: "family-event", // ✨ URL ID 고정
         title: "1. 경조 지원 제도",
         content: [
             "**1) 경조 휴가**",
@@ -189,11 +187,10 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["경조사", "결혼", "장례", "사망", "휴가", "지원금", "돈", "부조", "화환", "경조금"]
       },
       {
-        slug: "long-service-reward", // ✨ URL ID 고정
         title: "2. 장기근속 보상",
         content: [
             "**근속 장려금 및 특별 휴가**",
-            "입사일 기준 만 연차 도달 월의 말일에 장려금이 지급됩니다. 특별휴가는 다음 달에 시프티 앱을 통해 ‘특별휴가’로 부여되며, 지급일로부터 1년 이내에 사용해야 합니다.",
+            "입사일 기준 만 연차에 도달한 월 말에 장려금을 지급하며, 휴가는 해당 연도 안에 사용합니다.",
             "- 3년: 50만원",
             "- 5년: 200만원 + 유급휴가 2주",
             "- 10년: 500만원 + 유급휴가 4주",
@@ -202,7 +199,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["장기근속", "근속", "포상", "보너스", "안식월", "리프레시", "3년", "5년", "10년"]
       },
       {
-        slug: "referral-reward", // ✨ URL ID 고정
         title: "3. 추천 채용 리워드",
         content: [
             "**임직원 추천 보상금**",
@@ -214,10 +210,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         disclaimer: "※ 추천자가 신규 입사자의 입사일 기준 6개월 이내 퇴사 시 지급되지 않습니다.",
         keywords: ["채용", "추천", "인재", "보상금", "리워드", "소개"]
       },
-
       {
-        slug: "work-support", // ✨ URL ID 고정
-        title: "5. 근무 지원 제도",
+        title: "4. 근무 지원 제도",
         content: [
             "**야근 식대 & 택시비 지원**",
             "야근 식대: 1인 15,000원",
@@ -245,50 +239,36 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     id: ContentType.CULTURE,
     title: "일하는 문화",
     icon: Users,
-    description: "프럼의 조직 문화 프로그램",
+    description: "프럼의 조직 문화와 행사",
     subSections: [
       {
-        title: "4. 조직 문화 프로그램",
+        title: "1. 프럼 다이닝 (Froom Dining)",
         content: [
-            "**1) 프럼 다이닝 (Froom Dining)**",
             "2개월마다 랜덤으로 1인당 최대 10만원의 팀 식사비를 지원합니다.",
             "1. 2개월마다 새로운 조 편성",
             "2. 각 조는 랜덤으로 선정된 조장이 리드",
             "3. 식당·일정 조율",
             "4. 해당 날 카드 수령 → 결제 → 영수증 제출",
-            "[자세히 보기](https://docs.google.com/spreadsheets/d/1UVeggMBHTAObqB-F-3Koenxb8oP-87YD-KPK1yg8si4/edit?gid=1304888920#gid=1304888920)",
-            "\n",
-            "**2) 해피아워 (Happy Hour)**",
+            "[자세히 보기](https://docs.google.com/spreadsheets/d/1UVeggMBHTAObqB-F-3Koenxb8oP-87YD-KPK1yg8si4/edit?gid=1304888920#gid=1304888920)"
+        ],
+        disclaimer: "법인카드 1매 운영 → 타 조와 일정 중복 주의",
+        keywords: ["회식", "점심", "다이닝", "밥", "식사", "문화", "친목"]
+      },
+      {
+        title: "2. 해피아워 (Happy Hour)",
+        content: [
             "격주 금요일 오후 진행되는 사내 리프레시 프로그램입니다.",
             "1. 사원·선임 주도 준비",
             "2. 2층 레인보우룸에서 전직원이 함께 참여",
             "3. 간식, 네트워킹, 가벼운 휴식 시간"
         ],
-        disclaimer: "법인카드 1매 운영 → 타 조와 일정 중복 주의",
-        keywords: ["회식", "점심", "다이닝", "밥", "식사", "해피아워", "간식", "금요일", "문화", "친목"]
+        keywords: ["해피아워", "간식", "금요일", "문화", "친목", "휴식"]
       },
       {
-        title: "5. 근무 지원 제도",
-        content: [
-            "**야근 식대 & 택시비 지원**",
-            "야근 식대: 1인 15,000원",
-            "택시비: 오후 11시 이후 퇴근 시 거리 제한 없이 지원",
-            "\n",
-            "**청구 방법 (Spendit 앱 사용)**",
-            "1. Spendit 가입 → 앱 다운로드",
-            "2. 매달 말일에 1개월분 청구",
-            "3. Spendit · 지출 > 셀프 > 금액·상호·날짜 등 입력 후 저장",
-            "4. 영수증 또는 카드 승인내역 화면 첨부",
-            "5. 폴리시는 오한샘 수석에게 요청",
-            "6. 보고서 생성 후 제출 (보고서명 예시: 폴리시명-YYYYMMDD-이름)",
-            "\n",
-            "**관련 가이드**",
-            "[`지출 등록 방법(카드 승인 내역)`](https://help.spendit.kr/hc/ko)",
-            "[`지출 등록 방법(셀프 등록)`](https://help.spendit.kr/hc/ko)",
-            "[`참석자 등록 방법`](https://help.spendit.kr/hc/ko)",
-            "[`보고서 작성 및 제출`](https://help.spendit.kr/hc/ko)"
-        ],
-        keywords: ["야근", "식대", "저녁", "택시", "교통비", "스펜딧", "spendit", "영수증", "청구", "지출", "법인카드", "비용"]
+        slug: "aicontest",
+        title: "3. FRUMPT Contest",
+        content: "해피아워와 함께 진행되는 AI 콘테스트로, 매달 주어진 주제에 맞춰 다양한 AI 툴을 활용해 작업물을 자유롭게 제작하고 제출합니다.",
+        keywords: ["AI", "Contest", "콘테스트", "공모전", "생성형", "이미지"]
       }
     ]
   },
@@ -299,7 +279,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "근무 시간 및 사무실 이용 가이드",
     subSections: [
       {
-        slug: "work-hours", // ✨ URL ID 고정
         title: "업무 시간",
         content: [
             "오전 9:00 - 오후 6:00",
@@ -308,7 +287,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["출근", "퇴근", "시간", "근무", "9시", "6시", "유연"]
       },
       {
-        slug: "lunch-time", // ✨ URL ID 고정
         title: "점심 시간",
         content: [
             "오후 12:00 - 오후 1:00",
@@ -317,7 +295,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["점심", "식사", "휴게", "밥", "12시"]
       },
       {
-        slug: "first-to-arrive", // ✨ URL ID 고정
         title: "첫 출근자일때",
         content: [
             "1. 출입 단말기 [세트/경비] 해제 > 지문 인식",
@@ -330,7 +307,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["문열기", "오픈", "보안", "지문", "경비", "해제", "도어락", "비밀번호"]
       },
       {
-        slug: "last-to-leave", // ✨ URL ID 고정
         title: "마지막 퇴근자일때",
         content: [
             "1. 냉/난방기 OFF",
@@ -343,7 +319,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
         keywords: ["문잠그기", "마감", "퇴근", "소등", "잠금", "보안", "세트"]
       },
       {
-        slug: "annual-leave", // ✨ URL ID 고정
         title: "연차쓰기",
         content: [
             "**연차 종류**",
@@ -370,7 +345,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     subSections: [
       {
         uuid: "expense-1",
-        slug: "corporate-card", // ✨ URL ID 고정
         title: "1. 법인카드 사용 규정",
         content: [
           "**1) 식대 한도**",
@@ -387,7 +361,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
       },
       {
         uuid: "expense-2",
-        slug: "expense-report", // ✨ URL ID 고정
         title: "2. 지출 결의 프로세스 (Spendit)",
         content: [
           "**1) 영수증 제출 기한**",
@@ -412,7 +385,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     description: "업무에 도움이 되는 앱 다운로드",
     subSections: [
       {
-        slug: "tool-list", // ✨ URL ID 고정
         title: "Tool List",
         content: `| Name | Type | Comment | Download |
 |---|---|---|---|
@@ -421,14 +393,12 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Keka | Zip | Mac에서 파일 압축 시 윈도우 호환성을 위해 사용합니다. | [Download](https://www.keka.io/en/) |
 | Slack | 소통 | UX파트의 모든 커뮤니케이션은 Slack을 통해 진행합니다. | [Download](https://slack.com/download) |
 | Spendit | 비용관리 | 프럼의 비용 및 지출 관리는 Spendit을 사용합니다. | [Download](https://www.spendit.kr/) |
-| Microsoft Teams | 소통 | 클라이언트와의 온라인 미팅 시 사용되는 툴입니다. | [Download](https://www.microsoft.com/ko-kr/microsoft-teams/download-app) |
-| Midjourney | UX | 생성형 AI로 에셋을 만들어 시안에 활용합니다. | [Login](https://www.midjourney.com/) |
-| 시프티 | 근태관리 | 출퇴근 기록 및 휴가를 관리할 수 있습니다. | [Download](https://apps.apple.com/kr/app/%EC%8B%9C%ED%94%84%ED%8B%B0/id1170002741) |`,
+| Microsoft | 소통 | 클라이언트와의 온라인 미팅 시 사용되는 툴입니다. | [Download](https://www.microsoft.com/ko-kr/microsoft-teams/download-app) |
+| Midjourney | UX | 생성형 AI로 에셋을 만들어 시안에 활용합니다. | [Login](https://www.midjourney.com/) |`,
         keywords: ["툴", "앱", "프로그램", "소프트웨어", "설치", "다운로드", "피그마", "슬랙", "어도비", "스펜딧"]
       },
       {
-        slug: "shared-account", // ✨ URL ID 고정
-        title: "팀단위 구독 프로그램",
+        title: "팀단위로 구독하는 모든 프로그램은 아래 계정으로 로그인 가능합니다. (Figma 제외)",
         content: [
           "- ID: appfrum.test@gmail.com",
           "- PW: 팀원에게 문의"

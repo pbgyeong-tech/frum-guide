@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SectionData, ContentType, SubSection } from '../types';
+import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
-import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy, User as UserIcon, Clock } from 'lucide-react';
+import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
+import { ContestArchiveCard } from './ContestArchiveCard';
 import { trackAnchorView, trackEvent } from '../utils/firebase';
 import { addEditLog } from '../utils/db';
-import firebase from 'firebase/compat/app';
 
 // --- Badge Style Logic ---
 const BADGE_PALETTE = [
@@ -229,12 +230,13 @@ const renderMarkdownContent = (content: string | string[]) => {
 };
 
 // ----------------------------------------------------------------------
-// 4. 메인 컴포넌트 렌더러
+// 4. Main Component Renderer
 // ----------------------------------------------------------------------
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
   const isWelcome = data.id === ContentType.WELCOME;
   const isFAQ = data.id === ContentType.FAQ;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.CULTURE, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
+  // Added ContentType.CULTURE to complex layout list
+  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.CULTURE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
   
   const [isEditMode, setIsEditMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -258,21 +260,16 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   
   const handleDeleteTrigger = (uuid: string) => { setDeleteTargetId(uuid); setDeleteModalOpen(true); };
 
-  const handleSaveModal = async (newData: SubSection) => {
-    // 🛡️ 로그인 체크
-    if (!user || !user.email) {
-        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-        return;
-    }
-
+  const handleSaveModal = (newData: SubSection) => {
     const currentList = Array.isArray(data.subSections) ? data.subSections : [];
     let newSubSections = [...currentList];
-
-    // 로그 생성 시도
-    if (user) {
-        const userEmail = user.email || 'unknown_user';
+    if (user && user.email) {
+        newData.lastEditedBy = user.email;
+        newData.lastEditedAt = Date.now();
+        
+        // Log snapshot (explicit typing removed to avoid runtime type issues if types.ts lags)
         const snapshot = {
-            slug: newData.slug || '', 
+            slug: newData.slug || '',
             title: newData.title,
             body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content,
             media: newData.imagePlaceholder || '',
@@ -280,34 +277,28 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             disclaimer_note: newData.disclaimer || ''
         };
 
-        await addEditLog({ 
+        addEditLog({ 
             timestamp: Date.now(), 
-            userEmail: userEmail, 
+            userEmail: user.email, 
             sectionId: data.id, 
             subSectionTitle: newData.title, 
             action: editingItemId ? 'update' : 'create', 
             details: { after: snapshot } 
         });
     }
-
-    newData.lastEditedBy = user?.email || 'admin';
-    newData.lastEditedAt = Date.now();
-
     if (editingItemId) {
       newSubSections = newSubSections.map(sub => sub.uuid === editingItemId ? { ...newData, uuid: editingItemId } : sub);
     } else {
       const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
       newSubSections.push({ ...newData, uuid: newUuid });
     }
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
   };
 
   const executeDelete = async () => {
     if (!deleteTargetId) return;
     const targetItem = safeSubSections.find(s => s.uuid === deleteTargetId);
-    
-    if (user && targetItem) {
-        const userEmail = user.email || 'unknown_user';
+    if (user && user.email && targetItem) {
         const snapshot = {
            slug: targetItem.slug || '',
            title: targetItem.title,
@@ -317,18 +308,17 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
            disclaimer_note: targetItem.disclaimer || ''
         };
 
-        await addEditLog({ 
+        addEditLog({ 
             timestamp: Date.now(), 
-            userEmail: userEmail, 
+            userEmail: user.email, 
             sectionId: data.id, 
             subSectionTitle: targetItem.title, 
             action: 'delete', 
             details: { after: snapshot } 
         });
     }
-
     const newSubSections = safeSubSections.filter(s => s.uuid !== deleteTargetId);
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
     setDeleteTargetId(null);
     setDeleteModalOpen(false);
   };
@@ -338,7 +328,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length) return;
     [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
   };
 
   const handleMoveDown = (index: number) => {
@@ -346,7 +336,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     const newSubSections = [...safeSubSections];
     if (index >= newSubSections.length - 1) return;
     [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
-    onUpdateContent(data.id, newSubSections);
+    onUpdateContent(newSubSections);
   };
 
   const executeScroll = (id: string) => {
@@ -377,13 +367,10 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   useEffect(() => {
     const container = document.querySelector('.main-content');
     if (!container) return;
-
     let timeoutId: any = null;
-
     const handleScroll = () => {
       const headerOffset = 150;
       let newActiveId = '';
-
       safeSubSections.forEach((sub, idx) => {
           const id = sub.slug || sub.uuid || `section-${idx}`;
           const element = document.getElementById(id);
@@ -391,22 +378,16 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
               const rect = element.getBoundingClientRect();
               const containerRect = container.getBoundingClientRect();
               const relativeTop = rect.top - containerRect.top;
-              if (relativeTop < headerOffset + 10) {
+              if (relativeTop < headerOffset) {
                   newActiveId = id;
               }
           }
       });
-
       if (newActiveId && newActiveId !== activeSectionIdRef.current) {
         setActiveSectionId(newActiveId);
         activeSectionIdRef.current = newActiveId;
-        const targetHash = `#/${data.id}#${newActiveId}`;
-        if (window.location.hash !== targetHash) {
-            window.history.replaceState(null, '', targetHash);
-        }
       }
     };
-
     const throttledScroll = () => {
         if(!timeoutId) {
             timeoutId = setTimeout(() => {
@@ -415,7 +396,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
             }, 100);
         }
     }
-
     container.addEventListener('scroll', throttledScroll);
     return () => {
       container.removeEventListener('scroll', throttledScroll);
@@ -430,6 +410,18 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     navigate(`#${id}`);
     executeScroll(id);
   };
+
+  if (isFAQ) {
+    return (
+      <div className="animate-enter">
+        <header className="page-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '24px' }}>
+          <h1 className="hero-title" style={{ marginBottom: 0 }}>{data.title}</h1>
+          <p className="hero-desc" style={{ marginLeft: '4px' }}>{data.description}</p>
+        </header>
+        <FaqSearch onNavigate={onNavigate} content={allContent} />
+      </div>
+    );
+  }
 
   if (isWelcome) {
       return (
@@ -460,12 +452,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         {isAdmin && (<button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(!isEditMode); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: isEditMode ? '#E70012' : 'transparent', color: isEditMode ? '#fff' : '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} />{isEditMode ? 'Done Editing' : 'Edit Page'}</button>)}
       </header>
 
-      {/* FAQ Search - Shown only when NOT editing on FAQ page */}
-      {isFAQ && !isEditMode && (
-         <FaqSearch content={[data]} limitToSectionId={data.id} />
-      )}
-
-      {/* TOC (Table of Contents) - Shown for standard pages (not Welcome, not FAQ) */}
       {!isWelcome && !isFAQ && safeSubSections.length > 0 && (
         <>
           <style>{`.toc-sticky-bar { position: sticky; top: 0; z-index: 40; background: rgba(9, 9, 9, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 8px; margin: -20px -40px 40px -40px; padding: 16px 40px; overflow-x: auto; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none; } .toc-sticky-bar::-webkit-scrollbar { display: none; } .toc-sticky-bar button { flex-shrink: 0; } @media (max-width: 768px) { .toc-sticky-bar { top: 70px; margin: -10px -20px 30px -20px; padding: 12px 20px; } }`}</style>
@@ -481,10 +467,12 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         </>
       )}
 
-      {/* Grid Layout - Shown for standard pages OR when editing FAQ */}
-      {(!isFAQ || isEditMode) && (
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
+          if (sub.slug === 'aicontest') {
+             return <ContestArchiveCard key={sub.uuid || index} data={sub} />;
+          }
+
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
@@ -516,8 +504,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         })}
         {isAdmin && (<button onClick={handleAddNew} className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', borderStyle: 'dashed', borderColor: '#333', background: 'transparent', cursor: 'pointer', color: '#666', gap: '12px' }}><div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={24} /></div><span style={{ fontWeight: 600 }}>Add Content Block</span></button>)}
       </div>
-      )}
-
       <EditModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
       <ConfirmModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={executeDelete} />
     </div>

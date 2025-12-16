@@ -1,3 +1,4 @@
+
 import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
@@ -14,17 +15,17 @@ export enum ContentType {
 }
 
 export interface SubSection {
-  uuid?: string;
-  slug?: string;
+  uuid?: string; // Unique ID for deletion/editing stability
+  slug?: string; // URL Anchor ID (e.g., 'wifi-setup')
   title: string;
-  content: string | string[];
-  codeBlock?: string;
+  content: string | string[]; // Can be a paragraph or a list
+  codeBlock?: string; // For things like signatures or wifi passwords
   imagePlaceholder?: string;
   link?: string;
-  disclaimer?: string;
-  keywords?: string[];
-  lastEditedBy?: string;
-  lastEditedAt?: number;
+  disclaimer?: string; // Explicit field for the red info box
+  keywords?: string[]; // Added for natural language search scoring
+  lastEditedBy?: string; // Email of the last editor
+  lastEditedAt?: number; // Timestamp of the last edit
 }
 
 export interface SectionData {
@@ -38,7 +39,6 @@ export interface SectionData {
   children?: SectionData[];
 }
 
-// ✨ [중요] 이 부분이 없어서 Vercel이 에러를 내는 겁니다! 꼭 있어야 해요!
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -47,7 +47,7 @@ export interface ChatMessage {
 }
 
 export interface ContentSnapshot {
-  slug: string; 
+  slug: string;
   title: string;
   body_content: string;
   media: string;
@@ -61,7 +61,6 @@ export interface EditLog {
   sectionId: string;
   subSectionTitle: string;
   action: 'create' | 'update' | 'delete';
-  formatted_date?: string; 
   details: {
     before?: ContentSnapshot;
     after?: ContentSnapshot;
