@@ -13,26 +13,27 @@ import { addEditLog } from '../utils/db';
 
 // --- Badge Style Logic ---
 const getBadgeStyle = (text: string) => {
-  if (!text) return { bg: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid #444' };
+  if (!text) return { bg: 'rgba(255,255,255,0.05)', color: '#ccc', border: '1px solid #444' };
   const t = text.trim();
   
-  if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.1)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
-  if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.1)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
-  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.1)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
-  if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.1)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
-  if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.1)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
+  // Refined pastel colors for badges
+  if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.15)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.4)' }; 
+  if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.15)', color: '#e9d5ff', border: '1px solid rgba(126, 34, 206, 0.4)' }; 
+  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.15)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.4)' }; 
+  if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.15)', color: '#bfdbfe', border: '1px solid rgba(29, 78, 216, 0.4)' }; 
+  if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.15)', color: '#a7f3d0', border: '1px solid rgba(4, 120, 87, 0.4)' }; 
   
   let hash = 0;
   for (let i = 0; i < t.length; i++) { hash = t.charCodeAt(i) + ((hash << 5) - hash); }
 
   const h = Math.abs(hash) % 360;
-  const s = 75;
-  const l = 75;
+  const s = 60; // Lower saturation for pastel
+  const l = 80; // Higher lightness for contrast on dark bg
 
   return {
     color: `hsl(${h}, ${s}%, ${l}%)`,
     bg: `hsla(${h}, ${s}%, ${l}%, 0.1)`,
-    border: `1px solid hsla(${h}, ${s}%, ${l}%, 0.3)`
+    border: `1px solid hsla(${h}, ${s}%, ${l}%, 0.2)`
   };
 };
 
@@ -53,15 +54,15 @@ const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
   <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
     <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
-    <div style={{ flex: 1, lineHeight: 1.6, color: '#EAEAEA' }}>{children}</div>
+    <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
   </div>
 );
 
 const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) => (
-  <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px 24px', margin: '20px 0', textDecoration: 'none', cursor: 'pointer', transition: 'border 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E70012'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}>
+  <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', margin: '20px 0', textDecoration: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#E70012'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LinkIcon size={20} color="#fff" /></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{text}</span><span className="font-mono" style={{ color: '#666', fontSize: '0.8rem' }}>{new URL(url).hostname}</span></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{text}</span><span className="font-mono" style={{ color: '#888', fontSize: '0.8rem' }}>{new URL(url).hostname}</span></div>
     </div>
     <ArrowRight size={18} color="#E70012" />
   </a>
@@ -70,8 +71,8 @@ const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) =
 const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div style={{ marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
-      <button onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '1rem', fontWeight: 600 }}><span>{title}</span>{isOpen ? <ChevronDown size={18} color="#888" /> : <ChevronRight size={18} color="#888" />}</button>
+    <div style={{ marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '1.05rem', fontWeight: 600 }}><span>{title}</span>{isOpen ? <ChevronDown size={18} color="#888" /> : <ChevronRight size={18} color="#888" />}</button>
       {isOpen && <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>{children}</div>}
     </div>
   );
@@ -79,14 +80,14 @@ const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaul
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
   // 4. Monospace font for code
-  <div className="font-mono" style={{ background: '#050505', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontSize: '0.85rem', color: '#E0E0E0', margin: '16px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+  <div className="font-mono" style={{ background: '#080808', border: '1px solid #222', borderRadius: '8px', padding: '16px', fontSize: '0.9rem', color: '#ccc', margin: '16px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
     {text}
   </div>
 );
 
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.05) 0%, rgba(20,20,20,0.5) 100%)', borderLeft: '2px solid #E70012', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px', marginBottom: '20px', fontSize: '0.9rem', color: '#ddd', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0, marginTop: '4px' }} />
+  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.08) 0%, rgba(20,20,20,0.3) 100%)', borderLeft: '3px solid #E70012', padding: '16px 20px', borderRadius: '0 8px 8px 0', marginTop: '24px', marginBottom: '24px', fontSize: '0.95rem', color: '#d0d0d0', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+    <Lightbulb size={20} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
     <div style={{ lineHeight: 1.6, flex: 1 }}>{children}</div>
   </div>
 );
@@ -104,9 +105,9 @@ const parseInlineMarkdown = (text: string) => {
             return <a key={i} href={linkMatch[2]} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(linkMatch[1], linkMatch[2])} style={{ color: '#E70012', fontWeight: 600, borderBottom: '1px solid rgba(231,0,18,0.3)' }}>{linkMatch[1]}</a>;
         }
         const boldMatch = part.match(/^\*\*(.*?)\*\*$/);
-        if (boldMatch) return <strong key={i} style={{ color: '#fff' }}>{boldMatch[1]}</strong>;
+        if (boldMatch) return <strong key={i} style={{ color: '#fff', fontWeight: 700 }}>{boldMatch[1]}</strong>;
         const codeMatch = part.match(/^`(.*?)`$/);
-        if (codeMatch) return <code key={i} className="font-mono" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px' }}>{codeMatch[1]}</code>;
+        if (codeMatch) return <code key={i} className="font-mono" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.9em' }}>{codeMatch[1]}</code>;
         return part;
       })}
     </>
@@ -125,9 +126,9 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액') || header.includes('조장')) {
       const style = getBadgeStyle(cell);
       // 4. Monospace for badges
-      return <span className="font-mono" style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
+      return <span className="font-mono" style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.02em' }}>{cell}</span>;
     }
-    if (header.includes('이메일')) return <a href={`mailto:${cell}`} className="font-mono" style={{ color: '#aaa', fontSize: '0.85rem' }}>{cell}</a>;
+    if (header.includes('이메일')) return <a href={`mailto:${cell}`} className="font-mono" style={{ color: '#888', fontSize: '0.85rem', textDecoration: 'none' }}>{cell}</a>;
     return parseInlineMarkdown(cell);
   };
 
@@ -155,7 +156,8 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                        else if (h.includes('직급')) width = '15%';
                        
                        return (
-                         <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap', width }}>
+                         // Label Design: Uppercase, small font, wider letter spacing
+                         <th key={k} style={{ textAlign: 'left', padding: '16px 12px', color: '#666', fontSize: '11px', whiteSpace: 'nowrap', width, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
                            {h}
                          </th>
                        );
@@ -165,7 +167,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 <tbody>
                   {groupRows.map((rowCells, rIdx) => {
                     const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
-                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
+                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '16px 12px', color: '#b0b0b0', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
                   })}
                 </tbody>
               </table>
@@ -177,14 +179,14 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   }
   
   return (
-    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-        <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+        <thead><tr style={{ background: 'rgba(255,255,255,0.03)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '16px 12px', textAlign: 'left', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{h}</th>)}</tr></thead>
         <tbody>
           {bodyRows.map((row, i) => {
             const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
             while (cells.length < headers.length) cells.push('');
-            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
+            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '16px 12px', color: '#b0b0b0', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
           })}
         </tbody>
       </table>
@@ -205,9 +207,9 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (headerMatch) {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        const fontSize = level === 1 ? '1.35rem' : level === 2 ? '1.25rem' : '1.15rem';
+        const fontSize = level === 1 ? '1.5rem' : level === 2 ? '1.3rem' : '1.15rem';
         const color = level <= 2 ? '#fff' : '#e0e0e0';
-        const marginTop = i === 0 ? '0' : (level === 1 ? '32px' : '24px');
+        const marginTop = i === 0 ? '0' : (level === 1 ? '40px' : '32px');
         
         elements.push(
             <div key={`header-${i}`} style={{
@@ -215,8 +217,8 @@ const renderMarkdownContent = (content: string | string[]) => {
                 fontWeight: 700,
                 color: color,
                 marginTop: marginTop,
-                marginBottom: '12px',
-                lineHeight: 1.4,
+                marginBottom: '16px',
+                lineHeight: 1.3,
                 letterSpacing: '-0.02em'
             }}>
                 {parseInlineMarkdown(text)}
@@ -242,9 +244,9 @@ const renderMarkdownContent = (content: string | string[]) => {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
        if (imgMatch) {
          if (line.startsWith('![') && line.endsWith(')')) {
-            elements.push(<div key={i} style={{ margin: '24px 0' }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '8px', border: '1px solid #222' }} /></div>);
+            elements.push(<div key={i} style={{ margin: '32px 0' }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #222' }} /></div>);
          } else {
-            elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc' }}>{parseInlineMarkdown(line)}</p>);
+            elements.push(<p key={i} style={{ marginBottom: '16px', color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>);
          }
          i++; continue;
        }
@@ -266,18 +268,18 @@ const renderMarkdownContent = (content: string | string[]) => {
              if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span></div>);
         }
         i++; continue;
     }
-    if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '60px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
+    if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '40px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
         elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
         continue;
     }
-    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem' }}>{parseInlineMarkdown(line)}</p>); }
+    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '16px', color: '#a0a0a0', lineHeight: 1.75, fontSize: '1.05rem', fontWeight: 400 }}>{parseInlineMarkdown(line)}</p>); }
     i++;
   }
   return elements;
@@ -571,8 +573,8 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
           return (
              // 1. Spotlight Effect (onMouseMove) & 5. Scroll Stagger (stagger-item, animation-delay)
              <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item ${isFullWidth ? 'full-width' : ''}`} style={{ animationDelay: `${index * 100}ms` }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '20px' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
                  {adminControls}
                </div>
                {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}

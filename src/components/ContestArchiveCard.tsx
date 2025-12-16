@@ -46,7 +46,7 @@ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
   <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
     <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
-    <div style={{ flex: 1, lineHeight: 1.6, color: '#EAEAEA' }}>{children}</div>
+    <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
   </div>
 );
 
@@ -196,9 +196,9 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (headerMatch) {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        const fontSize = level === 1 ? '1.35rem' : level === 2 ? '1.25rem' : '1.15rem';
+        const fontSize = level === 1 ? '1.5rem' : level === 2 ? '1.3rem' : '1.15rem';
         const color = level <= 2 ? '#fff' : '#e0e0e0';
-        const marginTop = i === 0 ? '0' : (level === 1 ? '32px' : '24px');
+        const marginTop = i === 0 ? '0' : (level === 1 ? '40px' : '32px');
         
         elements.push(
             <div key={`header-${i}`} style={{
@@ -206,8 +206,8 @@ const renderMarkdownContent = (content: string | string[]) => {
                 fontWeight: 700,
                 color: color,
                 marginTop: marginTop,
-                marginBottom: '12px',
-                lineHeight: 1.4,
+                marginBottom: '16px',
+                lineHeight: 1.3,
                 letterSpacing: '-0.02em'
             }}>
                 {parseInlineMarkdown(text)}
@@ -257,7 +257,7 @@ const renderMarkdownContent = (content: string | string[]) => {
              if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#b0b0b0', lineHeight: 1.5, fontSize: '0.95rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span></div>);
         }
         i++; continue;
     }
@@ -268,7 +268,7 @@ const renderMarkdownContent = (content: string | string[]) => {
         elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
         continue;
     }
-    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc', lineHeight: 1.7, fontSize: '1rem' }}>{parseInlineMarkdown(line)}</p>); }
+    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '16px', color: '#a0a0a0', lineHeight: 1.75, fontSize: '1.05rem', fontWeight: 400 }}>{parseInlineMarkdown(line)}</p>); }
     i++;
   }
   return elements;
@@ -353,7 +353,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                 <div style={{ padding: '10px', background: 'rgba(231,0,18,0.1)', borderRadius: '10px' }}>
                     <HeaderIcon color="#E70012" size={22} strokeWidth={2.5} />
                 </div>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>{data.title}</h3>
+                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{data.title}</h3>
             </div>
             {adminControls && (
                 <div style={{ marginLeft: '16px' }}>{adminControls}</div>

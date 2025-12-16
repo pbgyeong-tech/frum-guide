@@ -176,16 +176,39 @@ aside.sidebar-container {
   margin-top: 60px; 
 }
 
-/* 1. Cursor Spotlight Effect Base */
+/* 1. Deep Glass Effect & Bento Card */
 .bento-card {
   position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  
+  border-radius: 20px;
   padding: 32px;
-  overflow: hidden; /* Important for spotlight containment */
-  transition: transform 0.4s var(--easing), border-color 0.4s;
+  overflow: hidden; 
+  transition: transform 0.4s var(--easing), border-color 0.4s, box-shadow 0.4s;
   min-width: 0;
+
+  /* Specular Border: Top/Left bright, Bottom/Right dark */
+  border: 1px solid rgba(255, 255, 255, 0.05); /* Fallback */
+  border-top-color: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.08);
+  border-right-color: rgba(0, 0, 0, 0.2);
+  border-bottom-color: rgba(0, 0, 0, 0.4);
+
+  /* Inner Glow & Deep Shadow */
+  box-shadow: 
+    0 20px 40px rgba(0,0,0,0.4), 
+    inset 0 0 0 1px rgba(255,255,255,0.03), 
+    inset 0 1px 0 0 rgba(255,255,255,0.05);
+}
+
+.bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 30px 60px rgba(0,0,0,0.5), 
+    inset 0 0 0 1px rgba(255,255,255,0.05), 
+    inset 0 1px 0 0 rgba(255,255,255,0.1);
 }
 
 /* The Spotlight Overlay */
@@ -196,11 +219,11 @@ aside.sidebar-container {
   left: 0;
   right: 0;
   bottom: 0;
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 1px; /* Border width */
   background: radial-gradient(
     800px circle at var(--mouse-x, 0) var(--mouse-y, 0),
-    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.25),
     transparent 40%
   );
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -217,7 +240,7 @@ aside.sidebar-container {
   opacity: 1;
 }
 
-/* Inner Glow */
+/* Inner Glow Highlight */
 .bento-card::after {
   content: "";
   position: absolute;
@@ -227,7 +250,7 @@ aside.sidebar-container {
   bottom: 0;
   background: radial-gradient(
     600px circle at var(--mouse-x, 0) var(--mouse-y, 0),
-    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.03),
     transparent 40%
   );
   opacity: 0;
