@@ -27,21 +27,35 @@ const ARCHIVE_MOCK_DATA: ArchiveData = {
   2026: {}
 };
 
-export const ContestArchiveCard: React.FC<{ data: SubSection }> = ({ data }) => {
+interface ContestArchiveCardProps {
+  data: SubSection;
+  adminControls?: React.ReactNode;
+  id?: string;
+}
+
+export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
   const [selectedYear, setSelectedYear] = useState<number>(2025);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
 
   const currentData = ARCHIVE_MOCK_DATA[selectedYear]?.[selectedMonth];
 
   return (
-    <div className="bento-card full-width" style={{ padding: 0, overflow: 'hidden' }}>
+    <div id={id} className="bento-card full-width" style={{ padding: 0, overflow: 'hidden' }}>
       {/* 1. Header Section */}
       <div style={{ padding: '32px 32px 20px 32px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <div style={{ padding: '8px', background: 'rgba(231,0,18,0.1)', borderRadius: '8px' }}>
-            <Trophy color="#E70012" size={20} />
-          </div>
-          <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>{data.title}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ padding: '8px', background: 'rgba(231,0,18,0.1)', borderRadius: '8px' }}>
+                    <Trophy color="#E70012" size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>{data.title}</h3>
+            </div>
+            {/* Admin Controls Area */}
+            {adminControls && (
+                <div style={{ marginLeft: '16px' }}>
+                    {adminControls}
+                </div>
+            )}
         </div>
         <p style={{ color: '#ccc', lineHeight: '1.6', fontSize: '1rem', margin: 0 }}>
           {Array.isArray(data.content) ? data.content[0] : data.content}

@@ -469,30 +469,37 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
+          // 1. Move sectionId calculation to the top of the loop
+          const sectionId = sub.slug || sub.uuid || `section-${index}`;
+
+          // 2. Common Admin Controls JSX Construction
+          const adminControls = isAdmin && isEditMode ? (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => handleMoveUp(index)} disabled={index === 0} title="Move Up" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === 0 ? 'transparent' : '#1a1a1a', border: index === 0 ? '1px solid transparent' : '1px solid #333', borderRadius: '6px', color: index === 0 ? '#444' : '#ccc', cursor: index === 0 ? 'default' : 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#666')} onMouseLeave={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#333')}><ArrowUp size={16} /></button>
+                <button onClick={() => handleMoveDown(index)} disabled={index === safeSubSections.length - 1} title="Move Down" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === safeSubSections.length - 1 ? 'transparent' : '#1a1a1a', border: index === safeSubSections.length - 1 ? '1px solid transparent' : '1px solid #333', borderRadius: '6px', color: index === safeSubSections.length - 1 ? '#444' : '#ccc', cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#666')} onMouseLeave={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#333')}><ArrowDown size={16} /></button>
+                </div>
+                <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#333'} onMouseLeave={(e) => e.currentTarget.style.background = '#1a1a1a'}><Edit3 size={16} /></button>
+                <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.2)'; e.currentTarget.style.borderColor = '#E70012'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.1)'; e.currentTarget.style.borderColor = 'rgba(231,0,18,0.3)'; }}><Trash2 size={16} /></button>
+                </div>
+            </div>
+          ) : null;
+
           if (sub.slug === 'aicontest') {
-             return <ContestArchiveCard key={sub.uuid || index} data={sub} />;
+             // 3. Pass id here
+             return <ContestArchiveCard key={sub.uuid || index} id={sectionId} data={sub} adminControls={adminControls} />;
           }
 
-          const sectionId = sub.slug || sub.uuid || `section-${index}`;
           const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
           
           return (
              <div key={sub.uuid || index} id={sectionId} className={`bento-card ${isFullWidth ? 'full-width' : ''}`}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: '20px' }}>
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.4 }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span style={{ fontSize: '0.75rem', color: '#666', fontFamily: 'monospace' }}>#{sub.slug}</span>)}</div>
-                 {isAdmin && isEditMode && (
-                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                     <div style={{ display: 'flex', gap: '4px' }}>
-                       <button onClick={() => handleMoveUp(index)} disabled={index === 0} title="Move Up" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === 0 ? 'transparent' : '#1a1a1a', border: index === 0 ? '1px solid transparent' : '1px solid #333', borderRadius: '6px', color: index === 0 ? '#444' : '#ccc', cursor: index === 0 ? 'default' : 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#666')} onMouseLeave={(e) => index !== 0 && (e.currentTarget.style.borderColor = '#333')}><ArrowUp size={16} /></button>
-                       <button onClick={() => handleMoveDown(index)} disabled={index === safeSubSections.length - 1} title="Move Down" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === safeSubSections.length - 1 ? 'transparent' : '#1a1a1a', border: index === safeSubSections.length - 1 ? '1px solid transparent' : '1px solid #333', borderRadius: '6px', color: index === safeSubSections.length - 1 ? '#444' : '#ccc', cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#666')} onMouseLeave={(e) => index !== safeSubSections.length - 1 && (e.currentTarget.style.borderColor = '#333')}><ArrowDown size={16} /></button>
-                     </div>
-                     <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
-                     <div style={{ display: 'flex', gap: '8px' }}>
-                       <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#333'} onMouseLeave={(e) => e.currentTarget.style.background = '#1a1a1a'}><Edit3 size={16} /></button>
-                       <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.2)'; e.currentTarget.style.borderColor = '#E70012'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(231,0,18,0.1)'; e.currentTarget.style.borderColor = 'rgba(231,0,18,0.3)'; }}><Trash2 size={16} /></button>
-                     </div>
-                   </div>
-                 )}
+                 {/* Render Admin Controls */}
+                 {adminControls}
                </div>
                {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
                <div style={{ color: '#ccc', lineHeight: '1.6' }}>{renderMarkdownContent(sub.content)}</div>
