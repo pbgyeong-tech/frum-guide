@@ -62,6 +62,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         if (initialData.disclaimer) {
           setDisclaimer(initialData.disclaimer);
         } else {
+          // Legacy support: if disclaimer was inside content prefixed with 👉
           const disclaimerIdx = contentArr.findIndex(c => c.trim().startsWith('👉'));
           if (disclaimerIdx !== -1) {
             setDisclaimer(contentArr[disclaimerIdx].replace(/^👉\s*/, ''));
@@ -321,8 +322,14 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                 <input type="text" value={link} onChange={(e) => handleInputChange(setLink, e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none' }} />
               </div>
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffaaaa', marginBottom: '8px', fontSize: '0.9rem' }}><AlertCircle size={14} /> Disclaimer / Note</label>
-                <input type="text" value={disclaimer} onChange={(e) => handleInputChange(setDisclaimer, e.target.value)} placeholder="Important note or warning text" style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid #444', borderRadius: '8px', color: '#ffaaaa', outline: 'none' }} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffaaaa', marginBottom: '8px', fontSize: '0.9rem' }}><AlertCircle size={14} /> Disclaimer / Note (Supports Markdown & Newlines)</label>
+                <textarea 
+                    value={disclaimer} 
+                    onChange={(e) => handleInputChange(setDisclaimer, e.target.value)} 
+                    placeholder="Important note or warning text. Supports markdown." 
+                    rows={3}
+                    style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid #444', borderRadius: '8px', color: '#ffaaaa', outline: 'none', resize: 'vertical', lineHeight: '1.5' }} 
+                />
               </div>
             </>
           )}

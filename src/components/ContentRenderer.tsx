@@ -83,8 +83,8 @@ const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.05) 0%, rgba(20,20,20,0.5) 100%)', borderLeft: '2px solid #E70012', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px', marginBottom: '20px', fontSize: '0.9rem', color: '#ddd', display: 'flex', gap: '12px', alignItems: 'flex-start', whiteSpace: 'pre-wrap' }}>
-    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
+  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.05) 0%, rgba(20,20,20,0.5) 100%)', borderLeft: '2px solid #E70012', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px', marginBottom: '20px', fontSize: '0.9rem', color: '#ddd', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0, marginTop: '4px' }} />
     <div style={{ lineHeight: 1.6, flex: 1 }}>{children}</div>
   </div>
 );
@@ -559,7 +559,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                <div style={{ color: '#ccc', lineHeight: '1.6' }}>{renderMarkdownContent(sub.content)}</div>
                {sub.codeBlock && (<div style={{ position: 'relative', marginTop: '16px' }}><CodeBlock text={sub.codeBlock} /><button onClick={() => navigator.clipboard.writeText(sub.codeBlock!)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }} title="Copy"><Copy size={14} /></button></div>)}
                {sub.link && (<a href={sub.link} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick('Link', sub.link!)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}><LinkIcon size={16} /> Link</a>)}
-               {sub.disclaimer && (<InfoBlock>{parseInlineMarkdown(sub.disclaimer)}</InfoBlock>)}
+               {sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer)}</InfoBlock>)}
              </div>
           );
         })}
