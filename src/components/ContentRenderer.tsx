@@ -120,7 +120,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const groupColumnIndex = headers.findIndex(h => h.includes('사업부'));
   
   const renderCell = (cell: string, header: string) => {
-    if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액')) {
+    if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액') || header.includes('조장')) {
       const style = getBadgeStyle(cell);
       return <span style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
     }
@@ -463,12 +463,22 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
     executeScroll(id);
   };
 
-  if (isFAQ) {
+  if (isFAQ && !isEditMode) {
     return (
       <div className="animate-enter">
-        <header className="page-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '24px' }}>
-          <h1 className="hero-title" style={{ marginBottom: 0 }}>{data.title}</h1>
-          <p className="hero-desc" style={{ marginLeft: '4px' }}>{data.description}</p>
+        <header className="page-header" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+             <h1 className="hero-title" style={{ marginBottom: 0 }}>{data.title}</h1>
+             <p className="hero-desc" style={{ marginLeft: '4px' }}>{data.description}</p>
+          </div>
+          {isAdmin && (
+            <button 
+              onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(true); }} 
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: 'transparent', color: '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <Edit3 size={16} /> Edit Page
+            </button>
+          )}
         </header>
         <FaqSearch onNavigate={onNavigate} content={allContent} />
       </div>
