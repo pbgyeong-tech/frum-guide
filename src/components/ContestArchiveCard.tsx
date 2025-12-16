@@ -182,7 +182,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
       <div style={{ background: 'rgba(255,255,255,0.02)' }}>
         {/* Year Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          {[2024, 2025, 2026, 2027].map(year => (
+          {[2025, 2026, 2027].map(year => (
             <button
               key={year}
               onClick={() => setSelectedYear(year)}
