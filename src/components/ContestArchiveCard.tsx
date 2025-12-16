@@ -90,9 +90,10 @@ const renderMarkdownContent = (content: string | string[]) => {
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
     
-    // Lists (Ordered & Unordered) - lenient regex (space optional but preferred)
+    // Lists (Ordered & Unordered)
+    // Modified to require space after marker (e.g. "* item") so that "**bold**" is not treated as a list.
     const isOrdered = /^\d+\./.test(trimmedLine);
-    const isUnordered = /^(\-|•|\*)/.test(trimmedLine);
+    const isUnordered = /^(\-|•|\*)\s/.test(trimmedLine); 
     if (isOrdered || isUnordered) {
         // Clean the marker
         const text = trimmedLine.replace(/^(\d+\.|(\-|•|\*))\s?/, '');
