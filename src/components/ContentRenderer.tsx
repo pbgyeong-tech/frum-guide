@@ -146,8 +146,22 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
         {Object.entries(grouped).map(([groupName, groupRows], i) => (
           <AccordionItem key={i} title={groupName} defaultOpen={i === 0}>
             <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead><tr style={{ background: 'rgba(0,0,0,0.3)' }}>{displayHeaders.map((h, k) => <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
+                    {displayHeaders.map((h, k) => {
+                       let width = 'auto';
+                       if (h.includes('이름')) width = '25%';
+                       else if (h.includes('직급')) width = '15%';
+                       
+                       return (
+                         <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap', width }}>
+                           {h}
+                         </th>
+                       );
+                    })}
+                  </tr>
+                </thead>
                 <tbody>
                   {groupRows.map((rowCells, rIdx) => {
                     const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
@@ -185,6 +199,33 @@ const renderMarkdownContent = (content: string | string[]) => {
 
   while (i < lines.length) {
     const line = lines[i].trim();
+
+    // Headers Support (#, ##, ###)
+    const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (headerMatch) {
+        const level = headerMatch[1].length;
+        const text = headerMatch[2];
+        const fontSize = level === 1 ? '1.35rem' : level === 2 ? '1.25rem' : '1.15rem';
+        const color = level <= 2 ? '#fff' : '#e0e0e0';
+        const marginTop = i === 0 ? '0' : (level === 1 ? '32px' : '24px');
+        
+        elements.push(
+            <div key={`header-${i}`} style={{
+                fontSize: level > 3 ? '1.05rem' : fontSize,
+                fontWeight: 700,
+                color: color,
+                marginTop: marginTop,
+                marginBottom: '12px',
+                lineHeight: 1.4,
+                letterSpacing: '-0.02em'
+            }}>
+                {parseInlineMarkdown(text)}
+            </div>
+        );
+        i++;
+        continue;
+    }
+
     if (line.startsWith('```')) {
       const codeLines = []; i++;
       while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
