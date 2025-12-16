@@ -5,14 +5,17 @@ import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lig
 import { trackEvent } from '../utils/firebase';
 
 // --- Badge Style Logic ---
+// Expanded Palette to 19 (Prime number) to minimize collisions
 const BADGE_PALETTE = [
   { bg: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid rgba(185, 28, 28, 0.5)' }, // Red
   { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }, // Orange
   { bg: 'rgba(245, 158, 11, 0.2)', color: '#fcd34d', border: '1px solid rgba(180, 83, 9, 0.5)' }, // Amber
+  { bg: 'rgba(250, 204, 21, 0.2)', color: '#fef08a', border: '1px solid rgba(234, 179, 8, 0.5)' }, // Yellow
   { bg: 'rgba(132, 204, 22, 0.2)', color: '#bef264', border: '1px solid rgba(63, 98, 18, 0.5)' }, // Lime
   { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }, // Emerald
   { bg: 'rgba(20, 184, 166, 0.2)', color: '#5eead4', border: '1px solid rgba(15, 118, 110, 0.5)' }, // Teal
   { bg: 'rgba(6, 182, 212, 0.2)', color: '#67e8f9', border: '1px solid rgba(21, 94, 117, 0.5)' }, // Cyan
+  { bg: 'rgba(14, 165, 233, 0.2)', color: '#7dd3fc', border: '1px solid rgba(3, 105, 161, 0.5)' }, // Sky
   { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }, // Blue
   { bg: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', border: '1px solid rgba(67, 56, 202, 0.5)' }, // Indigo
   { bg: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', border: '1px solid rgba(109, 40, 217, 0.5)' }, // Violet
@@ -20,20 +23,31 @@ const BADGE_PALETTE = [
   { bg: 'rgba(217, 70, 239, 0.2)', color: '#f0abfc', border: '1px solid rgba(162, 28, 175, 0.5)' }, // Fuchsia
   { bg: 'rgba(236, 72, 153, 0.2)', color: '#f9a8d4', border: '1px solid rgba(190, 24, 93, 0.5)' }, // Pink
   { bg: 'rgba(244, 63, 94, 0.2)', color: '#fda4af', border: '1px solid rgba(190, 18, 60, 0.5)' }, // Rose
+  { bg: 'rgba(100, 116, 139, 0.2)', color: '#cbd5e1', border: '1px solid rgba(71, 85, 105, 0.5)' }, // Slate
+  { bg: 'rgba(113, 113, 122, 0.2)', color: '#d4d4d8', border: '1px solid rgba(82, 82, 91, 0.5)' }, // Zinc
+  { bg: 'rgba(120, 113, 108, 0.2)', color: '#d6d3d1', border: '1px solid rgba(87, 83, 78, 0.5)' }, // Stone
 ];
 
 const getBadgeStyle = (text: string) => {
   if (!text) return BADGE_PALETTE[0];
   const t = text.trim();
+  
+  // Specific role overrides
   if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
   if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
   if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
   if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
   if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
   
-  let hash = 0;
-  for (let i = 0; i < t.length; i++) hash = ((hash << 5) - hash) + t.charCodeAt(i);
-  return BADGE_PALETTE[Math.abs(hash) % BADGE_PALETTE.length];
+  // Improved Hash Function (djb2 variant) for better distribution
+  let hash = 5381;
+  for (let i = 0; i < t.length; i++) {
+    // hash * 33 ^ charCode
+    hash = (hash * 33) ^ t.charCodeAt(i);
+  }
+  
+  // Ensure positive index
+  return BADGE_PALETTE[(hash >>> 0) % BADGE_PALETTE.length];
 };
 
 // --- Markdown Helpers ---
