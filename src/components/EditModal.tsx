@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, AlertCircle, Link, Hash, Trophy, Calendar, Bold, Italic, Underline, List, ListOrdered, Quote, Code, Terminal } from 'lucide-react';
+import { X, Save, AlertCircle, Hash, Trophy, Bold, Italic, Underline, List, ListOrdered, Quote, Code, Terminal } from 'lucide-react';
 import { SubSection } from '../types';
 
 interface EditModalProps {
@@ -23,6 +23,63 @@ const safeJsonParse = (str: string | undefined) => {
 };
 
 const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
+
+// --- List Logic Helpers ---
+const ROMAN_VALS = [10, 9, 5, 4, 1];
+const ROMAN_KEYS = ["x", "ix", "v", "iv", "i"];
+const toRoman = (n: number) => {
+    let res = "";
+    let num = n;
+    for(let i=0; i<ROMAN_VALS.length; i++) {
+        while(num >= ROMAN_VALS[i]) { res += ROMAN_KEYS[i]; num -= ROMAN_VALS[i]; }
+    }
+    return res || "i";
+};
+const fromRoman = (s: string) => {
+    const map: Record<string, number> = {i:1, ii:2, iii:3, iv:4, v:5, vi:6, vii:7, viii:8, ix:9, x:10};
+    return map[s.toLowerCase()] || 1;
+};
+const nextChar = (c: string) => String.fromCharCode(c.charCodeAt(0) + 1);
+
+const getLineListInfo = (line: string) => {
+    const indentMatch = line.match(/^(\s*)/);
+    const indent = indentMatch ? indentMatch[1].length : 0;
+    const level = Math.floor(indent / 2);
+
+    // Numeric: 1. 
+    const numMatch = line.match(/^(\s*)(\d+)\.\s/);
+    if (numMatch) return { type: 'numeric', val: parseInt(numMatch[2], 10), level, prefix: numMatch[0] };
+
+    // Roman: i. (Level 2 or specific pattern)
+    // We prioritize checking Roman if it matches specific patterns (i, ii, iii) or if level >= 2
+    // Regex for roman: start of line, spaces, roman chars, dot, space
+    const romanMatch = line.match(/^(\s*)([ivx]+)\.\s/);
+    if (romanMatch) {
+         // Ambiguity check: 'i' and 'v' could be alpha.
+         // If level >= 2 (4 spaces), treat as Roman.
+         if (level >= 2) return { type: 'roman', val: fromRoman(romanMatch[2]), level, prefix: romanMatch[0] };
+         // If level < 2, 'i' might be alpha 'i', but usually lists don't go a..i without context. 
+         // But for simple "i." at start, usually means Roman if user typed it explicitly.
+         // However, strictly following "1->a->i", 'i' appears at level 2.
+    }
+
+    // Alpha: a.
+    const alphaMatch = line.match(/^(\s*)([a-z])\.\s/);
+    if (alphaMatch) {
+        // If it was matched as roman above, it returns. If here, it's alpha.
+        // But 'i' matches both. 'i' at Level 1 should be treated as Alpha if we support a..i
+        // But our rule is 1->a->i. So 'i' is level 2. 
+        // If user manually types 'i.' at level 0, it's ambiguous. Editor assumes Roman for 'i.', 'ii.'?
+        // Let's stick to the prompt's hierarchy rule.
+        return { type: 'alpha', val: alphaMatch[2], level, prefix: alphaMatch[0] };
+    }
+
+    // Unordered
+    const unMatch = line.match(/^(\s*)([-*])\s/);
+    if (unMatch) return { type: 'unordered', val: unMatch[2], level, prefix: unMatch[0] };
+
+    return null;
+};
 
 // Toolbar Button Component
 const ToolbarBtn = ({ icon: Icon, onClick, title }: { icon: any, onClick: () => void, title: string }) => (
@@ -210,58 +267,37 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   // --- Smart List & Editing Logic (Slack-like) ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // 1. Fix for Issue A: Prevent double-execution during IME Composition (Korean, etc.)
-    if (e.nativeEvent.isComposing) {
-      return;
-    }
+    if (e.nativeEvent.isComposing) return;
 
     const target = e.currentTarget;
     const { selectionStart, selectionEnd, value } = target;
 
-    // Line detection helpers
+    // Line detection
     const currentLineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
     const nextNewLine = value.indexOf('\n', selectionStart);
     const currentLineEnd = nextNewLine === -1 ? value.length : nextNewLine;
     const currentLine = value.substring(currentLineStart, currentLineEnd);
     const textBeforeCursor = value.substring(currentLineStart, selectionStart);
 
-    // Regex for list items
-    // Matches: "  - " or "  1. " (indented or not)
-    // Group 1: Indentation
-    // Group 2: Marker (- or * or number)
-    const unorderedRegex = /^(\s*)([-*])\s/;
-    const orderedRegex = /^(\s*)(\d+)\.\s/;
+    // List Info Detection
+    const listInfo = getLineListInfo(currentLine);
 
+    // --- ENTER Key ---
     if (e.key === 'Enter') {
       if (e.shiftKey) {
-        // Shift+Enter = Normal single newline
-        e.preventDefault();
-        const insertion = '\n';
-        const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
-        handleInputChange(setContent, newValue);
-        requestAnimationFrame(() => {
-          target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
-        });
+        // Shift+Enter = Normal line break (no list logic)
         return;
       }
 
-      // Check if we are inside a list item
-      const matchU = textBeforeCursor.match(unorderedRegex);
-      const matchO = textBeforeCursor.match(orderedRegex);
-      const match = matchU || matchO;
-
-      if (match) {
+      if (listInfo) {
+        // We are in a list
         e.preventDefault();
-        const fullMatch = match[0];
-        const indent = match[1];
-        const marker = match[2];
-        const isOrdered = !!matchO;
 
-        // Check if the item is logically "empty" (user just typed the marker and hit enter)
-        const contentAfterMarker = currentLine.substring(fullMatch.length).trim();
-
+        // Check if item is logically empty (e.g., "1. " or "  a. ")
+        const contentAfterMarker = currentLine.substring(listInfo.prefix.length).trim();
+        
         if (!contentAfterMarker && selectionStart === currentLineEnd) {
-          // Exit list: Remove the marker from the current line
+          // Exit list: Remove the marker
           const newValue = value.substring(0, currentLineStart) + value.substring(currentLineEnd);
           handleInputChange(setContent, newValue);
           requestAnimationFrame(() => {
@@ -270,112 +306,144 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           return;
         }
 
-        // Continue list: Insert newline + indent + next marker
-        let nextMarker;
-        if (isOrdered) {
-          const num = parseInt(marker, 10);
-          nextMarker = `${num + 1}. `;
-        } else {
-          nextMarker = `${marker} `;
+        // Continue list: Calculate next marker
+        let nextMarker = '';
+        const indentStr = ' '.repeat(listInfo.level * 2);
+
+        if (listInfo.type === 'numeric') {
+          nextMarker = `${(listInfo.val as number) + 1}. `;
+        } else if (listInfo.type === 'alpha') {
+          nextMarker = `${nextChar(listInfo.val as string)}. `;
+        } else if (listInfo.type === 'roman') {
+          nextMarker = `${toRoman((listInfo.val as number) + 1)}. `;
+        } else if (listInfo.type === 'unordered') {
+          nextMarker = `${listInfo.val} `;
         }
 
-        const insertion = `\n${indent}${nextMarker}`;
+        const insertion = `\n${indentStr}${nextMarker}`;
         const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
         handleInputChange(setContent, newValue);
         requestAnimationFrame(() => {
-          target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
+            target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
         });
         return;
       }
-
-      // Default Enter: Double newline for Markdown paragraphs (standard behavior)
-      e.preventDefault();
-      const insertion = '\n\n';
-      const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
-      handleInputChange(setContent, newValue);
-      requestAnimationFrame(() => {
-        target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
-      });
-      return;
     }
 
+    // --- TAB Key (Indent/Outdent) ---
     if (e.key === 'Tab') {
       e.preventDefault();
       
-      const matchU = currentLine.match(unorderedRegex);
-      const matchO = currentLine.match(orderedRegex);
-      const match = matchU || matchO;
-
-      if (match) {
-        // List indentation logic
-        if (e.shiftKey) {
-          // Outdent
-          const indent = match[1];
-          if (indent.length >= 2) {
-            // Remove 2 spaces
-            const newLine = currentLine.substring(2);
-            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-            handleInputChange(setContent, newValue);
-            requestAnimationFrame(() => {
-              target.selectionStart = target.selectionEnd = Math.max(currentLineStart, selectionStart - 2);
-            });
+      const allLines = value.split('\n');
+      const lineIndex = value.substring(0, currentLineStart).split('\n').length - 1;
+      
+      if (listInfo && (listInfo.type === 'numeric' || listInfo.type === 'alpha' || listInfo.type === 'roman')) {
+          // Ordered list handling
+          let newLevel = listInfo.level;
+          let newType = listInfo.type;
+          
+          if (!e.shiftKey) {
+             // Indent -> Increase Level
+             newLevel++;
+          } else {
+             // Outdent -> Decrease Level
+             if (newLevel > 0) newLevel--;
+             else return; // Can't outdent past 0
           }
-        } else {
-          // Indent (2 spaces) - Fix Issue B (input)
-          const newLine = '  ' + currentLine;
-          const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+
+          // Determine expected type based on level
+          // Level 0: Numeric, Level 1: Alpha, Level 2: Roman, Level 3+: Numeric fallback
+          if (newLevel === 0) newType = 'numeric';
+          else if (newLevel === 1) newType = 'alpha';
+          else if (newLevel === 2) newType = 'roman';
+          else newType = 'numeric';
+
+          // Determine sequence value
+          // Look up for the previous sibling at the same level
+          let newVal: string | number = (newType === 'alpha' ? 'a' : (newType === 'roman' ? 1 : 1));
+
+          // Scan backwards for a sibling
+          for (let i = lineIndex - 1; i >= 0; i--) {
+              const siblingInfo = getLineListInfo(allLines[i]);
+              if (!siblingInfo) continue;
+              
+              if (siblingInfo.level === newLevel) {
+                  // Found sibling! Continue sequence
+                  if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
+                  else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
+                  else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
+                  break; 
+              }
+              if (siblingInfo.level < newLevel) {
+                  // Found parent, stop scanning, start new sequence
+                  break;
+              }
+          }
+          
+          // Construct new marker
+          let newMarker = '';
+          if (newType === 'numeric') newMarker = `${newVal}. `;
+          else if (newType === 'alpha') newMarker = `${newVal}. `;
+          else if (newType === 'roman') newMarker = `${toRoman(newVal as number)}. `;
+
+          const indentStr = ' '.repeat(newLevel * 2);
+          const contentAfter = currentLine.substring(listInfo.prefix.length);
+          const newLineStr = `${indentStr}${newMarker}${contentAfter}`;
+          
+          const newValue = value.substring(0, currentLineStart) + newLineStr + value.substring(currentLineEnd);
           handleInputChange(setContent, newValue);
           requestAnimationFrame(() => {
-            target.selectionStart = target.selectionEnd = selectionStart + 2;
+              target.selectionStart = target.selectionEnd = currentLineStart + indentStr.length + newMarker.length;
           });
-        }
+
+      } else if (listInfo && listInfo.type === 'unordered') {
+          // Unordered list indentation (simple)
+          if (!e.shiftKey) {
+              const newLine = '  ' + currentLine;
+              const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+              handleInputChange(setContent, newValue);
+              requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = selectionStart + 2; });
+          } else {
+             if (currentLine.startsWith('  ')) {
+                 const newLine = currentLine.substring(2);
+                 const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+                 handleInputChange(setContent, newValue);
+                 requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = Math.max(currentLineStart, selectionStart - 2); });
+             }
+          }
       } else {
-        // Standard Tab behavior (insert 2 spaces)
-        if (!e.shiftKey) {
-          const insertion = '  ';
-          const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
-          handleInputChange(setContent, newValue);
-          requestAnimationFrame(() => {
-            target.selectionStart = target.selectionEnd = selectionStart + 2;
-          });
-        }
+          // Normal Tab
+          if (!e.shiftKey) {
+              const insertion = '  ';
+              const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
+              handleInputChange(setContent, newValue);
+              requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = selectionStart + 2; });
+          }
       }
       return;
     }
 
+    // --- BACKSPACE Key ---
     if (e.key === 'Backspace') {
-      // Detect if cursor is strictly after the list marker
-      const matchU = textBeforeCursor.match(/^(\s*)([-*])\s$/);
-      const matchO = textBeforeCursor.match(/^(\s*)(\d+)\.\s$/);
-      const match = matchU || matchO;
-
-      if (match && selectionStart === selectionEnd) {
-        const fullMatch = match[0];
-        const indent = match[1];
-        
-        // Double check position matches length of marker
-        if (selectionStart === currentLineStart + fullMatch.length) {
-          e.preventDefault();
-          
-          if (indent.length >= 2) {
-            // Nested list: Outdent
-            const newLine = currentLine.substring(2);
-            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-            handleInputChange(setContent, newValue);
-            requestAnimationFrame(() => {
-              target.selectionStart = target.selectionEnd = selectionStart - 2;
-            });
-          } else {
-            // Top-level list: Remove list formatting
-            const newLine = currentLine.substring(fullMatch.length);
-            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-            handleInputChange(setContent, newValue);
-            requestAnimationFrame(() => {
-              target.selectionStart = target.selectionEnd = currentLineStart;
-            });
-          }
-        }
-      }
+       if (listInfo && selectionStart === currentLineStart + listInfo.prefix.length && selectionStart === selectionEnd) {
+           // Cursor is just after the marker
+           e.preventDefault();
+           
+           if (listInfo.level > 0) {
+               // Outdent (Similar to Shift+Tab logic but triggers on Backspace at start)
+               // For simplicity, just remove 2 spaces and let user fix number, OR run the full outdent logic?
+               // Let's run full outdent logic for consistency
+               const eventMock = { key: 'Tab', shiftKey: true, preventDefault: () => {} } as any;
+               handleKeyDown(eventMock);
+               return; 
+           } else {
+               // Remove list marker (Level 0)
+               const newLine = currentLine.substring(listInfo.prefix.length);
+               const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+               handleInputChange(setContent, newValue);
+               requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = currentLineStart; });
+           }
+       }
     }
   };
 

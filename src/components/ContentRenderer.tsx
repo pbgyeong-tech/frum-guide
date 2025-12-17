@@ -58,6 +58,22 @@ const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBot
   </div>
 );
 
+// Level 2 Ordered List Item (Alpha: a.)
+const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
+    <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
+        <span className="font-mono" style={{ color: '#ccc', fontWeight: 600, minWidth: '20px', textAlign: 'right' }}>{marker}.</span>
+        <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+    </div>
+);
+
+// Level 3 Ordered List Item (Roman: i.)
+const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
+    <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
+        <span className="font-mono" style={{ color: '#888', fontStyle: 'italic', minWidth: '20px', textAlign: 'right' }}>{marker}.</span>
+        <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+    </div>
+);
+
 const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) => (
   <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', margin: '20px 0', textDecoration: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#E70012'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -249,7 +265,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
   let i = 0;
 
   while (i < lines.length) {
-    // FIX ISSUE B: Use raw line to detect indentation level before trimming
+    // Use raw line to detect indentation level before trimming
     const rawLine = lines[i];
     const line = rawLine.trim();
 
@@ -268,8 +284,8 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
         if (level === 1) {
             fontSize = '2rem'; 
-            marginTop = i === 0 ? '0' : '80px'; // Increased for section separation
-            marginBottom = '48px'; // Increased for hierarchy
+            marginTop = i === 0 ? '0' : '80px'; 
+            marginBottom = '48px'; 
             letterSpacing = '-0.05em';
             fontWeight = 700;
         } else if (level === 2) {
@@ -281,7 +297,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
         } else if (level === 3) {
             fontSize = '1.25rem';
             marginTop = i === 0 ? '0' : '48px';
-            marginBottom = '28px'; // Distinctly larger than line-gap
+            marginBottom = '28px';
             letterSpacing = '-0.02em';
             fontWeight = 600;
             color = '#e0e0e0';
@@ -334,50 +350,73 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
 
-    // List Logic with Indentation Support (Issue B)
-    const isOrdered = /^\d+\./.test(line);
+    // List Logic with Hierarchy (Numeric, Alpha, Roman, Unordered)
+    // 1. Unordered
     const isUnordered = /^(\-|•|\*)\s/.test(line);
-    if (isOrdered || isUnordered) {
-        // Calculate indent level (assuming 2 spaces = 1 level)
-        const indentMatch = rawLine.match(/^(\s*)/);
-        const spaces = indentMatch ? indentMatch[1].length : 0;
-        const level = Math.floor(spaces / 2);
-        const marginLeft = `${level * 24}px`;
+    // 2. Numeric: 1. 
+    const isNumeric = /^\d+\.\s/.test(line);
+    // 3. Alpha/Roman
+    // Indent check for disambiguation
+    const indentMatch = rawLine.match(/^(\s*)/);
+    const spaces = indentMatch ? indentMatch[1].length : 0;
+    const level = Math.floor(spaces / 2);
 
+    if (isOrderedOrUnordered(line)) {
+        const marginLeft = `${level * 24}px`;
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
-        const nextIsUnordered = /^(\-|•|\*)\s/.test(nextLine);
-        let marginBottom = '24px';
-        if (isOrdered && nextIsUnordered) marginBottom = '8px';
-        if (isUnordered && nextIsUnordered) marginBottom = '4px';
-        
-        if (isOrdered) {
-             const match = line.match(/^(\d+)\.\s+(.*)/);
-             if (match) {
-               // Wrap StepBlock to apply margin without modifying component
-               elements.push(
-                 <div key={i} style={{ marginLeft }}>
-                   <StepBlock number={match[1]} marginBottom={marginBottom}>
-                     {parseInlineMarkdown(match[2])}
-                   </StepBlock>
-                 </div>
-               );
-             }
-        } else {
-            const text = line.replace(/^(\-|•|\*)\s*/, '');
-            elements.push(
-              <div key={i} style={{ 
-                display: 'flex', 
-                alignItems: 'flex-start', 
-                gap: '10px', 
-                marginBottom: marginBottom, 
-                paddingLeft: '52px', // Original alignment
-                marginLeft: marginLeft // Added nesting indent
-              }}>
-                <span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span>
-                <span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span>
-              </div>
+        const nextIsItem = isOrderedOrUnordered(nextLine);
+        let marginBottom = nextIsItem ? '8px' : '24px';
+        if (isUnordered && nextIsItem) marginBottom = '4px';
+
+        let renderedItem = null;
+
+        // Try to match specific types based on regex
+        // We check Roman first if indentation is deep (Level >= 2) or explicit
+        const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
+        const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
+        const matchNum = line.match(/^(\d+)\.\s+(.*)/);
+        const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
+
+        if (isUnordered && matchUn) {
+             renderedItem = (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom, paddingLeft: '52px', marginLeft }}>
+                    <span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span>
+                    <span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(matchUn[2])}</span>
+                </div>
+             );
+        } 
+        else if (matchNum) {
+            // Level 1: Red Circle
+            renderedItem = (
+                <div style={{ marginLeft }}>
+                    <StepBlock number={matchNum[1]} marginBottom={marginBottom}>
+                        {parseInlineMarkdown(matchNum[2])}
+                    </StepBlock>
+                </div>
             );
         }
+        else if (matchRoman && level >= 2) {
+             // Level 3 (Roman)
+             renderedItem = (
+                 <RomanBlock marker={matchRoman[1]} marginLeft={marginLeft}>
+                     {parseInlineMarkdown(matchRoman[2])}
+                 </RomanBlock>
+             );
+        }
+        else if (matchAlpha) {
+             // Level 2 (Alpha)
+             renderedItem = (
+                 <AlphaBlock marker={matchAlpha[1]} marginLeft={marginLeft}>
+                     {parseInlineMarkdown(matchAlpha[2])}
+                 </AlphaBlock>
+             );
+        }
+        else {
+            // Fallback (e.g. empty list item)
+            renderedItem = <div key={i}></div>;
+        }
+
+        elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
 
@@ -409,13 +448,12 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
          const nextLine = lines[j].trim();
          if (nextLine === '') break;
          
-         // Lookahead check for special blocks to break paragraph
          if (/^(#{1,6})\s/.test(nextLine)) break;
          if (nextLine.startsWith('```')) break;
          if (nextLine.startsWith('|')) break;
          if (nextLine.startsWith('![') && nextLine.endsWith(')') && nextLine.match(/!\[(.*?)\]\((.*?)\)/)) break;
          if (nextLine.startsWith('[') && nextLine.endsWith(')') && !nextLine.includes('!') && nextLine.match(/^\[(.*?)\]\((.*?)\)$/)) break;
-         if (/^(\d+\.|-|\*|•)\s/.test(nextLine)) break;
+         if (isOrderedOrUnordered(nextLine)) break;
          if (/^-{3,}$/.test(nextLine)) break;
          if (nextLine.startsWith('>')) break;
          
@@ -442,6 +480,11 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     i = j;
   }
   return elements;
+};
+
+// Helper for lookahead check
+const isOrderedOrUnordered = (str: string) => {
+    return /^(\d+|[a-z]|[ivx]+)\.\s/.test(str) || /^(\-|•|\*)\s/.test(str);
 };
 
 // ----------------------------------------------------------------------
