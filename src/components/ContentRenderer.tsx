@@ -266,20 +266,20 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
         if (level === 1) {
             fontSize = '2rem'; 
-            marginTop = i === 0 ? '0' : '60px';
-            marginBottom = '24px';
-            letterSpacing = '-0.05em'; // Tightened to -0.05em
+            marginTop = i === 0 ? '0' : '80px'; // Increased for section separation
+            marginBottom = '48px'; // Increased for hierarchy
+            letterSpacing = '-0.05em';
             fontWeight = 700;
         } else if (level === 2) {
             fontSize = '1.5rem';
-            marginTop = i === 0 ? '0' : '48px';
-            marginBottom = '16px';
+            marginTop = i === 0 ? '0' : '64px';
+            marginBottom = '36px';
             letterSpacing = '-0.025em';
             fontWeight = 700;
         } else if (level === 3) {
             fontSize = '1.25rem';
-            marginTop = i === 0 ? '0' : '32px';
-            marginBottom = '12px';
+            marginTop = i === 0 ? '0' : '48px';
+            marginBottom = '28px'; // Distinctly larger than line-gap
             letterSpacing = '-0.02em';
             fontWeight = 600;
             color = '#e0e0e0';

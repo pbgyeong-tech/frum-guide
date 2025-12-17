@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, AlertCircle, Link, Hash, Trophy, Calendar } from 'lucide-react';
+import { X, Save, AlertCircle, Link, Hash, Trophy, Calendar, Bold, Italic, Underline, List, ListOrdered, Quote, Code, Terminal } from 'lucide-react';
 import { SubSection } from '../types';
 
 interface EditModalProps {
@@ -24,6 +24,31 @@ const safeJsonParse = (str: string | undefined) => {
 
 const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
 
+// Toolbar Button Component
+const ToolbarBtn = ({ icon: Icon, onClick, title }: { icon: any, onClick: () => void, title: string }) => (
+  <button 
+    onClick={onClick}
+    title={title}
+    type="button"
+    style={{ 
+      background: 'transparent', 
+      border: 'none', 
+      color: '#aaa', 
+      cursor: 'pointer', 
+      padding: '6px', 
+      borderRadius: '4px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.2s'
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.background = 'transparent'; }}
+  >
+    <Icon size={16} />
+  </button>
+);
+
 export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, initialData, onDirty }) => {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -44,6 +69,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   // Track if initial load is done to avoid setting dirty on open
   const [loaded, setLoaded] = useState(false);
+
+  // Ref for Body Content Textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -130,6 +158,54 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
       const isArchive = ARCHIVE_SLUGS.includes(suggested);
       setIsArchiveMode(isArchive);
     }
+  };
+
+  // --- Toolbar Logic ---
+  const insertFormat = (startTag: string, endTag: string = '') => {
+    if (!textareaRef.current) return;
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    const currentText = content;
+    
+    const before = currentText.substring(0, start);
+    const selected = currentText.substring(start, end);
+    const after = currentText.substring(end);
+    
+    const newText = before + startTag + selected + endTag + after;
+    
+    handleInputChange(setContent, newText);
+    
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Select the text inside the tags
+        textareaRef.current.setSelectionRange(start + startTag.length, end + startTag.length);
+      }
+    }, 0);
+  };
+
+  const insertLinePrefix = (prefix: string) => {
+    if (!textareaRef.current) return;
+    const start = textareaRef.current.selectionStart;
+    const currentText = content;
+    
+    // Find the beginning of the current line
+    const lineStart = currentText.lastIndexOf('\n', start - 1) + 1;
+    
+    const before = currentText.substring(0, lineStart);
+    const after = currentText.substring(lineStart);
+    
+    const newText = before + prefix + after;
+    
+    handleInputChange(setContent, newText);
+    
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const newCursorPos = start + prefix.length;
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
   };
 
   // Contest Data Handling
@@ -267,10 +343,26 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             {isArchiveMode && <p style={{ marginTop: '6px', fontSize: '0.8rem', color: '#4ade80' }}>✨ Archive/Contest Mode Active: Using extended calendar editor.</p>}
           </div>
 
-          {/* Body Content */}
+          {/* Body Content with Toolbar */}
           <div>
-            <label style={{ display: 'block', color: '#888', marginBottom: '8px', fontSize: '0.9rem' }}>Body Content (Description)</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ color: '#888', fontSize: '0.9rem', margin: 0 }}>Body Content (Description)</label>
+              {/* Markdown Toolbar */}
+              <div style={{ display: 'flex', gap: '4px', background: '#222', borderRadius: '6px', padding: '4px', border: '1px solid #333' }}>
+                  <ToolbarBtn icon={Bold} onClick={() => insertFormat('**', '**')} title="Bold" />
+                  <ToolbarBtn icon={Italic} onClick={() => insertFormat('*', '*')} title="Italic" />
+                  <ToolbarBtn icon={Underline} onClick={() => insertFormat('<u>', '</u>')} title="Underline" />
+                  <div style={{ width: '1px', background: '#444', margin: '0 4px' }} />
+                  <ToolbarBtn icon={List} onClick={() => insertLinePrefix('- ')} title="Bullet List" />
+                  <ToolbarBtn icon={ListOrdered} onClick={() => insertLinePrefix('1. ')} title="Numbered List" />
+                  <div style={{ width: '1px', background: '#444', margin: '0 4px' }} />
+                  <ToolbarBtn icon={Quote} onClick={() => insertLinePrefix('> ')} title="Blockquote" />
+                  <ToolbarBtn icon={Code} onClick={() => insertFormat('`', '`')} title="Inline Code" />
+                  <ToolbarBtn icon={Terminal} onClick={() => insertFormat('\n```\n', '\n```\n')} title="Code Block" />
+              </div>
+            </div>
             <textarea 
+              ref={textareaRef}
               value={content} 
               onChange={(e) => handleInputChange(setContent, e.target.value)}
               onKeyDown={(e) => {
@@ -289,8 +381,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                 }
               }}
               placeholder="Enter main description... (Enter = New Paragraph, Shift+Enter = Line Break)" 
-              rows={6} 
-              style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical', lineHeight: '1.5' }} 
+              rows={8} 
+              style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical', lineHeight: '1.5', fontFamily: 'monospace' }} 
             />
           </div>
 

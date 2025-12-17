@@ -250,20 +250,20 @@ const renderMarkdownContent = (content: string | string[]) => {
 
         if (level === 1) {
             fontSize = '2rem'; 
-            marginTop = i === 0 ? '0' : '60px'; // Massive top margin
-            marginBottom = '24px'; // Tight bottom margin
+            marginTop = i === 0 ? '0' : '80px'; // Massive top margin
+            marginBottom = '48px'; // Tight bottom margin
             letterSpacing = '-0.03em'; // Tight letter spacing
             fontWeight = 700;
         } else if (level === 2) {
             fontSize = '1.5rem';
-            marginTop = i === 0 ? '0' : '48px';
-            marginBottom = '16px';
+            marginTop = i === 0 ? '0' : '64px';
+            marginBottom = '36px';
             letterSpacing = '-0.025em';
             fontWeight = 700;
         } else if (level === 3) {
             fontSize = '1.25rem';
-            marginTop = i === 0 ? '0' : '32px';
-            marginBottom = '12px';
+            marginTop = i === 0 ? '0' : '48px';
+            marginBottom = '28px';
             letterSpacing = '-0.02em';
             fontWeight = 600;
             color = '#e0e0e0';
