@@ -9,7 +9,7 @@ import { Menu } from 'lucide-react';
 import { seedDB, saveContent } from './utils/db';
 import { auth, loginWithGoogle, logout, trackScreenView, trackMenuClick } from './utils/firebase';
 import { AdminRestoreButton } from './components/AdminRestoreButton';
-import { SEO } from './components/SEO'; // SEO 컴포넌트 임포트
+import { SEO } from './components/SEO';
 import firebase from 'firebase/compat/app';
 
 // Helper: Find Data recursively
@@ -54,9 +54,9 @@ const MainLayout: React.FC<{
     }
   }, [activeData, currentId]);
 
-  const handleContentUpdate = (newSubSections: SubSection[]) => {
-    console.log(`[MainLayout] Requesting update for ${currentId}`, newSubSections);
-    onUpdateContent(currentId, newSubSections);
+  const handleContentUpdate = (id: ContentType, newSubSections: SubSection[]) => {
+    console.log(`[MainLayout] Requesting update for ${id}`, newSubSections);
+    onUpdateContent(id, newSubSections);
   };
 
   // 현재 URL 생성 (HashRouter 고려)
@@ -324,3 +324,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+    

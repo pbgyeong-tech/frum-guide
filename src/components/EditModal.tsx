@@ -12,6 +12,15 @@ interface EditModalProps {
   onDirty?: (dirty: boolean) => void;
 }
 
+// --- History Types ---
+interface HistoryState {
+  text: string;
+  selectionStart: number;
+  selectionEnd: number;
+  timestamp: number;
+  type: 'input' | 'action'; // 'input' for typing, 'action' for toolbar/macros
+}
+
 // Helper to safely parse JSON
 const safeJsonParse = (str: string | undefined) => {
   if (!str) return {};
@@ -69,11 +78,6 @@ const getLineListInfo = (line: string) => {
        const str = romanMatch[2];
        const isMultiCharRoman = str.length > 1; // ii, iii, iv, vi... clearly roman
        if (level >= 2 || isMultiCharRoman || str === 'i') { 
-          // Note: 'i' at level 0/1 is ambiguous, but if it's 'i.' it usually starts a roman list or is just item 'i' of alpha.
-          // However, assuming hierarchy 1 -> a -> i:
-          // 'i' at level 2 is definitely Roman.
-          // 'i' at level 1 is 'h'->'i' (Alpha).
-          // We'll let the level guide us.
           if (level >= 2) return { type: 'roman', val: fromRoman(str), level, prefix: romanMatch[0] };
        }
     }
@@ -131,9 +135,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   // Ref for Body Content Textarea
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // --- History Management Refs ---
+  const historyRef = useRef<HistoryState[]>([]);
+  const historyIndexRef = useRef<number>(-1);
 
+  // Initialize Data & History
   useEffect(() => {
     if (isOpen) {
+      let initialContent = '';
+
       if (initialData) {
         setTitle(initialData.title);
         setSlug(initialData.slug || '');
@@ -159,7 +170,8 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           }
         }
 
-        setContent(contentArr.join('\n'));
+        initialContent = contentArr.join('\n');
+        setContent(initialContent);
         setMediaUrl(initialData.imagePlaceholder || '');
         setLink(initialData.link || '');
 
@@ -190,6 +202,17 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setIsArchiveMode(false);
         setContestData({});
       }
+
+      // Reset History Stack
+      historyRef.current = [{
+        text: initialContent,
+        selectionStart: 0,
+        selectionEnd: 0,
+        timestamp: Date.now(),
+        type: 'action' // Initial state treated as action so first type pushes new
+      }];
+      historyIndexRef.current = 0;
+
       setLoaded(true);
       onDirty?.(false);
     } else {
@@ -197,10 +220,96 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     }
   }, [isOpen, initialData]);
 
-  // Handle Input Changes
+  // Handle Input Changes (Generic)
   const handleInputChange = (setter: React.Dispatch<React.SetStateAction<any>>, value: any) => {
     setter(value);
     if (loaded && onDirty) onDirty(true);
+  };
+
+  // --- Centralized Body Update Logic (with History) ---
+  const updateBody = (newText: string, newCursorStart: number, newCursorEnd: number, type: 'input' | 'action') => {
+    // 1. Update React State
+    handleInputChange(setContent, newText);
+
+    // 2. Manage History
+    const now = Date.now();
+    const currentIndex = historyIndexRef.current;
+    const currentEntry = historyRef.current[currentIndex];
+
+    // Determine if we should merge with the previous entry
+    // Merge if: Same type 'input' AND happened recently (< 1000ms)
+    // Actions (toolbar) always create new entries
+    const isSequentialInput = 
+      type === 'input' && 
+      currentEntry?.type === 'input' && 
+      (now - currentEntry.timestamp) < 1000;
+
+    if (isSequentialInput) {
+      // Replace current entry
+      historyRef.current[currentIndex] = {
+        text: newText,
+        selectionStart: newCursorStart,
+        selectionEnd: newCursorEnd,
+        timestamp: now,
+        type: type
+      };
+    } else {
+      // If we are in the middle of history (undo happened), truncate future
+      if (currentIndex < historyRef.current.length - 1) {
+        historyRef.current = historyRef.current.slice(0, currentIndex + 1);
+      }
+      // Push new entry
+      historyRef.current.push({
+        text: newText,
+        selectionStart: newCursorStart,
+        selectionEnd: newCursorEnd,
+        timestamp: now,
+        type: type
+      });
+      historyIndexRef.current++;
+    }
+
+    // 3. Update Cursor (Async to allow render)
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(newCursorStart, newCursorEnd);
+        textareaRef.current.focus();
+      }
+    });
+  };
+
+  // --- Undo / Redo Functions ---
+  const performUndo = () => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current--;
+      const prev = historyRef.current[historyIndexRef.current];
+      
+      // Update state directly without pushing to history
+      handleInputChange(setContent, prev.text);
+      
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.setSelectionRange(prev.selectionStart, prev.selectionEnd);
+          textareaRef.current.focus();
+        }
+      });
+    }
+  };
+
+  const performRedo = () => {
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyIndexRef.current++;
+      const next = historyRef.current[historyIndexRef.current];
+      
+      handleInputChange(setContent, next.text);
+      
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.setSelectionRange(next.selectionStart, next.selectionEnd);
+          textareaRef.current.focus();
+        }
+      });
+    }
   };
 
   const handleSlugChange = (value: string) => {
@@ -232,15 +341,13 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     
     const newText = before + startTag + selected + endTag + after;
     
-    handleInputChange(setContent, newText);
-    
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        // Select the text inside the tags
-        textareaRef.current.setSelectionRange(start + startTag.length, end + startTag.length);
-      }
-    }, 0);
+    // Use new updateBody to track history as 'action'
+    updateBody(
+      newText, 
+      start + startTag.length, 
+      end + startTag.length, 
+      'action'
+    );
   };
 
   const insertLinePrefix = (prefix: string) => {
@@ -256,19 +363,25 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     
     const newText = before + prefix + after;
     
-    handleInputChange(setContent, newText);
-    
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        const newCursorPos = start + prefix.length;
-        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-      }
-    }, 0);
+    // Use new updateBody to track history as 'action'
+    const newCursorPos = start + prefix.length;
+    updateBody(newText, newCursorPos, newCursorPos, 'action');
   };
 
   // --- Smart List & Editing Logic (Slack-like) ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 1. Intercept Undo/Redo
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      performUndo();
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && (e.shiftKey && e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+      e.preventDefault();
+      performRedo();
+      return;
+    }
+
     if (e.nativeEvent.isComposing) return;
 
     const target = e.currentTarget;
@@ -279,10 +392,89 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     const nextNewLine = value.indexOf('\n', selectionStart);
     const currentLineEnd = nextNewLine === -1 ? value.length : nextNewLine;
     const currentLine = value.substring(currentLineStart, currentLineEnd);
-    const textBeforeCursor = value.substring(currentLineStart, selectionStart);
 
     // List Info Detection
     const listInfo = getLineListInfo(currentLine);
+
+    // Helper for changing level (Indent/Outdent)
+    const changeLevel = (direction: 'indent' | 'outdent') => {
+        if (!listInfo) return;
+
+        let newLevel = listInfo.level;
+        if (direction === 'indent') newLevel++;
+        else newLevel--;
+
+        if (newLevel < 0) return; // Cannot outdent past root
+
+        // Handle Unordered Lists (Simple indentation)
+        if (listInfo.type === 'unordered') {
+             const indentStr = '  '.repeat(newLevel);
+             const contentAfter = currentLine.substring(listInfo.prefix.length);
+             const newLineStr = `${indentStr}${listInfo.val} ${contentAfter}`;
+             const newValue = value.substring(0, currentLineStart) + newLineStr + value.substring(currentLineEnd);
+             
+             // Keep cursor relative to text start if possible
+             const textStartOffset = selectionStart - (currentLineStart + listInfo.prefix.length);
+             const newCursor = currentLineStart + indentStr.length + 2 + Math.max(0, textStartOffset);
+             updateBody(newValue, newCursor, newCursor, 'action');
+             return;
+        }
+
+        // Handle Ordered Lists (Hierarchy)
+        let newType = listInfo.type;
+        // Strict Hierarchy: 0=Numeric, 1=Alpha, 2=Roman
+        if (newLevel === 0) newType = 'numeric';
+        else if (newLevel === 1) newType = 'alpha';
+        else if (newLevel === 2) newType = 'roman';
+        
+        // Determine sequence value
+        const allLines = value.split('\n');
+        const lineIndex = value.substring(0, currentLineStart).split('\n').length - 1;
+        
+        let newVal: number | string = (newType === 'alpha' ? 'a' : 1);
+        if (newType === 'roman') newVal = 1;
+        
+        // Scan for previous sibling at new level to continue sequence
+        for (let i = lineIndex - 1; i >= 0; i--) {
+            const prevLine = allLines[i];
+            const prevInfo = getLineListInfo(prevLine);
+            if (!prevInfo) continue; 
+            
+            // If we hit a parent (lower level), stop searching
+            if (prevInfo.level < newLevel) break; 
+            
+            if (prevInfo.level === newLevel) {
+                // Found sibling
+                if (newType === 'numeric' && prevInfo.type === 'numeric') {
+                    newVal = (prevInfo.val as number) + 1;
+                } else if (newType === 'alpha' && prevInfo.type === 'alpha') {
+                    newVal = nextChar(prevInfo.val as string);
+                } else if (newType === 'roman' && prevInfo.type === 'roman') {
+                    newVal = (prevInfo.val as number) + 1;
+                }
+                break;
+            }
+        }
+        
+        // Construct new prefix
+        let newMarker = '';
+        if (newType === 'numeric') newMarker = `${newVal}. `;
+        else if (newType === 'alpha') newMarker = `${newVal}. `;
+        else if (newType === 'roman') newMarker = `${toRoman(newVal as number)}. `;
+
+        const indentStr = '  '.repeat(newLevel);
+        const contentAfter = currentLine.substring(listInfo.prefix.length);
+        const newLineStr = `${indentStr}${newMarker}${contentAfter}`;
+        
+        const newValue = value.substring(0, currentLineStart) + newLineStr + value.substring(currentLineEnd);
+        
+        // Calculate new cursor position relative to text content
+        const contentOffset = selectionStart - (currentLineStart + listInfo.prefix.length);
+        const newPrefixLen = indentStr.length + newMarker.length;
+        const newCursor = currentLineStart + newPrefixLen + Math.max(0, contentOffset);
+        
+        updateBody(newValue, newCursor, newCursor, 'action');
+    };
 
     // --- ENTER Key ---
     if (e.key === 'Enter') {
@@ -295,23 +487,17 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         // We are in a list
         e.preventDefault();
 
-        // Check if item is logically empty (e.g., "1. " or "  a. ")
         const contentAfterMarker = currentLine.substring(listInfo.prefix.length).trim();
         
-        if (!contentAfterMarker && selectionStart === currentLineEnd) {
-          // Exit list: Remove the marker
+        // If empty item -> Exit list
+        if (!contentAfterMarker) {
           const newValue = value.substring(0, currentLineStart) + value.substring(currentLineEnd);
-          handleInputChange(setContent, newValue);
-          requestAnimationFrame(() => {
-            target.selectionStart = target.selectionEnd = currentLineStart;
-          });
+          updateBody(newValue, currentLineStart, currentLineStart, 'action');
           return;
         }
 
         // Continue list: Calculate next marker
         let nextMarker = '';
-        const indentStr = ' '.repeat(listInfo.level * 2);
-
         if (listInfo.type === 'numeric') {
           nextMarker = `${(listInfo.val as number) + 1}. `;
         } else if (listInfo.type === 'alpha') {
@@ -322,12 +508,10 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           nextMarker = `${listInfo.val} `;
         }
 
+        const indentStr = '  '.repeat(listInfo.level);
         const insertion = `\n${indentStr}${nextMarker}`;
         const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
-        handleInputChange(setContent, newValue);
-        requestAnimationFrame(() => {
-            target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
-        });
+        updateBody(newValue, selectionStart + insertion.length, selectionStart + insertion.length, 'action');
         return;
       }
     }
@@ -336,120 +520,14 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     if (e.key === 'Tab') {
       e.preventDefault();
       
-      const allLines = value.split('\n');
-      const lineIndex = value.substring(0, currentLineStart).split('\n').length - 1;
-      
-      if (listInfo && (listInfo.type === 'numeric' || listInfo.type === 'alpha' || listInfo.type === 'roman')) {
-          // Ordered list handling
-          let newLevel = listInfo.level;
-          let newType = listInfo.type;
-          
-          if (!e.shiftKey) {
-             // Indent -> Increase Level
-             newLevel++;
-          } else {
-             // Outdent -> Decrease Level
-             if (newLevel > 0) newLevel--;
-             else return; // Can't outdent past 0
-          }
-
-          // Strict Hierarchy: 0=Numeric, 1=Alpha, 2=Roman
-          if (newLevel === 0) newType = 'numeric';
-          else if (newLevel === 1) newType = 'alpha';
-          else if (newLevel === 2) newType = 'roman';
-          else newType = 'numeric'; // Default fallback
-
-          // Determine sequence value
-          // Start fresh at 1 or 'a' or 'i' unless we want to find a sibling. 
-          // Slack logic: When you indent, you start a NEW sublist (a.), so start at 'a'.
-          // When you outdent, you return to the parent's sequence.
-          
-          let newVal: string | number = (newType === 'alpha' ? 'a' : 1);
-          if (newType === 'roman') newVal = 1;
-
-          if (e.shiftKey) {
-              // Outdent: Try to find previous sibling at new level to continue sequence
-              for (let i = lineIndex - 1; i >= 0; i--) {
-                  const siblingInfo = getLineListInfo(allLines[i]);
-                  if (!siblingInfo) continue;
-                  
-                  if (siblingInfo.level === newLevel) {
-                      // Found preceding sibling
-                      if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
-                      else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
-                      else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
-                      break; 
-                  }
-                  if (siblingInfo.level < newLevel) {
-                      // Found parent, start fresh
-                      break;
-                  }
-              }
-          } else {
-             // Indent: Start new sublist. Always start at 1/a/i.
-             // Unless we are indenting into an EXISTING sublist? 
-             // Slack starts fresh 'a.' when indenting '1.'.
-             // But if lines are:
-             // 1. Item
-             //   a. Item
-             // 2. Item (Tab here) -> should become b.
-             // We'll scan back for same level.
-              for (let i = lineIndex - 1; i >= 0; i--) {
-                  const siblingInfo = getLineListInfo(allLines[i]);
-                  if (!siblingInfo) continue;
-                  
-                  if (siblingInfo.level === newLevel) {
-                      // Found preceding sibling at same new level
-                       if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
-                      else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
-                      else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
-                      break;
-                  }
-                  if (siblingInfo.level < newLevel) {
-                      // Found parent, this is the first child
-                      break;
-                  }
-              }
-          }
-          
-          // Construct new marker
-          let newMarker = '';
-          if (newType === 'numeric') newMarker = `${newVal}. `;
-          else if (newType === 'alpha') newMarker = `${newVal}. `;
-          else if (newType === 'roman') newMarker = `${toRoman(newVal as number)}. `;
-
-          const indentStr = ' '.repeat(newLevel * 2);
-          const contentAfter = currentLine.substring(listInfo.prefix.length);
-          const newLineStr = `${indentStr}${newMarker}${contentAfter}`;
-          
-          const newValue = value.substring(0, currentLineStart) + newLineStr + value.substring(currentLineEnd);
-          handleInputChange(setContent, newValue);
-          requestAnimationFrame(() => {
-              target.selectionStart = target.selectionEnd = currentLineStart + indentStr.length + newMarker.length;
-          });
-
-      } else if (listInfo && listInfo.type === 'unordered') {
-          // Unordered list indentation (simple)
-          if (!e.shiftKey) {
-              const newLine = '  ' + currentLine;
-              const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-              handleInputChange(setContent, newValue);
-              requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = selectionStart + 2; });
-          } else {
-             if (currentLine.startsWith('  ')) {
-                 const newLine = currentLine.substring(2);
-                 const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-                 handleInputChange(setContent, newValue);
-                 requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = Math.max(currentLineStart, selectionStart - 2); });
-             }
-          }
+      if (listInfo) {
+          changeLevel(e.shiftKey ? 'outdent' : 'indent');
       } else {
-          // Normal Tab
+          // Normal Tab indentation for non-list text
           if (!e.shiftKey) {
               const insertion = '  ';
               const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
-              handleInputChange(setContent, newValue);
-              requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = selectionStart + 2; });
+              updateBody(newValue, selectionStart + 2, selectionStart + 2, 'input');
           }
       }
       return;
@@ -457,23 +535,31 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
     // --- BACKSPACE Key ---
     if (e.key === 'Backspace') {
-       // If cursor is right after the list prefix (e.g. "  a. |")
-       if (listInfo && selectionStart === currentLineStart + listInfo.prefix.length && selectionStart === selectionEnd) {
+       // If cursor is right after the list prefix (e.g. "  a. |") and no text selected
+       if (listInfo && selectionStart === selectionEnd && selectionStart === currentLineStart + listInfo.prefix.length) {
            e.preventDefault();
            
            if (listInfo.level > 0) {
-               // Outdent logic (Shift+Tab simulation)
-               const eventMock = { key: 'Tab', shiftKey: true, preventDefault: () => {} } as any;
-               handleKeyDown(eventMock);
+               // Outdent logic
+               changeLevel('outdent');
            } else {
                // Remove list marker (Level 0) -> Convert to plain text
                const newLine = currentLine.substring(listInfo.prefix.length);
                const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
-               handleInputChange(setContent, newValue);
-               requestAnimationFrame(() => { target.selectionStart = target.selectionEnd = currentLineStart; });
+               updateBody(newValue, currentLineStart, currentLineStart, 'action');
            }
        }
     }
+  };
+
+  // --- Handlers for regular typing ---
+  const onBodyContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateBody(
+      e.target.value,
+      e.target.selectionStart,
+      e.target.selectionEnd,
+      'input'
+    );
   };
 
   // Contest Data Handling
@@ -632,7 +718,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             <textarea 
               ref={textareaRef}
               value={content} 
-              onChange={(e) => handleInputChange(setContent, e.target.value)}
+              onChange={onBodyContentChange}
               onKeyDown={handleKeyDown}
               placeholder="Enter main description... (Enter = New Paragraph, Shift+Enter = Line Break)" 
               rows={8} 
