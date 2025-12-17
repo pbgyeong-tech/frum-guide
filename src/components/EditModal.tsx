@@ -270,7 +270,28 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
           {/* Body Content */}
           <div>
             <label style={{ display: 'block', color: '#888', marginBottom: '8px', fontSize: '0.9rem' }}>Body Content (Description)</label>
-            <textarea value={content} onChange={(e) => handleInputChange(setContent, e.target.value)} placeholder="Enter main description..." rows={6} style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical', lineHeight: '1.5' }} />
+            <textarea 
+              value={content} 
+              onChange={(e) => handleInputChange(setContent, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const target = e.currentTarget;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  const val = target.value;
+                  const insertion = e.shiftKey ? '\n' : '\n\n';
+                  const newVal = val.substring(0, start) + insertion + val.substring(end);
+                  handleInputChange(setContent, newVal);
+                  requestAnimationFrame(() => {
+                    target.selectionStart = target.selectionEnd = start + insertion.length;
+                  });
+                }
+              }}
+              placeholder="Enter main description... (Enter = New Paragraph, Shift+Enter = Line Break)" 
+              rows={6} 
+              style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical', lineHeight: '1.5' }} 
+            />
           </div>
 
           {/* CONTEST SPECIFIC UI */}

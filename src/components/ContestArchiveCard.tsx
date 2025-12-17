@@ -153,14 +153,26 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
             <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', tableLayout: 'fixed' }}>
                 <thead>
-                  <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
                     {displayHeaders.map((h, k) => {
                        let width = 'auto';
                        if (h.includes('이름')) width = '25%';
                        else if (h.includes('직급')) width = '15%';
                        
                        return (
-                         <th key={k} style={{ textAlign: 'left', padding: '12px', color: '#888', fontSize: '11px', whiteSpace: 'nowrap', width }}>
+                         <th key={k} style={{ 
+                           textAlign: 'left', 
+                           padding: '12px', 
+                           color: 'rgba(255,255,255,0.85)', 
+                           fontSize: '11px', 
+                           whiteSpace: 'nowrap', 
+                           width,
+                           textTransform: 'uppercase', 
+                           letterSpacing: '0.1em', 
+                           fontWeight: 700,
+                           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                           borderBottom: 'none'
+                         }}>
                            {h}
                          </th>
                        );
@@ -170,7 +182,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 <tbody>
                   {groupRows.map((rowCells, rIdx) => {
                     const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
-                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
+                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '12px', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
                   })}
                 </tbody>
               </table>
@@ -184,12 +196,29 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   return (
     <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '20px 0', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-        <thead><tr style={{ background: 'rgba(255,255,255,0.05)' }}>{headers.map((h, i) => <th key={i} style={{ padding: '12px', textAlign: 'left', color: '#888', borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{h}</th>)}</tr></thead>
+        <thead>
+          <tr style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
+            {headers.map((h, i) => (
+              <th key={i} style={{ 
+                padding: '12px', 
+                textAlign: 'left', 
+                color: 'rgba(255,255,255,0.85)', 
+                borderBottom: 'none', 
+                whiteSpace: 'nowrap',
+                fontSize: '11px', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.1em', 
+                fontWeight: 700,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
           {bodyRows.map((row, i) => {
             const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
             while (cells.length < headers.length) cells.push('');
-            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: '#ccc', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
+            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '12px', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
           })}
         </tbody>
       </table>
@@ -269,21 +298,23 @@ const renderMarkdownContent = (content: string | string[]) => {
       elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />);
       continue;
     }
-    if (line.includes('![') && line.includes(')')) {
+    
+    // Standalone Image
+    if (line.startsWith('![') && line.endsWith(')') && line.match(/!\[(.*?)\]\((.*?)\)/)) {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
        if (imgMatch) {
-         if (line.startsWith('![') && line.endsWith(')')) {
-            elements.push(<div key={i} style={{ margin: '24px 0' }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '8px', border: '1px solid #222' }} /></div>);
-         } else {
-            elements.push(<p key={i} style={{ marginBottom: '12px', color: '#ccc' }}>{parseInlineMarkdown(line)}</p>);
-         }
-         i++; continue;
+          elements.push(<div key={i} style={{ margin: '24px 0' }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '8px', border: '1px solid #222' }} /></div>);
+          i++; continue;
        }
     }
-    if (line.startsWith('[') && line.endsWith(')') && !line.includes('!')) {
+
+    // Link Card
+    if (line.startsWith('[') && line.endsWith(')') && !line.includes('!') && line.match(/^\[(.*?)\]\((.*?)\)$/)) {
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
+
+    // List
     const isOrdered = /^\d+\./.test(line);
     const isUnordered = /^(\-|•|\*)\s/.test(line);
     if (isOrdered || isUnordered) {
@@ -301,24 +332,57 @@ const renderMarkdownContent = (content: string | string[]) => {
         }
         i++; continue;
     }
+
     if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '60px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
+    
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
         elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
         continue;
     }
-    if (line !== '') { 
-        // Updated paragraph style: more breathing room (24px margin)
-        elements.push(<p key={i} style={{ 
+    
+    if (line === '') {
+        i++; continue;
+    }
+    
+    // Paragraph Grouping Logic
+    const paragraphLines: string[] = [line];
+    let j = i + 1;
+    while (j < lines.length) {
+         const nextLine = lines[j].trim();
+         if (nextLine === '') break;
+         
+         if (/^(#{1,6})\s/.test(nextLine)) break;
+         if (nextLine.startsWith('```')) break;
+         if (nextLine.startsWith('|')) break;
+         if (nextLine.startsWith('![') && nextLine.endsWith(')') && nextLine.match(/!\[(.*?)\]\((.*?)\)/)) break;
+         if (nextLine.startsWith('[') && nextLine.endsWith(')') && !nextLine.includes('!') && nextLine.match(/^\[(.*?)\]\((.*?)\)$/)) break;
+         if (/^(\d+\.|-|\*|•)\s/.test(nextLine)) break;
+         if (/^-{3,}$/.test(nextLine)) break;
+         if (nextLine.startsWith('>')) break;
+         
+         paragraphLines.push(nextLine);
+         j++;
+    }
+
+    elements.push(
+        <p key={i} style={{ 
             marginBottom: '24px', 
             color: '#a0a0a0', 
             lineHeight: 1.75, 
             fontSize: '1.05rem', 
             fontWeight: 400 
-        }}>{parseInlineMarkdown(line)}</p>); 
-    }
-    i++;
+        }}>
+            {paragraphLines.map((l, idx) => (
+                <React.Fragment key={idx}>
+                    {parseInlineMarkdown(l)}
+                    {idx < paragraphLines.length - 1 && <br />}
+                </React.Fragment>
+            ))}
+        </p>
+    );
+    i = j;
   }
   return elements;
 };

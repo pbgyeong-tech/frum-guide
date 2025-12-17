@@ -27,8 +27,8 @@ export const HANDBOOK_CONTENT: SectionData[] = [
     heroVideo: "https://cdn.midjourney.com/video/efa8c7dd-863a-49ed-95b7-a04d94a5bd87/3.mp4",
     subSections: [
       {
-        title: "Onboarding Strategy",
-        content: "Frum의 여정에 합류하신 것을 환영합니다. 본 가이드는 새로운 구성원이 조직의 문화·업무 방식·협업 구조를 빠르게 이해하도록 돕는 Roadmap입니다.",
+        title: "Onboarding Guide",
+        content: "Frum의 여정에 합류하신 것을 환영합니다. 본 가이드는 새로운 구성원이 조직의 문화·업무 방식·협업 구조를 빠르게 이해하도록 돕는 온보딩 로드맵입니다.",
         keywords: ["환영", "입사", "시작", "가이드", "로드맵", "ot", "오리엔테이션", "전략", "비전"]
       }
     ]
@@ -80,7 +80,6 @@ export const HANDBOOK_CONTENT: SectionData[] = [
 | Contents Solution Center | 류민 | 수석 | m.ryu@frum.co.kr |
 | Contents Solution Center | 김장원 | 수석 | jw.kim@frum.co.kr |
 | Contents Solution Center | 이세환 | 수석 | sh.lee@frum.co.kr |
-| Contents Solution Center | 황은비 | 책임 | eb.hwang@frum.co.kr |
 | Contents Solution Center | 이인주 | 책임 | ij.lee@frum.co.kr |
 | Contents Solution Center | 윤현수 | 책임 | hs.yoon@frum.co.kr |
 | Contents Solution Center | 남도연 | 선임 | dy.nam@frum.co.kr |
