@@ -50,7 +50,7 @@ const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
 };
 
 // --- Sub Components ---
-// 4. Use Monospace font for numbers
+// Level 0: Numeric (Circle Badge)
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
   <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
     <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
@@ -58,18 +58,20 @@ const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBot
   </div>
 );
 
-// Level 2 Ordered List Item (Alpha: a.)
+// Level 1: Alpha (a., b.) - Fixed width for alignment
 const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
-        <span className="font-mono" style={{ color: '#ccc', fontWeight: 600, minWidth: '20px', textAlign: 'right' }}>{marker}.</span>
+        {/* Fixed width 24px + Right Align ensuring content starts at consistent X */}
+        <span className="font-mono" style={{ color: '#ccc', fontWeight: 600, width: '24px', textAlign: 'right', flexShrink: 0 }}>{marker}.</span>
         <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
 
-// Level 3 Ordered List Item (Roman: i.)
+// Level 2: Roman (i., ii., viii.) - Wider fixed width for alignment
 const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
     <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
-        <span className="font-mono" style={{ color: '#888', fontStyle: 'italic', minWidth: '20px', textAlign: 'right' }}>{marker}.</span>
+        {/* Fixed width 42px to accommodate 'viii.' */}
+        <span className="font-mono" style={{ color: '#888', fontStyle: 'italic', width: '42px', textAlign: 'right', flexShrink: 0 }}>{marker}.</span>
         <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
@@ -351,27 +353,28 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
 
     // List Logic with Hierarchy (Numeric, Alpha, Roman, Unordered)
-    // 1. Unordered
+    // Hierarchy: Level 0 (0 spaces) = 1., Level 1 (2 spaces) = a., Level 2 (4 spaces) = i.
     const isUnordered = /^(\-|•|\*)\s/.test(line);
-    // 2. Numeric: 1. 
-    const isNumeric = /^\d+\.\s/.test(line);
-    // 3. Alpha/Roman
+    const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
+
     // Indent check for disambiguation
     const indentMatch = rawLine.match(/^(\s*)/);
     const spaces = indentMatch ? indentMatch[1].length : 0;
     const level = Math.floor(spaces / 2);
 
-    if (isOrderedOrUnordered(line)) {
+    if (isOrdered || isUnordered) {
+        // Adjust left margin for visual hierarchy
+        // Level 0: 0, Level 1: 24px, Level 2: 48px
         const marginLeft = `${level * 24}px`;
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
-        const nextIsItem = isOrderedOrUnordered(nextLine);
+        const nextIsItem = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine);
         let marginBottom = nextIsItem ? '8px' : '24px';
         if (isUnordered && nextIsItem) marginBottom = '4px';
 
         let renderedItem = null;
 
         // Try to match specific types based on regex
-        // We check Roman first if indentation is deep (Level >= 2) or explicit
+        // We use strict level-based rendering where possible to match EditModal logic
         const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
         const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
@@ -386,7 +389,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
              );
         } 
         else if (matchNum) {
-            // Level 1: Red Circle
+            // Level 0: Numeric (Circle)
             renderedItem = (
                 <div style={{ marginLeft }}>
                     <StepBlock number={matchNum[1]} marginBottom={marginBottom}>
@@ -396,7 +399,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
             );
         }
         else if (matchRoman && level >= 2) {
-             // Level 3 (Roman)
+             // Level 2 (Roman) - Strictly for deeply nested or explicitly roman items
              renderedItem = (
                  <RomanBlock marker={matchRoman[1]} marginLeft={marginLeft}>
                      {parseInlineMarkdown(matchRoman[2])}
@@ -404,7 +407,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
              );
         }
         else if (matchAlpha) {
-             // Level 2 (Alpha)
+             // Level 1 (Alpha) - a. b. c.
              renderedItem = (
                  <AlphaBlock marker={matchAlpha[1]} marginLeft={marginLeft}>
                      {parseInlineMarkdown(matchAlpha[2])}
@@ -412,8 +415,8 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
              );
         }
         else {
-            // Fallback (e.g. empty list item)
-            renderedItem = <div key={i}></div>;
+            // Fallback
+            renderedItem = <div key={i}>{line}</div>;
         }
 
         elements.push(<div key={i}>{renderedItem}</div>);
@@ -453,7 +456,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
          if (nextLine.startsWith('|')) break;
          if (nextLine.startsWith('![') && nextLine.endsWith(')') && nextLine.match(/!\[(.*?)\]\((.*?)\)/)) break;
          if (nextLine.startsWith('[') && nextLine.endsWith(')') && !nextLine.includes('!') && nextLine.match(/^\[(.*?)\]\((.*?)\)$/)) break;
-         if (isOrderedOrUnordered(nextLine)) break;
+         if (/^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine)) break;
          if (/^-{3,}$/.test(nextLine)) break;
          if (nextLine.startsWith('>')) break;
          
@@ -624,7 +627,22 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       setActiveSectionId(id);
       activeSectionIdRef.current = id;
       trackAnchorView(data.id, id);
-      setTimeout(() => executeScroll(id), 100);
+      
+      const attemptScroll = (retryCount: number) => {
+        const element = document.getElementById(id);
+        if (element) {
+          executeScroll(id);
+        } else {
+           // Retry only for Company route as per request to fix delayed rendering issues
+           // Retries up to ~1.5 seconds (15 * 100ms)
+           if (data.id === ContentType.COMPANY && retryCount < 15) {
+             setTimeout(() => attemptScroll(retryCount + 1), 100);
+           }
+        }
+      };
+
+      // Always wait 100ms initially
+      setTimeout(() => attemptScroll(0), 100);
     }
   }, [location.hash, data.id]);
 

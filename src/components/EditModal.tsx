@@ -44,39 +44,41 @@ const nextChar = (c: string) => String.fromCharCode(c.charCodeAt(0) + 1);
 const getLineListInfo = (line: string) => {
     const indentMatch = line.match(/^(\s*)/);
     const indent = indentMatch ? indentMatch[1].length : 0;
+    // 2 spaces = 1 indent level
     const level = Math.floor(indent / 2);
 
-    // Numeric: 1. 
-    const numMatch = line.match(/^(\s*)(\d+)\.\s/);
-    if (numMatch) return { type: 'numeric', val: parseInt(numMatch[2], 10), level, prefix: numMatch[0] };
-
-    // Roman: i. (Level 2 or specific pattern)
-    // We prioritize checking Roman if it matches specific patterns (i, ii, iii) or if level >= 2
-    // Regex for roman: start of line, spaces, roman chars, dot, space
-    const romanMatch = line.match(/^(\s*)([ivx]+)\.\s/);
-    if (romanMatch) {
-         // Ambiguity check: 'i' and 'v' could be alpha.
-         // If level >= 2 (4 spaces), treat as Roman.
-         if (level >= 2) return { type: 'roman', val: fromRoman(romanMatch[2]), level, prefix: romanMatch[0] };
-         // If level < 2, 'i' might be alpha 'i', but usually lists don't go a..i without context. 
-         // But for simple "i." at start, usually means Roman if user typed it explicitly.
-         // However, strictly following "1->a->i", 'i' appears at level 2.
-    }
-
-    // Alpha: a.
-    const alphaMatch = line.match(/^(\s*)([a-z])\.\s/);
-    if (alphaMatch) {
-        // If it was matched as roman above, it returns. If here, it's alpha.
-        // But 'i' matches both. 'i' at Level 1 should be treated as Alpha if we support a..i
-        // But our rule is 1->a->i. So 'i' is level 2. 
-        // If user manually types 'i.' at level 0, it's ambiguous. Editor assumes Roman for 'i.', 'ii.'?
-        // Let's stick to the prompt's hierarchy rule.
-        return { type: 'alpha', val: alphaMatch[2], level, prefix: alphaMatch[0] };
-    }
-
     // Unordered
-    const unMatch = line.match(/^(\s*)([-*])\s/);
+    const unMatch = line.match(/^(\s*)([-*•])\s/);
     if (unMatch) return { type: 'unordered', val: unMatch[2], level, prefix: unMatch[0] };
+
+    // Strict Hierarchy Check based on regex and levels
+    // Level 0: Numeric (1.)
+    // Level 1: Alpha (a.)
+    // Level 2: Roman (i.)
+    
+    // Check specific markers
+    const numMatch = line.match(/^(\s*)(\d+)\.\s/);
+    const alphaMatch = line.match(/^(\s*)([a-z])\.\s/);
+    const romanMatch = line.match(/^(\s*)([ivx]+)\.\s/);
+
+    if (numMatch) return { type: 'numeric', val: parseInt(numMatch[2], 10), level, prefix: numMatch[0] };
+    
+    // Roman check requires caution (conflicts with 'i', 'v', 'x' in alpha)
+    // We prioritize Roman if level >= 2 OR if it matches Roman-only patterns like ii, iii, iv
+    if (romanMatch) {
+       const str = romanMatch[2];
+       const isMultiCharRoman = str.length > 1; // ii, iii, iv, vi... clearly roman
+       if (level >= 2 || isMultiCharRoman || str === 'i') { 
+          // Note: 'i' at level 0/1 is ambiguous, but if it's 'i.' it usually starts a roman list or is just item 'i' of alpha.
+          // However, assuming hierarchy 1 -> a -> i:
+          // 'i' at level 2 is definitely Roman.
+          // 'i' at level 1 is 'h'->'i' (Alpha).
+          // We'll let the level guide us.
+          if (level >= 2) return { type: 'roman', val: fromRoman(str), level, prefix: romanMatch[0] };
+       }
+    }
+
+    if (alphaMatch) return { type: 'alpha', val: alphaMatch[2], level, prefix: alphaMatch[0] };
 
     return null;
 };
@@ -351,32 +353,62 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
              else return; // Can't outdent past 0
           }
 
-          // Determine expected type based on level
-          // Level 0: Numeric, Level 1: Alpha, Level 2: Roman, Level 3+: Numeric fallback
+          // Strict Hierarchy: 0=Numeric, 1=Alpha, 2=Roman
           if (newLevel === 0) newType = 'numeric';
           else if (newLevel === 1) newType = 'alpha';
           else if (newLevel === 2) newType = 'roman';
-          else newType = 'numeric';
+          else newType = 'numeric'; // Default fallback
 
           // Determine sequence value
-          // Look up for the previous sibling at the same level
-          let newVal: string | number = (newType === 'alpha' ? 'a' : (newType === 'roman' ? 1 : 1));
+          // Start fresh at 1 or 'a' or 'i' unless we want to find a sibling. 
+          // Slack logic: When you indent, you start a NEW sublist (a.), so start at 'a'.
+          // When you outdent, you return to the parent's sequence.
+          
+          let newVal: string | number = (newType === 'alpha' ? 'a' : 1);
+          if (newType === 'roman') newVal = 1;
 
-          // Scan backwards for a sibling
-          for (let i = lineIndex - 1; i >= 0; i--) {
-              const siblingInfo = getLineListInfo(allLines[i]);
-              if (!siblingInfo) continue;
-              
-              if (siblingInfo.level === newLevel) {
-                  // Found sibling! Continue sequence
-                  if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
-                  else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
-                  else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
-                  break; 
+          if (e.shiftKey) {
+              // Outdent: Try to find previous sibling at new level to continue sequence
+              for (let i = lineIndex - 1; i >= 0; i--) {
+                  const siblingInfo = getLineListInfo(allLines[i]);
+                  if (!siblingInfo) continue;
+                  
+                  if (siblingInfo.level === newLevel) {
+                      // Found preceding sibling
+                      if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
+                      else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
+                      else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
+                      break; 
+                  }
+                  if (siblingInfo.level < newLevel) {
+                      // Found parent, start fresh
+                      break;
+                  }
               }
-              if (siblingInfo.level < newLevel) {
-                  // Found parent, stop scanning, start new sequence
-                  break;
+          } else {
+             // Indent: Start new sublist. Always start at 1/a/i.
+             // Unless we are indenting into an EXISTING sublist? 
+             // Slack starts fresh 'a.' when indenting '1.'.
+             // But if lines are:
+             // 1. Item
+             //   a. Item
+             // 2. Item (Tab here) -> should become b.
+             // We'll scan back for same level.
+              for (let i = lineIndex - 1; i >= 0; i--) {
+                  const siblingInfo = getLineListInfo(allLines[i]);
+                  if (!siblingInfo) continue;
+                  
+                  if (siblingInfo.level === newLevel) {
+                      // Found preceding sibling at same new level
+                       if (newType === 'numeric' && siblingInfo.type === 'numeric') newVal = (siblingInfo.val as number) + 1;
+                      else if (newType === 'alpha' && siblingInfo.type === 'alpha') newVal = nextChar(siblingInfo.val as string);
+                      else if (newType === 'roman' && siblingInfo.type === 'roman') newVal = (siblingInfo.val as number) + 1;
+                      break;
+                  }
+                  if (siblingInfo.level < newLevel) {
+                      // Found parent, this is the first child
+                      break;
+                  }
               }
           }
           
@@ -425,19 +457,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
     // --- BACKSPACE Key ---
     if (e.key === 'Backspace') {
+       // If cursor is right after the list prefix (e.g. "  a. |")
        if (listInfo && selectionStart === currentLineStart + listInfo.prefix.length && selectionStart === selectionEnd) {
-           // Cursor is just after the marker
            e.preventDefault();
            
            if (listInfo.level > 0) {
-               // Outdent (Similar to Shift+Tab logic but triggers on Backspace at start)
-               // For simplicity, just remove 2 spaces and let user fix number, OR run the full outdent logic?
-               // Let's run full outdent logic for consistency
+               // Outdent logic (Shift+Tab simulation)
                const eventMock = { key: 'Tab', shiftKey: true, preventDefault: () => {} } as any;
                handleKeyDown(eventMock);
-               return; 
            } else {
-               // Remove list marker (Level 0)
+               // Remove list marker (Level 0) -> Convert to plain text
                const newLine = currentLine.substring(listInfo.prefix.length);
                const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
                handleInputChange(setContent, newValue);
