@@ -210,6 +210,11 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   // --- Smart List & Editing Logic (Slack-like) ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 1. Fix for Issue A: Prevent double-execution during IME Composition (Korean, etc.)
+    if (e.nativeEvent.isComposing) {
+      return;
+    }
+
     const target = e.currentTarget;
     const { selectionStart, selectionEnd, value } = target;
 
@@ -224,7 +229,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     // Matches: "  - " or "  1. " (indented or not)
     // Group 1: Indentation
     // Group 2: Marker (- or * or number)
-    // Group 3: Space after marker (implicitly handled)
     const unorderedRegex = /^(\s*)([-*])\s/;
     const orderedRegex = /^(\s*)(\d+)\.\s/;
 
@@ -317,7 +321,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             });
           }
         } else {
-          // Indent
+          // Indent (2 spaces) - Fix Issue B (input)
           const newLine = '  ' + currentLine;
           const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
           handleInputChange(setContent, newValue);

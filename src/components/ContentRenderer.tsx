@@ -249,7 +249,9 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+    // FIX ISSUE B: Use raw line to detect indentation level before trimming
+    const rawLine = lines[i];
+    const line = rawLine.trim();
 
     // Headers Support (#, ##, ###)
     const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
@@ -304,6 +306,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
     if (line.startsWith('```')) {
       const codeLines = []; i++;
+      // Note: We use lines[i] (raw) for code blocks to preserve indentation inside the block
       while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
@@ -331,21 +334,49 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
 
-    // List
+    // List Logic with Indentation Support (Issue B)
     const isOrdered = /^\d+\./.test(line);
     const isUnordered = /^(\-|•|\*)\s/.test(line);
     if (isOrdered || isUnordered) {
+        // Calculate indent level (assuming 2 spaces = 1 level)
+        const indentMatch = rawLine.match(/^(\s*)/);
+        const spaces = indentMatch ? indentMatch[1].length : 0;
+        const level = Math.floor(spaces / 2);
+        const marginLeft = `${level * 24}px`;
+
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
         const nextIsUnordered = /^(\-|•|\*)\s/.test(nextLine);
         let marginBottom = '24px';
         if (isOrdered && nextIsUnordered) marginBottom = '8px';
         if (isUnordered && nextIsUnordered) marginBottom = '4px';
+        
         if (isOrdered) {
              const match = line.match(/^(\d+)\.\s+(.*)/);
-             if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
+             if (match) {
+               // Wrap StepBlock to apply margin without modifying component
+               elements.push(
+                 <div key={i} style={{ marginLeft }}>
+                   <StepBlock number={match[1]} marginBottom={marginBottom}>
+                     {parseInlineMarkdown(match[2])}
+                   </StepBlock>
+                 </div>
+               );
+             }
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            elements.push(
+              <div key={i} style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '10px', 
+                marginBottom: marginBottom, 
+                paddingLeft: '52px', // Original alignment
+                marginLeft: marginLeft // Added nesting indent
+              }}>
+                <span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span>
+                <span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span>
+              </div>
+            );
         }
         i++; continue;
     }
