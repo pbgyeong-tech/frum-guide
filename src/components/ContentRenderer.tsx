@@ -11,6 +11,11 @@ import { ContestArchiveCard } from './ContestArchiveCard';
 import { trackAnchorView, trackEvent } from '../utils/firebase';
 import { addEditLog } from '../utils/db';
 
+// --- Constants for Typography & Spacing ---
+const LINE_HEIGHT = 1.6;
+const INDENT_STEP = 24; // px per level
+const ITEM_GAP = '12px'; // Gap between marker and content
+
 // --- Badge Style Logic ---
 const getBadgeStyle = (text: string) => {
   if (!text) return { bg: 'rgba(255,255,255,0.05)', color: '#ccc', border: '1px solid #444' };
@@ -51,28 +56,28 @@ const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
 
 // --- Sub Components ---
 // Level 0: Numeric (Circle Badge)
-const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
-  <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
-    <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
-    <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '8px' }) => (
+  <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom: marginBottom, alignItems: 'flex-start' }}>
+    <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '0' }}>{number}</div>
+    <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
   </div>
 );
 
 // Level 1: Alpha (a., b.) - Fixed width for alignment
-const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
-    <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
+const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = '8px' }) => (
+    <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom, marginLeft, alignItems: 'baseline' }}>
         {/* Fixed width 24px + Right Align ensuring content starts at consistent X */}
         <span className="font-mono" style={{ color: '#ccc', fontWeight: 600, width: '24px', textAlign: 'right', flexShrink: 0 }}>{marker}.</span>
-        <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+        <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
 
 // Level 2: Roman (i., ii., viii.) - Wider fixed width for alignment
-const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string }> = ({ marker, children, marginLeft }) => (
-    <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', marginLeft, alignItems: 'baseline' }}>
+const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = '8px' }) => (
+    <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom, marginLeft, alignItems: 'baseline' }}>
         {/* Fixed width 42px to accommodate 'viii.' */}
         <span className="font-mono" style={{ color: '#888', fontStyle: 'italic', width: '42px', textAlign: 'right', flexShrink: 0 }}>{marker}.</span>
-        <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+        <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
 
@@ -267,7 +272,6 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
   let i = 0;
 
   while (i < lines.length) {
-    // Use raw line to detect indentation level before trimming
     const rawLine = lines[i];
     const line = rawLine.trim();
 
@@ -324,7 +328,6 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
     if (line.startsWith('```')) {
       const codeLines = []; i++;
-      // Note: We use lines[i] (raw) for code blocks to preserve indentation inside the block
       while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
@@ -353,7 +356,6 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
 
     // List Logic with Hierarchy (Numeric, Alpha, Roman, Unordered)
-    // Hierarchy: Level 0 (0 spaces) = 1., Level 1 (2 spaces) = a., Level 2 (4 spaces) = i.
     const isUnordered = /^(\-|•|\*)\s/.test(line);
     const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
 
@@ -361,20 +363,15 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     const indentMatch = rawLine.match(/^(\s*)/);
     const spaces = indentMatch ? indentMatch[1].length : 0;
     const level = Math.floor(spaces / 2);
+    const marginLeft = `${level * INDENT_STEP}px`;
 
     if (isOrdered || isUnordered) {
-        // Adjust left margin for visual hierarchy
-        // Level 0: 0, Level 1: 24px, Level 2: 48px
-        const marginLeft = `${level * 24}px`;
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
         const nextIsItem = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine);
-        let marginBottom = nextIsItem ? '8px' : '24px';
-        if (isUnordered && nextIsItem) marginBottom = '4px';
-
+        let marginBottom = nextIsItem ? '8px' : '24px'; // Tighter siblings, larger separation from next block
+        
         let renderedItem = null;
 
-        // Try to match specific types based on regex
-        // We use strict level-based rendering where possible to match EditModal logic
         const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
         const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
@@ -382,14 +379,20 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
         if (isUnordered && matchUn) {
              renderedItem = (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom, paddingLeft: '52px', marginLeft }}>
-                    <span style={{ color: '#666', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span>
-                    <span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(matchUn[2])}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: ITEM_GAP, marginBottom, marginLeft }}>
+                    <span style={{ 
+                        color: '#666', 
+                        lineHeight: LINE_HEIGHT, 
+                        fontSize: '0.95rem', 
+                        width: '20px', // Fixed width for alignment
+                        textAlign: 'center', 
+                        flexShrink: 0 
+                    }}>•</span>
+                    <span style={{ color: '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span>
                 </div>
              );
         } 
         else if (matchNum) {
-            // Level 0: Numeric (Circle)
             renderedItem = (
                 <div style={{ marginLeft }}>
                     <StepBlock number={matchNum[1]} marginBottom={marginBottom}>
@@ -399,17 +402,15 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
             );
         }
         else if (matchRoman && level >= 2) {
-             // Level 2 (Roman) - Strictly for deeply nested or explicitly roman items
              renderedItem = (
-                 <RomanBlock marker={matchRoman[1]} marginLeft={marginLeft}>
+                 <RomanBlock marker={matchRoman[1]} marginLeft={marginLeft} marginBottom={marginBottom}>
                      {parseInlineMarkdown(matchRoman[2])}
                  </RomanBlock>
              );
         }
         else if (matchAlpha) {
-             // Level 1 (Alpha) - a. b. c.
              renderedItem = (
-                 <AlphaBlock marker={matchAlpha[1]} marginLeft={marginLeft}>
+                 <AlphaBlock marker={matchAlpha[1]} marginLeft={marginLeft} marginBottom={marginBottom}>
                      {parseInlineMarkdown(matchAlpha[2])}
                  </AlphaBlock>
              );
@@ -446,6 +447,13 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 
     // Paragraph Grouping Logic
     const paragraphLines: string[] = [line];
+    
+    // Check indentation of the first line of the paragraph to enable "ID: ... - item" hierarchies
+    const pIndentMatch = rawLine.match(/^(\s*)/);
+    const pSpaces = pIndentMatch ? pIndentMatch[1].length : 0;
+    const pLevel = Math.floor(pSpaces / 2);
+    const pMarginLeft = `${pLevel * INDENT_STEP}px`;
+
     let j = i + 1;
     while (j < lines.length) {
          const nextLine = lines[j].trim();
@@ -464,11 +472,27 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
          j++;
     }
 
+    // Check if the NEXT element after this paragraph is a list
+    // If so, reduce the bottom margin to group them visually (e.g. "ID: ..." followed by "- detail")
+    let nextIsList = false;
+    if (j < lines.length) {
+        const nextRaw = lines[j]; // Check the line that broke the loop (might be empty or list)
+        // If it was empty, check line after empty? No, paragraph ends at block break.
+        // We strictly check the very next line content in the source array that isn't empty?
+        // Actually the loop breaks on empty line.
+        // If loop broke on List Item, j points to it.
+        const nextLineCheck = lines[j].trim();
+        nextIsList = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLineCheck) || /^(\-|•|\*)\s/.test(nextLineCheck);
+    }
+    
+    const pMb = nextIsList ? '8px' : (options.margin !== undefined ? options.margin : '24px');
+
     elements.push(
         <p key={i} style={{ 
-            marginBottom: options.margin !== undefined ? options.margin : '24px', 
+            marginBottom: pMb, 
+            marginLeft: pMarginLeft,
             color: options.color || '#a0a0a0', 
-            lineHeight: 1.75, 
+            lineHeight: LINE_HEIGHT, 
             fontSize: options.fontSize || '1.05rem', 
             fontWeight: 400 
         }}>
@@ -485,14 +509,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
   return elements;
 };
 
-// Helper for lookahead check
-const isOrderedOrUnordered = (str: string) => {
-    return /^(\d+|[a-z]|[ivx]+)\.\s/.test(str) || /^(\-|•|\*)\s/.test(str);
-};
-
-// ----------------------------------------------------------------------
-// 4. Main Component Renderer
-// ----------------------------------------------------------------------
+// ... ContentRenderer Component (unchanged logic, just re-exporting with new renderMarkdownContent) ...
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
   const isWelcome = data.id === ContentType.WELCOME;
   const isFAQ = data.id === ContentType.FAQ;
@@ -633,15 +650,12 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
         if (element) {
           executeScroll(id);
         } else {
-           // Retry only for Company route as per request to fix delayed rendering issues
-           // Retries up to ~1.5 seconds (15 * 100ms)
            if (data.id === ContentType.COMPANY && retryCount < 15) {
              setTimeout(() => attemptScroll(retryCount + 1), 100);
            }
         }
       };
 
-      // Always wait 100ms initially
       setTimeout(() => attemptScroll(0), 100);
     }
   }, [location.hash, data.id]);

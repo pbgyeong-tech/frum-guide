@@ -4,6 +4,11 @@ import { SubSection } from '../types';
 import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
+// --- Constants (Matching ContentRenderer) ---
+const LINE_HEIGHT = 1.6;
+const INDENT_STEP = 24; // px per level
+const ITEM_GAP = '12px'; // Gap between marker and content
+
 // --- Badge Style Logic ---
 const getBadgeStyle = (text: string) => {
   if (!text) return { bg: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid #444' };
@@ -43,10 +48,10 @@ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
 
 // --- Helper Components ---
 
-const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '24px' }) => (
-  <div style={{ display: 'flex', gap: '16px', marginBottom: marginBottom, alignItems: 'flex-start' }}>
-    <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '2px' }}>{number}</div>
-    <div style={{ flex: 1, lineHeight: 1.6, color: '#a0a0a0' }}>{children}</div>
+const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = '8px' }) => (
+  <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom: marginBottom, alignItems: 'flex-start' }}>
+    <div className="font-mono" style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', marginTop: '0' }}>{number}</div>
+    <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
   </div>
 );
 
@@ -232,7 +237,8 @@ const renderMarkdownContent = (content: string | string[]) => {
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+    const rawLine = lines[i];
+    const line = rawLine.trim();
 
     // Headers Support (#, ##, ###)
     const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
@@ -240,7 +246,6 @@ const renderMarkdownContent = (content: string | string[]) => {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
         
-        // GitBook-like Typography Scale
         let fontSize = '1.1rem';
         let marginTop = '24px';
         let marginBottom = '12px';
@@ -250,9 +255,9 @@ const renderMarkdownContent = (content: string | string[]) => {
 
         if (level === 1) {
             fontSize = '2rem'; 
-            marginTop = i === 0 ? '0' : '80px'; // Massive top margin
-            marginBottom = '48px'; // Tight bottom margin
-            letterSpacing = '-0.03em'; // Tight letter spacing
+            marginTop = i === 0 ? '0' : '80px'; 
+            marginBottom = '48px'; 
+            letterSpacing = '-0.03em'; 
             fontWeight = 700;
         } else if (level === 2) {
             fontSize = '1.5rem';
@@ -314,21 +319,38 @@ const renderMarkdownContent = (content: string | string[]) => {
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
 
-    // List
-    const isOrdered = /^\d+\./.test(line);
+    // List Logic with Hierarchy
+    const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
     const isUnordered = /^(\-|•|\*)\s/.test(line);
+    
+    const indentMatch = rawLine.match(/^(\s*)/);
+    const spaces = indentMatch ? indentMatch[1].length : 0;
+    const level = Math.floor(spaces / 2);
+    const marginLeft = `${level * INDENT_STEP}px`;
+
     if (isOrdered || isUnordered) {
         const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
-        const nextIsUnordered = /^(\-|•|\*)\s/.test(nextLine);
-        let marginBottom = '24px';
-        if (isOrdered && nextIsUnordered) marginBottom = '8px';
-        if (isUnordered && nextIsUnordered) marginBottom = '4px';
+        const nextIsItem = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine);
+        let marginBottom = nextIsItem ? '8px' : '24px';
+        
         if (isOrdered) {
              const match = line.match(/^(\d+)\.\s+(.*)/);
-             if (match) elements.push(<StepBlock key={i} number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock>);
+             if (match) elements.push(<div key={i} style={{ marginLeft }}><StepBlock number={match[1]} marginBottom={marginBottom}>{parseInlineMarkdown(match[2])}</StepBlock></div>);
         } else {
             const text = line.replace(/^(\-|•|\*)\s*/, '');
-            elements.push(<div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: marginBottom, paddingLeft: '52px' }}><span style={{ color: '#555', lineHeight: 1.5, fontSize: '0.95rem', alignSelf: 'flex-start', paddingTop: '0' }}>•</span><span style={{ color: '#a0a0a0', lineHeight: 1.6, fontSize: '1rem' }}>{parseInlineMarkdown(text)}</span></div>);
+            elements.push(
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: ITEM_GAP, marginBottom, marginLeft }}>
+                    <span style={{ 
+                        color: '#555', 
+                        lineHeight: LINE_HEIGHT, 
+                        fontSize: '0.95rem', 
+                        width: '20px', 
+                        textAlign: 'center', 
+                        flexShrink: 0 
+                    }}>•</span>
+                    <span style={{ color: '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(text)}</span>
+                </div>
+            );
         }
         i++; continue;
     }
@@ -348,6 +370,11 @@ const renderMarkdownContent = (content: string | string[]) => {
     
     // Paragraph Grouping Logic
     const paragraphLines: string[] = [line];
+    const pIndentMatch = rawLine.match(/^(\s*)/);
+    const pSpaces = pIndentMatch ? pIndentMatch[1].length : 0;
+    const pLevel = Math.floor(pSpaces / 2);
+    const pMarginLeft = `${pLevel * INDENT_STEP}px`;
+
     let j = i + 1;
     while (j < lines.length) {
          const nextLine = lines[j].trim();
@@ -366,11 +393,20 @@ const renderMarkdownContent = (content: string | string[]) => {
          j++;
     }
 
+    let nextIsList = false;
+    if (j < lines.length) {
+        const nextLineCheck = lines[j].trim();
+        nextIsList = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLineCheck) || /^(\-|•|\*)\s/.test(nextLineCheck);
+    }
+    
+    const pMb = nextIsList ? '8px' : '24px';
+
     elements.push(
         <p key={i} style={{ 
-            marginBottom: '24px', 
+            marginBottom: pMb, 
+            marginLeft: pMarginLeft,
             color: '#a0a0a0', 
-            lineHeight: 1.75, 
+            lineHeight: LINE_HEIGHT, 
             fontSize: '1.05rem', 
             fontWeight: 400 
         }}>
@@ -387,7 +423,9 @@ const renderMarkdownContent = (content: string | string[]) => {
   return elements;
 };
 
-// --- Main Component ---
+// ... Rest of ContestArchiveCard (Logic unchanged, mostly display updates) ...
+// (Note: No other logic changes needed in ContestArchiveCard component itself, 
+// as it relies on renderMarkdownContent for text display)
 
 interface ArchiveData {
   [year: number]: {
