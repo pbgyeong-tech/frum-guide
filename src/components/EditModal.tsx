@@ -208,6 +208,173 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     }, 0);
   };
 
+  // --- Smart List & Editing Logic (Slack-like) ---
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    const { selectionStart, selectionEnd, value } = target;
+
+    // Line detection helpers
+    const currentLineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+    const nextNewLine = value.indexOf('\n', selectionStart);
+    const currentLineEnd = nextNewLine === -1 ? value.length : nextNewLine;
+    const currentLine = value.substring(currentLineStart, currentLineEnd);
+    const textBeforeCursor = value.substring(currentLineStart, selectionStart);
+
+    // Regex for list items
+    // Matches: "  - " or "  1. " (indented or not)
+    // Group 1: Indentation
+    // Group 2: Marker (- or * or number)
+    // Group 3: Space after marker (implicitly handled)
+    const unorderedRegex = /^(\s*)([-*])\s/;
+    const orderedRegex = /^(\s*)(\d+)\.\s/;
+
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift+Enter = Normal single newline
+        e.preventDefault();
+        const insertion = '\n';
+        const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
+        handleInputChange(setContent, newValue);
+        requestAnimationFrame(() => {
+          target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
+        });
+        return;
+      }
+
+      // Check if we are inside a list item
+      const matchU = textBeforeCursor.match(unorderedRegex);
+      const matchO = textBeforeCursor.match(orderedRegex);
+      const match = matchU || matchO;
+
+      if (match) {
+        e.preventDefault();
+        const fullMatch = match[0];
+        const indent = match[1];
+        const marker = match[2];
+        const isOrdered = !!matchO;
+
+        // Check if the item is logically "empty" (user just typed the marker and hit enter)
+        const contentAfterMarker = currentLine.substring(fullMatch.length).trim();
+
+        if (!contentAfterMarker && selectionStart === currentLineEnd) {
+          // Exit list: Remove the marker from the current line
+          const newValue = value.substring(0, currentLineStart) + value.substring(currentLineEnd);
+          handleInputChange(setContent, newValue);
+          requestAnimationFrame(() => {
+            target.selectionStart = target.selectionEnd = currentLineStart;
+          });
+          return;
+        }
+
+        // Continue list: Insert newline + indent + next marker
+        let nextMarker;
+        if (isOrdered) {
+          const num = parseInt(marker, 10);
+          nextMarker = `${num + 1}. `;
+        } else {
+          nextMarker = `${marker} `;
+        }
+
+        const insertion = `\n${indent}${nextMarker}`;
+        const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
+        handleInputChange(setContent, newValue);
+        requestAnimationFrame(() => {
+          target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
+        });
+        return;
+      }
+
+      // Default Enter: Double newline for Markdown paragraphs (standard behavior)
+      e.preventDefault();
+      const insertion = '\n\n';
+      const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
+      handleInputChange(setContent, newValue);
+      requestAnimationFrame(() => {
+        target.selectionStart = target.selectionEnd = selectionStart + insertion.length;
+      });
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const matchU = currentLine.match(unorderedRegex);
+      const matchO = currentLine.match(orderedRegex);
+      const match = matchU || matchO;
+
+      if (match) {
+        // List indentation logic
+        if (e.shiftKey) {
+          // Outdent
+          const indent = match[1];
+          if (indent.length >= 2) {
+            // Remove 2 spaces
+            const newLine = currentLine.substring(2);
+            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+            handleInputChange(setContent, newValue);
+            requestAnimationFrame(() => {
+              target.selectionStart = target.selectionEnd = Math.max(currentLineStart, selectionStart - 2);
+            });
+          }
+        } else {
+          // Indent
+          const newLine = '  ' + currentLine;
+          const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+          handleInputChange(setContent, newValue);
+          requestAnimationFrame(() => {
+            target.selectionStart = target.selectionEnd = selectionStart + 2;
+          });
+        }
+      } else {
+        // Standard Tab behavior (insert 2 spaces)
+        if (!e.shiftKey) {
+          const insertion = '  ';
+          const newValue = value.substring(0, selectionStart) + insertion + value.substring(selectionEnd);
+          handleInputChange(setContent, newValue);
+          requestAnimationFrame(() => {
+            target.selectionStart = target.selectionEnd = selectionStart + 2;
+          });
+        }
+      }
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      // Detect if cursor is strictly after the list marker
+      const matchU = textBeforeCursor.match(/^(\s*)([-*])\s$/);
+      const matchO = textBeforeCursor.match(/^(\s*)(\d+)\.\s$/);
+      const match = matchU || matchO;
+
+      if (match && selectionStart === selectionEnd) {
+        const fullMatch = match[0];
+        const indent = match[1];
+        
+        // Double check position matches length of marker
+        if (selectionStart === currentLineStart + fullMatch.length) {
+          e.preventDefault();
+          
+          if (indent.length >= 2) {
+            // Nested list: Outdent
+            const newLine = currentLine.substring(2);
+            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+            handleInputChange(setContent, newValue);
+            requestAnimationFrame(() => {
+              target.selectionStart = target.selectionEnd = selectionStart - 2;
+            });
+          } else {
+            // Top-level list: Remove list formatting
+            const newLine = currentLine.substring(fullMatch.length);
+            const newValue = value.substring(0, currentLineStart) + newLine + value.substring(currentLineEnd);
+            handleInputChange(setContent, newValue);
+            requestAnimationFrame(() => {
+              target.selectionStart = target.selectionEnd = currentLineStart;
+            });
+          }
+        }
+      }
+    }
+  };
+
   // Contest Data Handling
   const handleYearMonthChange = (year: number, month: number) => {
       setCYear(year);
@@ -365,21 +532,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
               ref={textareaRef}
               value={content} 
               onChange={(e) => handleInputChange(setContent, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const target = e.currentTarget;
-                  const start = target.selectionStart;
-                  const end = target.selectionEnd;
-                  const val = target.value;
-                  const insertion = e.shiftKey ? '\n' : '\n\n';
-                  const newVal = val.substring(0, start) + insertion + val.substring(end);
-                  handleInputChange(setContent, newVal);
-                  requestAnimationFrame(() => {
-                    target.selectionStart = target.selectionEnd = start + insertion.length;
-                  });
-                }
-              }}
+              onKeyDown={handleKeyDown}
               placeholder="Enter main description... (Enter = New Paragraph, Shift+Enter = Line Break)" 
               rows={8} 
               style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none', resize: 'vertical', lineHeight: '1.5', fontFamily: 'monospace' }} 
