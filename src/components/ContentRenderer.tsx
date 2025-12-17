@@ -85,12 +85,32 @@ const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
+// Updated InfoBlock (Disclaimer) for GitBook Style
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.08) 0%, rgba(20,20,20,0.3) 100%)', borderLeft: '3px solid #E70012', padding: '16px 20px', borderRadius: '0 8px 8px 0', marginTop: '24px', marginBottom: '24px', fontSize: '0.95rem', color: '#d0d0d0', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-    <Lightbulb size={20} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
-    <div style={{ lineHeight: 1.6, flex: 1 }}>{children}</div>
+  <div style={{ 
+    background: 'rgba(231,0,18,0.05)', // Subtle background
+    borderLeft: '2px solid #E70012', 
+    padding: '16px 20px', 
+    borderRadius: '4px', 
+    marginTop: '32px', // More space above
+    marginBottom: '32px', 
+    fontSize: '0.9rem', // Smaller text (Gitbook style)
+    color: '#888', // Dimmer text color
+    display: 'flex', 
+    gap: '12px', 
+    alignItems: 'flex-start',
+    lineHeight: '1.6'
+  }}>
+    <Lightbulb size={16} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
+    <div style={{ flex: 1 }}>{children}</div>
   </div>
 );
+
+interface MarkdownOptions {
+  fontSize?: string;
+  color?: string;
+  margin?: string;
+}
 
 const parseInlineMarkdown = (text: string) => {
   const imgMatch = text.match(/!\[(.*?)\]\((.*?)\)/);
@@ -194,7 +214,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const renderMarkdownContent = (content: string | string[]) => {
+const renderMarkdownContent = (content: string | string[], options: MarkdownOptions = {}) => {
   const lines = Array.isArray(content) ? content : content.split('\n');
   const elements: React.ReactNode[] = [];
   let i = 0;
@@ -207,19 +227,45 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (headerMatch) {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        const fontSize = level === 1 ? '1.5rem' : level === 2 ? '1.3rem' : '1.15rem';
-        const color = level <= 2 ? '#fff' : '#e0e0e0';
-        const marginTop = i === 0 ? '0' : (level === 1 ? '40px' : '32px');
+        
+        // GitBook-like Typography Scale
+        let fontSize = '1.1rem';
+        let marginTop = '24px';
+        let marginBottom = '12px';
+        let letterSpacing = '-0.01em';
+        let fontWeight = 600;
+        let color = '#fff';
+
+        if (level === 1) {
+            fontSize = '2rem'; 
+            marginTop = i === 0 ? '0' : '60px'; // Massive top margin
+            marginBottom = '24px'; // Tight bottom margin
+            letterSpacing = '-0.03em'; // Tight letter spacing
+            fontWeight = 700;
+        } else if (level === 2) {
+            fontSize = '1.5rem';
+            marginTop = i === 0 ? '0' : '48px';
+            marginBottom = '16px';
+            letterSpacing = '-0.025em';
+            fontWeight = 700;
+        } else if (level === 3) {
+            fontSize = '1.25rem';
+            marginTop = i === 0 ? '0' : '32px';
+            marginBottom = '12px';
+            letterSpacing = '-0.02em';
+            fontWeight = 600;
+            color = '#e0e0e0';
+        }
         
         elements.push(
             <div key={`header-${i}`} style={{
-                fontSize: level > 3 ? '1.05rem' : fontSize,
-                fontWeight: 700,
-                color: color,
-                marginTop: marginTop,
-                marginBottom: '16px',
+                fontSize,
+                fontWeight,
+                color,
+                marginTop,
+                marginBottom,
                 lineHeight: 1.3,
-                letterSpacing: '-0.02em'
+                letterSpacing
             }}>
                 {parseInlineMarkdown(text)}
             </div>
@@ -276,10 +322,29 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
-        elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
+        
+        // Render quotes using the disclaimer style options
+        elements.push(
+          <InfoBlock key={`quote-${i}`}>
+            {renderMarkdownContent(quoteLines.join('\n'), {
+              fontSize: '0.9rem',
+              color: '#888',
+              margin: '0'
+            })}
+          </InfoBlock>
+        );
         continue;
     }
-    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '16px', color: '#a0a0a0', lineHeight: 1.75, fontSize: '1.05rem', fontWeight: 400 }}>{parseInlineMarkdown(line)}</p>); }
+    if (line !== '') { 
+        // Updated paragraph style: more breathing room (24px margin)
+        elements.push(<p key={i} style={{ 
+            marginBottom: options.margin !== undefined ? options.margin : '24px', 
+            color: options.color || '#a0a0a0', 
+            lineHeight: 1.75, 
+            fontSize: options.fontSize || '1.05rem', 
+            fontWeight: 400 
+        }}>{parseInlineMarkdown(line)}</p>); 
+    }
     i++;
   }
   return elements;
@@ -510,7 +575,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 <div className="brand-slash-container"><div className="brand-slash-line"></div></div>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20, textAlign: 'center' }}><h1 className="hero-title" style={{ fontSize: 'clamp(3rem, 5vw, 5rem)' }}>{data.title}</h1></div>
             </div>
-            {safeSubSections.length > 0 && (<div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto 80px', padding: '0 20px' }}><h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2><p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p></div>)}
+            {safeSubSections.length > 0 && (<div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '60px auto 80px', padding: '0 20px' }}><h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2><p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p></div>)}
             <div className="grid-layout">
                 {quickLinkSections.map((section, index) => {
                   const SectionIcon = section.icon;
@@ -574,14 +639,14 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
              // 1. Spotlight Effect (onMouseMove) & 5. Scroll Stagger (stagger-item, animation-delay)
              <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item ${isFullWidth ? 'full-width' : ''}`} style={{ animationDelay: `${index * 100}ms` }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
                  {adminControls}
                </div>
                {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
                <div style={{ color: '#ccc', lineHeight: '1.6' }}>{renderMarkdownContent(sub.content)}</div>
                {sub.codeBlock && (<div style={{ position: 'relative', marginTop: '16px' }}><CodeBlock text={sub.codeBlock} /><button onClick={() => navigator.clipboard.writeText(sub.codeBlock!)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }} title="Copy"><Copy size={14} /></button></div>)}
                {sub.link && (<a href={sub.link} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick('Link', sub.link!)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}><LinkIcon size={16} /> Link</a>)}
-               {sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer)}</InfoBlock>)}
+               {sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>)}
              </div>
           );
         })}

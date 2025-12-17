@@ -76,10 +76,24 @@ const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
+// Updated InfoBlock (Disclaimer)
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ background: 'linear-gradient(90deg, rgba(231,0,18,0.05) 0%, rgba(20,20,20,0.5) 100%)', borderLeft: '2px solid #E70012', padding: '16px', borderRadius: '0 8px 8px 0', marginTop: '20px', marginBottom: '20px', fontSize: '0.9rem', color: '#ddd', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-    <Lightbulb size={18} color="#E70012" style={{ flexShrink: 0, marginTop: '4px' }} />
-    <div style={{ lineHeight: 1.6, flex: 1 }}>{children}</div>
+  <div style={{ 
+    background: 'rgba(231,0,18,0.05)', // Subtle background
+    borderLeft: '2px solid #E70012', 
+    padding: '16px 20px', 
+    borderRadius: '4px', 
+    marginTop: '32px', 
+    marginBottom: '32px', 
+    fontSize: '0.85rem', // Smaller text
+    color: '#888', // Dimmer text color
+    display: 'flex', 
+    gap: '12px', 
+    alignItems: 'flex-start',
+    lineHeight: '1.6'
+  }}>
+    <Lightbulb size={16} color="#E70012" style={{ flexShrink: 0, marginTop: '2px' }} />
+    <div style={{ flex: 1 }}>{children}</div>
   </div>
 );
 
@@ -196,19 +210,45 @@ const renderMarkdownContent = (content: string | string[]) => {
     if (headerMatch) {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        const fontSize = level === 1 ? '1.5rem' : level === 2 ? '1.3rem' : '1.15rem';
-        const color = level <= 2 ? '#fff' : '#e0e0e0';
-        const marginTop = i === 0 ? '0' : (level === 1 ? '40px' : '32px');
+        
+        // GitBook-like Typography Scale
+        let fontSize = '1.1rem';
+        let marginTop = '24px';
+        let marginBottom = '12px';
+        let letterSpacing = '-0.01em';
+        let fontWeight = 600;
+        let color = '#fff';
+
+        if (level === 1) {
+            fontSize = '2rem'; 
+            marginTop = i === 0 ? '0' : '60px'; // Massive top margin
+            marginBottom = '24px'; // Tight bottom margin
+            letterSpacing = '-0.03em'; // Tight letter spacing
+            fontWeight = 700;
+        } else if (level === 2) {
+            fontSize = '1.5rem';
+            marginTop = i === 0 ? '0' : '48px';
+            marginBottom = '16px';
+            letterSpacing = '-0.025em';
+            fontWeight = 700;
+        } else if (level === 3) {
+            fontSize = '1.25rem';
+            marginTop = i === 0 ? '0' : '32px';
+            marginBottom = '12px';
+            letterSpacing = '-0.02em';
+            fontWeight = 600;
+            color = '#e0e0e0';
+        }
         
         elements.push(
             <div key={`header-${i}`} style={{
-                fontSize: level > 3 ? '1.05rem' : fontSize,
-                fontWeight: 700,
-                color: color,
-                marginTop: marginTop,
-                marginBottom: '16px',
+                fontSize,
+                fontWeight,
+                color,
+                marginTop,
+                marginBottom,
                 lineHeight: 1.3,
-                letterSpacing: '-0.02em'
+                letterSpacing
             }}>
                 {parseInlineMarkdown(text)}
             </div>
@@ -268,7 +308,16 @@ const renderMarkdownContent = (content: string | string[]) => {
         elements.push(<InfoBlock key={`quote-${i}`}>{quoteLines.map((qLine, qIdx) => <div key={qIdx} style={{ marginBottom: qIdx < quoteLines.length - 1 ? '4px' : '0' }}>{parseInlineMarkdown(qLine)}</div>)}</InfoBlock>);
         continue;
     }
-    if (line !== '') { elements.push(<p key={i} style={{ marginBottom: '16px', color: '#a0a0a0', lineHeight: 1.75, fontSize: '1.05rem', fontWeight: 400 }}>{parseInlineMarkdown(line)}</p>); }
+    if (line !== '') { 
+        // Updated paragraph style: more breathing room (24px margin)
+        elements.push(<p key={i} style={{ 
+            marginBottom: '24px', 
+            color: '#a0a0a0', 
+            lineHeight: 1.75, 
+            fontSize: '1.05rem', 
+            fontWeight: 400 
+        }}>{parseInlineMarkdown(line)}</p>); 
+    }
     i++;
   }
   return elements;
@@ -353,7 +402,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                 <div style={{ padding: '10px', background: 'rgba(231,0,18,0.1)', borderRadius: '10px' }}>
                     <HeaderIcon color="#E70012" size={22} strokeWidth={2.5} />
                 </div>
-                <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{data.title}</h3>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{data.title}</h3>
             </div>
             {adminControls && (
                 <div style={{ marginLeft: '16px' }}>{adminControls}</div>
