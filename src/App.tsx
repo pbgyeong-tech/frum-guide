@@ -297,27 +297,25 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        <div className="content-wrapper">
-          <Routes>
-            {/* 1. Root/Welcome routes */}
-            <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
-            
-            {/* 2. Main content route */}
-            <Route path="/:sectionId" element={
-              <MainLayout 
-                contentData={contentData}
-                onUpdateContent={handleUpdateContent}
-                setIsDirty={setIsDirty}
-                isAdmin={isAdmin}
-                user={user}
-                onNavigate={handleNavigate}
-              />
-            } />
+        <Routes>
+          {/* 1. Root/Welcome routes */}
+          <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
+          
+          {/* 2. Main content route */}
+          <Route path="/:sectionId" element={
+            <MainLayout 
+              contentData={contentData}
+              onUpdateContent={handleUpdateContent}
+              setIsDirty={setIsDirty}
+              isAdmin={isAdmin}
+              user={user}
+              onNavigate={handleNavigate}
+            />
+          } />
 
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
-          </Routes>
-        </div>
+          {/* Catch-all redirect */}
+          <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
+        </Routes>
 
         <AdminRestoreButton user={user} />
       </main>

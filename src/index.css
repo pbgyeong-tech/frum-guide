@@ -275,6 +275,7 @@ aside.sidebar-container {
 /* Hero Section Styles */
 .hero-title { 
   font-size: 4rem; 
+  /* Welcome text bold refinement */
   font-weight: 700; 
   margin-bottom: 24px; 
   color: #fff; 
@@ -305,14 +306,115 @@ aside.sidebar-container {
   overflow: hidden;
 }
 
+.hero-text-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  text-align: center;
+  padding: 0 20px;
+}
+
 /* Updated Brand Slash - Sharp, Clean, No Blur */
 .brand-slash-line {
-  width: 150%;
+  width: 90%; /* Default Mobile: Broad accent */
   height: 1px; /* Very thin sharp line */
   background: #E70012; /* Solid Red */
   box-shadow: none; /* No Blur */
   transform: rotate(45deg); /* Top-left to Bottom-right */
   opacity: 1;
+}
+
+/* Full Width Hero for Welcome Page */
+.hero-full-width-container {
+  width: 100%;
+  height: 80vh; /* Default height for mobile/tablet */
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  margin-bottom: 0; /* No margin, blending handled by gradient */
+}
+
+/* Desktop Specific Adjustments */
+@media (min-width: 769px) {
+  /* Layout: Sidebar Fixed, Main Full Width */
+  .app-container {
+    display: block; /* Disable flex row */
+  }
+
+  aside.sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    /* Increased transparency to let hero show through */
+    background: rgba(5, 5, 5, 0.6); 
+    z-index: 100;
+  }
+
+  .main-content {
+    /* Push regular content to the right */
+    padding-left: var(--sidebar-width);
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Hero expands to full viewport width (underneath sidebar) */
+  .hero-full-width-container {
+    margin-left: calc(var(--sidebar-width) * -1);
+    width: calc(100% + var(--sidebar-width));
+    /* Cinematic 16:9 ratio */
+    height: auto; 
+    aspect-ratio: 16 / 9; 
+  }
+
+  /* Refined Slash for Desktop */
+  .brand-slash-line {
+    /* Approx 2x height of Welcome text */
+    width: 280px;
+  }
+
+  /* Align centered content to the right of the sidebar */
+  .brand-slash-container,
+  .hero-text-container {
+    padding-left: var(--sidebar-width);
+  }
+}
+
+.hero-full-width-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+  animation: slowZoom 20s infinite alternate; 
+}
+
+@keyframes slowZoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+.hero-bottom-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 300px; /* Large fade area */
+  background: linear-gradient(to bottom, transparent 0%, var(--bg-main) 100%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Adjust content wrapper padding top when following hero */
+.content-wrapper.with-hero {
+  padding-top: 0;
+  position: relative;
+  z-index: 10;
+  margin-top: -80px; /* Overlap the fade slightly */
 }
 
 /* Page Header Styles */

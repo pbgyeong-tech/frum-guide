@@ -546,7 +546,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
   if (isFAQ && !isEditMode) {
     return (
-      <div className="animate-enter">
+      <div className="content-wrapper animate-enter">
         <header className="page-header" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
              <h1 className="hero-title" style={{ marginBottom: 0 }}>{data.title}</h1>
@@ -569,28 +569,33 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
   if (isWelcome) {
       return (
         <div className="animate-enter">
-            <div className="hero-image-container" style={{ marginTop: '20px' }}>
-                {data.heroVideo ? <video src={data.heroVideo} className="hero-img-anim" autoPlay loop muted playsInline /> : <img src={data.heroImage} className="hero-img-anim" alt="Hero" />}
-                <div className="hero-overlay-gradient"></div>
+            <div className="hero-full-width-container">
+                {data.heroVideo ? <video src={data.heroVideo} className="hero-full-width-media" autoPlay loop muted playsInline /> : <img src={data.heroImage} className="hero-full-width-media" alt="Hero" />}
+                
+                <div className="hero-overlay-gradient" style={{ opacity: 0.4 }}></div>
+                <div className="hero-bottom-gradient"></div>
+
                 <div className="brand-slash-container"><div className="brand-slash-line"></div></div>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 20, textAlign: 'center' }}><h1 className="hero-title" style={{ fontSize: 'clamp(3rem, 5vw, 5rem)' }}>{data.title}</h1></div>
+                <div className="hero-text-container"><h1 className="hero-title" style={{ fontSize: 'clamp(3.5rem, 6vw, 6rem)', textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>{data.title}</h1></div>
             </div>
-            {safeSubSections.length > 0 && (<div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '60px auto 80px', padding: '0 20px' }}><h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2><p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p></div>)}
-            <div className="grid-layout">
-                {quickLinkSections.map((section, index) => {
-                  const SectionIcon = section.icon;
-                  return (
-                    // 1. Apply bento-card spotlight via handleMouseMove
-                    <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className="bento-card stagger-item" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', animationDelay: `${index * 100}ms` }}><div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><SectionIcon size={24} color="#E70012" /><h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{section.title}</h3></div><p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5', margin: 0 }}>{section.description}</p></button>
-                  );
-                })}
+            
+            <div className="content-wrapper with-hero">
+                {safeSubSections.length > 0 && (<div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto 80px', padding: '0 20px' }}><h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2><p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p></div>)}
+                <div className="grid-layout">
+                    {quickLinkSections.map((section, index) => {
+                      const SectionIcon = section.icon;
+                      return (
+                        <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className="bento-card stagger-item" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', animationDelay: `${index * 100}ms` }}><div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><SectionIcon size={24} color="#E70012" /><h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{section.title}</h3></div><p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5', margin: 0 }}>{section.description}</p></button>
+                      );
+                    })}
+                </div>
             </div>
         </div>
       );
   }
 
   return (
-    <div className="animate-enter">
+    <div className="content-wrapper animate-enter">
       <header className="page-header">
         <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
         {isAdmin && (<button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(!isEditMode); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: isEditMode ? '#E70012' : 'transparent', color: isEditMode ? '#fff' : '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} />{isEditMode ? 'Done Editing' : 'Edit Page'}</button>)}
@@ -639,7 +644,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
              // 1. Spotlight Effect (onMouseMove) & 5. Scroll Stagger (stagger-item, animation-delay)
              <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item ${isFullWidth ? 'full-width' : ''}`} style={{ animationDelay: `${index * 100}ms` }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
                  {adminControls}
                </div>
                {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
