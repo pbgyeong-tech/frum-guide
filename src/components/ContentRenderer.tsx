@@ -180,9 +180,16 @@ interface MarkdownOptions {
 }
 
 const renderMarkdownContent = (content: string | string[], options: MarkdownOptions = {}) => {
-  const lines = Array.isArray(content) ? content : content.split('\n');
+  // CRITICAL: Ensure we have a flat array of single lines by splitting any internal \n
+  const lines = (Array.isArray(content) ? content : [content])
+    .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
+    
   const elements: React.ReactNode[] = [];
   let i = 0;
+
+  // Re-usable regex for block triggers
+  const listRegex = /^(\d+|[a-zA-Z]|[ivxIVX]+)\.\s/;
+  const bulletRegex = /^(\-|•|\*)\s/;
 
   while (i < lines.length) {
     const rawLine = lines[i];
@@ -203,7 +210,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
     if (line.startsWith('```')) {
       const codeLines = []; i++;
-      while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
+      while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
     }
@@ -221,20 +228,32 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
-    const isUnordered = /^(\-|•|\*)\s/.test(line);
-    const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
+
+    const isUnordered = bulletRegex.test(line);
+    const isOrdered = listRegex.test(line);
+
     if (isOrdered || isUnordered) {
         const indentMatch = rawLine.match(/^(\s*)/);
         const level = Math.floor((indentMatch ? indentMatch[1].length : 0) / 2);
-        const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
-        const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
+        
+        const matchRoman = line.match(/^([ivxIVX]+)\.\s+(.*)/);
+        const matchAlpha = line.match(/^([a-zA-Z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
         const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
+        
         let renderedItem = null;
-        if (isUnordered && matchUn) renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
-        else if (matchNum) renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
-        else if (matchRoman && level >= 2) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
-        else if (matchAlpha) renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
+        if (isUnordered && matchUn) {
+          renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
+        } else if (matchNum) {
+          renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
+        } else if (matchRoman && level >= 2) {
+          renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
+        } else if (matchAlpha) {
+          renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
+        } else {
+          // Fallback if regex matched isOrdered but specific sub-match failed
+          renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
+        }
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
@@ -245,11 +264,26 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
         elements.push(<InfoBlock key={`quote-${i}`}>{renderMarkdownContent(quoteLines.join('\n'), { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>);
         continue;
     }
+    
+    // Standard Paragraph Gathering
     const paragraphLines: string[] = [line];
     let j = i + 1;
     while (j < lines.length) {
-         const nextLine = lines[j].trim();
-         if (nextLine === '' || /^(#{1,6})\s/.test(nextLine) || nextLine.startsWith('```') || nextLine.startsWith('|') || nextLine.match(/!\[(.*?)\]\((.*?)\)/) || nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine) || /^-{3,}$/.test(nextLine) || nextLine.startsWith('>')) break;
+         const nextRawLine = lines[j];
+         const nextLine = nextRawLine.trim();
+         
+         // Break if we hit any other block trigger
+         if (nextLine === '' || 
+             /^(#{1,6})\s/.test(nextLine) || 
+             nextLine.startsWith('```') || 
+             nextLine.startsWith('|') || 
+             nextLine.match(/!\[(.*?)\]\((.*?)\)/) || 
+             nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || 
+             listRegex.test(nextLine) || 
+             bulletRegex.test(nextLine) || 
+             /^-{3,}$/.test(nextLine) || 
+             nextLine.startsWith('>')) break;
+             
          paragraphLines.push(nextLine);
          j++;
     }
@@ -407,7 +441,13 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
-          const isFullWidth = isComplexLayout || (Array.isArray(sub.content) ? sub.content.length > 5 : sub.content.length > 300);
+          
+          // Re-calculate full-width based on actual line count after splitting
+          const allLines = (Array.isArray(sub.content) ? sub.content : [sub.content])
+            .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
+          const totalLength = allLines.join('').length;
+          const isFullWidth = isComplexLayout || allLines.length > 5 || totalLength > 300;
+          
           const isArchive = ARCHIVE_SLUGS.includes(sub.slug || '');
 
           const adminControls = isAdmin && isEditMode && (
