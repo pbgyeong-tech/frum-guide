@@ -1,4 +1,3 @@
-
 import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
@@ -14,18 +13,43 @@ export enum ContentType {
   FAQ = 'faq',
 }
 
+export type BlockType = 'heading' | 'paragraph' | 'list' | 'quote' | 'code' | 'media' | 'link' | 'disclaimer' | 'table' | 'divider';
+
+export interface EditorBlock {
+  id: string;
+  type: BlockType;
+  value: string;
+  value2?: string; 
+}
+
+export interface ArchiveEntry {
+  title: string;
+  winner?: string;
+  imageUrl?: string;
+  description?: string;
+}
+
+export interface ArchiveData {
+  [year: number]: {
+    [month: number]: ArchiveEntry;
+  };
+}
+
 export interface SubSection {
   uuid?: string; // Unique ID for deletion/editing stability
   slug?: string; // URL Anchor ID (e.g., 'wifi-setup')
   title: string;
   content: string | string[]; // Can be a paragraph or a list
+  items?: string[]; // For explicit list items
   codeBlock?: string; // For things like signatures or wifi passwords
   imagePlaceholder?: string;
   link?: string;
+  linkTitle?: string; // Added to persist custom link labels
   disclaimer?: string; // Explicit field for the red info box
   keywords?: string[]; // Added for natural language search scoring
   lastEditedBy?: string; // Email of the last editor
   lastEditedAt?: number; // Timestamp of the last edit
+  blocks?: EditorBlock[]; // Source of truth for block-based editor
 }
 
 export interface SectionData {

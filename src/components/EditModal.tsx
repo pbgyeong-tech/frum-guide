@@ -1,15 +1,15 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  X, Save, AlertCircle, Hash, Plus, Trash2, 
+  X, Save, Hash, Plus, Trash2, 
   ChevronUp, ChevronDown, Heading3, AlignLeft, 
   List, Quote, Terminal, Image as ImageIcon, 
-  Link as LinkIcon, AlertTriangle, GripVertical,
-  Table as TableIcon, PlusCircle, MinusCircle,
-  Minus
+  Link as LinkIcon, AlertTriangle, 
+  Table as TableIcon, Minus, Calendar, Trophy, Layers,
+  PlusCircle, MinusCircle
 } from 'lucide-react';
-import { SubSection } from '../types';
+import { SubSection, ArchiveData, ArchiveEntry, EditorBlock, BlockType } from '../types';
+import { generateUUID } from '../utils/db';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -19,53 +19,141 @@ interface EditModalProps {
   onDirty?: (dirty: boolean) => void;
 }
 
-type BlockType = 'heading' | 'paragraph' | 'list' | 'quote' | 'code' | 'media' | 'link' | 'disclaimer' | 'table' | 'divider';
+const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
 
-interface EditorBlock {
-  id: string;
-  type: BlockType;
-  value: string;
-  value2?: string; 
-}
+const BLOCK_TYPES: { type: BlockType; label: string; icon: any }[] = [
+  { type: 'paragraph', label: '본문(MD)', icon: AlignLeft },
+  { type: 'heading', label: '소제목', icon: Heading3 },
+  { type: 'list', label: '목록', icon: List },
+  { type: 'quote', label: '인용구', icon: Quote },
+  { type: 'code', label: '코드', icon: Terminal },
+  { type: 'table', label: '표', icon: TableIcon },
+  { type: 'divider', label: '구분선', icon: Minus },
+  { type: 'media', label: '이미지', icon: ImageIcon },
+  { type: 'link', label: '링크', icon: LinkIcon },
+  { type: 'disclaimer', label: '주의사항', icon: AlertTriangle },
+];
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
+const ROMAN_LIST = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'];
 
-// Helper for alpha-numeric incrementing
-const getNextAlpha = (char: string) => {
-  const code = char.toLowerCase().charCodeAt(0);
-  return (code >= 97 && code < 122) ? String.fromCharCode(code + 1) : 'a';
-};
+/**
+ * Table Editor Component for cell-based editing
+ */
+const TableEditor: React.FC<{ value: string, onChange: (val: string) => void }> = ({ value, onChange }) => {
+  const parseTable = useCallback((md: string) => {
+    const lines = md.trim().split('\n').filter(l => l.trim() !== '' && !/^[\s\|\-:]+$/.test(l));
+    if (lines.length === 0) return [['', ''], ['', '']];
+    return lines.map(line => {
+      const cells = line.split('|').map(c => c.trim());
+      // Handle edge pipes
+      return cells.filter((_, i) => i > 0 && i < cells.length - 1);
+    });
+  }, []);
 
-// Helper for roman numeral incrementing
-const getNextRoman = (roman: string) => {
-  const sequence = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
-  const idx = sequence.indexOf(roman.toLowerCase());
-  return (idx !== -1 && idx < sequence.length - 1) ? sequence[idx + 1] : 'i';
-};
+  const [grid, setGrid] = useState<string[][]>(parseTable(value));
 
-const parseTableMd = (md: string): string[][] => {
-  const lines = md.trim().split('\n').filter(l => l.includes('|') && !l.includes('---'));
-  if (lines.length === 0) return [['', ''], ['', '']];
-  return lines.map(line => 
-    line.split('|')
-      .map(cell => cell.trim())
-      .filter((_, i, arr) => (i > 0 && i < arr.length - 1) || arr.length === 1)
+  const serialize = (data: string[][]) => {
+    if (data.length === 0) return '';
+    const header = `| ${data[0].join(' | ')} |`;
+    const separator = `| ${data[0].map(() => '---').join(' | ')} |`;
+    const body = data.slice(1).map(r => `| ${r.join(' | ')} |`).join('\n');
+    return `${header}\n${separator}\n${body}`;
+  };
+
+  const updateCell = (r: number, c: number, val: string) => {
+    const newGrid = grid.map((row, ri) => ri === r ? row.map((cell, ci) => ci === c ? val : cell) : row);
+    setGrid(newGrid);
+    onChange(serialize(newGrid));
+  };
+
+  const addRow = () => {
+    const newRow = new Array(grid[0]?.length || 1).fill('');
+    const newGrid = [...grid, newRow];
+    setGrid(newGrid);
+    onChange(serialize(newGrid));
+  };
+
+  const removeRow = (idx: number) => {
+    if (grid.length <= 1) return;
+    const newGrid = grid.filter((_, i) => i !== idx);
+    setGrid(newGrid);
+    onChange(serialize(newGrid));
+  };
+
+  const addCol = () => {
+    const newGrid = grid.map(r => [...r, '']);
+    setGrid(newGrid);
+    onChange(serialize(newGrid));
+  };
+
+  const removeCol = (idx: number) => {
+    if (grid[0]?.length <= 1) return;
+    const newGrid = grid.map(r => r.filter((_, i) => i !== idx));
+    setGrid(newGrid);
+    onChange(serialize(newGrid));
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ overflowX: 'auto', background: '#0d0d0d', borderRadius: '8px', border: '1px solid #222' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '400px' }}>
+          <thead>
+            <tr style={{ background: '#1a1a1a' }}>
+              <th style={{ width: '30px' }}></th>
+              {grid[0]?.map((_, ci) => (
+                <th key={ci} style={{ padding: '8px' }}>
+                  <button onClick={() => removeCol(ci)} title="열 삭제" style={{ color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}><MinusCircle size={14}/></button>
+                </th>
+              ))}
+              <th style={{ width: '40px' }}><button onClick={addCol} title="열 추가" style={{ color: '#E70012', background: 'none', border: 'none', cursor: 'pointer' }}><PlusCircle size={18}/></button></th>
+            </tr>
+          </thead>
+          <tbody>
+            {grid.map((row, ri) => (
+              <tr key={ri} style={{ borderBottom: '1px solid #222' }}>
+                <td style={{ textAlign: 'center' }}>
+                  <button onClick={() => removeRow(ri)} title="행 삭제" style={{ color: '#555', background: 'none', border: 'none', cursor: 'pointer' }}><MinusCircle size={14}/></button>
+                </td>
+                {row.map((cell, ci) => (
+                  <td key={ci} style={{ padding: '4px' }}>
+                    <input 
+                      type="text" 
+                      value={cell} 
+                      onChange={e => updateCell(ri, ci, e.target.value)} 
+                      style={{ 
+                        width: '100%', 
+                        background: ri === 0 ? 'rgba(231,0,18,0.05)' : 'transparent', 
+                        border: 'none', 
+                        color: ri === 0 ? '#fff' : '#ccc', 
+                        padding: '8px', 
+                        fontSize: '0.85rem',
+                        fontWeight: ri === 0 ? 700 : 400,
+                        outline: 'none'
+                      }} 
+                    />
+                  </td>
+                ))}
+                <td></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button onClick={addRow} style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#E70012', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+        <PlusCircle size={16} /> 행 추가하기
+      </button>
+    </div>
   );
-};
-
-const stringifyTableMd = (grid: string[][]): string => {
-  if (grid.length === 0) return '';
-  const header = `| ${grid[0].join(' | ')} |`;
-  const divider = `| ${grid[0].map(() => '---').join(' | ')} |`;
-  const body = grid.slice(1).map(row => `| ${row.join(' | ')} |`).join('\n');
-  return `${header}\n${divider}\n${body}`;
 };
 
 export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, initialData, onDirty }) => {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [blocks, setBlocks] = useState<EditorBlock[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [archiveData, setArchiveData] = useState<ArchiveData>({});
+  const [activeYear, setActiveYear] = useState<number>(2025);
+  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1);
 
   useEffect(() => {
     if (isOpen) {
@@ -73,472 +161,404 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         setTitle(initialData.title);
         setSlug(initialData.slug || '');
         
-        const newBlocks: EditorBlock[] = [];
-        const lines = Array.isArray(initialData.content) ? initialData.content : (initialData.content || '').split('\n');
-        
-        let i = 0;
-        while (i < lines.length) {
-          const line = lines[i];
-          const trimmed = line.trim();
-
-          if (trimmed.startsWith('### ')) {
-            newBlocks.push({ id: generateId(), type: 'heading', value: trimmed.replace('### ', '') });
-          } else if (trimmed.startsWith('> ')) {
-            newBlocks.push({ id: generateId(), type: 'quote', value: trimmed.replace(/^>\s?/, '') });
-          } else if (/^-{3,}$/.test(trimmed)) {
-            newBlocks.push({ id: generateId(), type: 'divider', value: '---' });
-          } else if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || /^\d+\.\s/.test(trimmed)) {
-            let listItems = [line];
-            let j = i + 1;
-            while (j < lines.length && (/^\s*([-•]|\d+\.)\s/.test(lines[j]) || lines[j].trim() === '')) {
-              listItems.push(lines[j]);
-              j++;
-            }
-            newBlocks.push({ id: generateId(), type: 'list', value: listItems.join('\n') });
-            i = j - 1;
-          } else if (trimmed.startsWith('|')) {
-            const tableLines = [];
-            while (i < lines.length && lines[i].trim().startsWith('|')) {
-              tableLines.push(lines[i]);
-              i++;
-            }
-            newBlocks.push({ id: generateId(), type: 'table', value: tableLines.join('\n') });
-            continue;
-          } else if (trimmed.startsWith('```')) {
-            const codeLines = []; i++;
-            while (i < lines.length && !lines[i].startsWith('```')) {
-              codeLines.push(lines[i]);
-              i++;
-            }
-            newBlocks.push({ id: generateId(), type: 'code', value: codeLines.join('\n') });
-          } else if (trimmed !== '') {
-            newBlocks.push({ id: generateId(), type: 'paragraph', value: trimmed });
+        if (initialData.codeBlock && ARCHIVE_SLUGS.includes(initialData.slug || '')) {
+          try {
+            setArchiveData(JSON.parse(initialData.codeBlock));
+          } catch (e) {
+            setArchiveData({});
           }
-          i++;
+        } else {
+          setArchiveData({});
         }
 
-        if (initialData.imagePlaceholder) newBlocks.push({ id: generateId(), type: 'media', value: initialData.imagePlaceholder });
-        if (initialData.link) newBlocks.push({ id: generateId(), type: 'link', value: initialData.link, value2: '관련 링크' });
-        if (initialData.disclaimer) newBlocks.push({ id: generateId(), type: 'disclaimer', value: initialData.disclaimer });
+        if (initialData.blocks && initialData.blocks.length > 0) {
+          setBlocks(initialData.blocks);
+        } else {
+          const newBlocks: EditorBlock[] = [];
+          const lines = Array.isArray(initialData.content) ? initialData.content : (initialData.content || '').split('\n');
+          
+          let i = 0;
+          const hrRegex = /^\s*-{3,}\s*$/;
+          const listRegex = /^(\s*([-•*]|\d+\.|[a-zA-Z]\.|[ivxIVX]+\.))\s+/;
 
-        setBlocks(newBlocks.length > 0 ? newBlocks : [{ id: generateId(), type: 'paragraph', value: '' }]);
+          while (i < lines.length) {
+            const rawLine = lines[i];
+            const trimmed = rawLine.trim();
+
+            if (trimmed.startsWith('### ')) {
+              newBlocks.push({ id: generateUUID(), type: 'heading', value: trimmed.replace('### ', '') });
+            } else if (trimmed.startsWith('> ')) {
+              let quoteItems = [trimmed.replace(/^>\s?/, '')];
+              let j = i + 1;
+              while (j < lines.length && lines[j].trim().startsWith('> ')) {
+                quoteItems.push(lines[j].trim().replace(/^>\s?/, ''));
+                j++;
+              }
+              newBlocks.push({ id: generateUUID(), type: 'quote', value: quoteItems.join('\n') });
+              i = j - 1;
+            } else if (hrRegex.test(trimmed)) {
+              newBlocks.push({ id: generateUUID(), type: 'divider', value: '---' });
+            } else if (listRegex.test(rawLine)) {
+              let listItems = [rawLine];
+              let j = i + 1;
+              while (j < lines.length) {
+                const nextLine = lines[j];
+                const nextTrimmed = nextLine.trim();
+                if (nextTrimmed === '' || nextTrimmed.startsWith('### ') || nextTrimmed.startsWith('```') || nextTrimmed.startsWith('|') || nextTrimmed.startsWith('> ')) break;
+                if (listRegex.test(nextLine) || /^\s+/.test(nextLine)) {
+                    listItems.push(nextLine);
+                    j++;
+                } else {
+                    break;
+                }
+              }
+              newBlocks.push({ id: generateUUID(), type: 'list', value: listItems.join('\n') });
+              i = j - 1;
+            } else if (trimmed.startsWith('|')) {
+              const tableLines = [];
+              while (i < lines.length && lines[i].trim().startsWith('|')) {
+                tableLines.push(lines[i]);
+                i++;
+              }
+              newBlocks.push({ id: generateUUID(), type: 'table', value: tableLines.join('\n') });
+              continue;
+            } else if (trimmed.startsWith('```')) {
+              const codeLines = []; i++;
+              while (i < lines.length && !lines[i].trim().startsWith('```')) {
+                codeLines.push(lines[i]);
+                i++;
+              }
+              newBlocks.push({ id: generateUUID(), type: 'code', value: codeLines.join('\n') });
+            } else if (trimmed.match(/^\[(.*?)\]\((.*?)\)$/)) {
+              const linkMatch = trimmed.match(/^\[(.*?)\]\((.*?)\)$/);
+              if (linkMatch) newBlocks.push({ id: generateUUID(), type: 'link', value: linkMatch[2], value2: linkMatch[1] });
+            } else if (trimmed !== '') {
+              let pLines = [trimmed];
+              let j = i + 1;
+              while (j < lines.length) {
+                const nextRawLine = lines[j];
+                const nextLine = nextRawLine.trim();
+                if (nextLine === '' || nextLine.startsWith('### ') || nextLine.startsWith('>') || listRegex.test(nextRawLine) || nextLine.startsWith('|') || nextLine.startsWith('```') || hrRegex.test(nextLine)) break;
+                pLines.push(nextLine);
+                j++;
+              }
+              newBlocks.push({ id: generateUUID(), type: 'paragraph', value: pLines.join('\n') });
+              i = j - 1;
+            }
+            i++;
+          }
+
+          if (initialData.imagePlaceholder) newBlocks.push({ id: generateUUID(), type: 'media', value: initialData.imagePlaceholder });
+          if (initialData.disclaimer) newBlocks.push({ id: generateUUID(), type: 'disclaimer', value: initialData.disclaimer });
+
+          setBlocks(newBlocks.length > 0 ? newBlocks : [{ id: generateUUID(), type: 'paragraph', value: '' }]);
+        }
       } else {
         setTitle('');
         setSlug('');
-        setBlocks([{ id: generateId(), type: 'paragraph', value: '' }]);
+        setBlocks([{ id: generateUUID(), type: 'paragraph', value: '' }]);
+        setArchiveData({});
       }
-      setLoaded(true);
       onDirty?.(false);
     } else {
-      setLoaded(false);
+      setShowTypeSelector(false);
     }
   }, [isOpen, initialData]);
 
-  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<any>>, value: any) => {
-    setter(value);
-    if (loaded && onDirty) onDirty(true);
+  const isArchive = ARCHIVE_SLUGS.includes(slug);
+
+  const updateArchiveEntry = (field: keyof ArchiveEntry, value: string) => {
+    setArchiveData(prev => {
+      const yearData = prev[activeYear] || {};
+      const monthData = yearData[activeMonth] || { title: '' };
+      return { ...prev, [activeYear]: { ...yearData, [activeMonth]: { ...monthData, [field]: value } } };
+    });
+    if (onDirty) onDirty(true);
   };
 
   const addBlock = (type: BlockType) => {
-    let value = '';
-    if (type === 'table') value = stringifyTableMd([['구분', '내용'], ['', '']]);
-    if (type === 'divider') value = '---';
+    let defaultValue = '';
+    if (type === 'table') defaultValue = '| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |';
+    setBlocks([...blocks, { id: generateUUID(), type, value: defaultValue, value2: type === 'link' ? '' : undefined }]);
+    setShowTypeSelector(false);
+    if (onDirty) onDirty(true);
+  };
+
+  // Helper for List Item analysis
+  const getListInfo = (line: string) => {
+    const numericMatch = line.match(/^(\s*)(\d+)\.\s(.*)$/);
+    if (numericMatch) return { indent: numericMatch[1], marker: numericMatch[2], content: numericMatch[3], type: 'numeric' as const };
+    const alphaMatch = line.match(/^(\s*)([a-z])\.\s(.*)$/);
+    if (alphaMatch) return { indent: alphaMatch[1], marker: alphaMatch[2], content: alphaMatch[3], type: 'alpha' as const };
+    const romanMatch = line.match(/^(\s*)(i|ii|iii|iv|v|vi|vii|viii|ix|x)\.\s(.*)$/);
+    if (romanMatch) return { indent: romanMatch[1], marker: romanMatch[2], content: romanMatch[3], type: 'roman' as const };
     
-    const newBlock: EditorBlock = { id: generateId(), type, value };
-    if (type === 'link') newBlock.value2 = '';
-    
-    setBlocks([...blocks, newBlock]);
-    if (onDirty) onDirty(true);
+    const numericEmpty = line.match(/^(\s*)(\d+)\.\s*$/);
+    if (numericEmpty) return { indent: numericEmpty[1], marker: numericEmpty[2], content: "", type: 'numeric' as const };
+    const alphaEmpty = line.match(/^(\s*)([a-z])\.\s*$/);
+    if (alphaEmpty) return { indent: alphaEmpty[1], marker: alphaEmpty[2], content: "", type: 'alpha' as const };
+    const romanEmpty = line.match(/^(\s*)(i|ii|iii|iv|v|vi|vii|viii|ix|x)\.\s*$/);
+    if (romanEmpty) return { indent: romanEmpty[1], marker: romanEmpty[2], content: "", type: 'roman' as const };
+
+    return null;
   };
 
-  const updateBlock = (id: string, value: string, value2?: string) => {
-    setBlocks(blocks.map(b => b.id === id ? { ...b, value, value2 } : b));
-    if (onDirty) onDirty(true);
+  const getNextMarker = (marker: string, type: 'numeric' | 'alpha' | 'roman') => {
+    if (type === 'numeric') return (parseInt(marker) + 1) + '.';
+    if (type === 'alpha') return String.fromCharCode(marker.charCodeAt(0) + 1) + '.';
+    if (type === 'roman') {
+        const idx = ROMAN_LIST.indexOf(marker);
+        return (idx !== -1 && idx < ROMAN_LIST.length - 1) ? ROMAN_LIST[idx + 1] + '.' : 'i.';
+    }
+    return "";
   };
 
-  const removeBlock = (id: string) => {
-    if (blocks.length <= 1) return;
-    setBlocks(blocks.filter(b => b.id !== id));
-    if (onDirty) onDirty(true);
-  };
-
-  const moveBlock = (index: number, direction: 'up' | 'down') => {
-    const newBlocks = [...blocks];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= blocks.length) return;
-    [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
-    setBlocks(newBlocks);
-    if (onDirty) onDirty(true);
-  };
-
-  const handleSmartTyping = (e: React.KeyboardEvent<HTMLTextAreaElement>, blockId: string) => {
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, blockId: string) => {
     const textarea = e.currentTarget;
-    const { selectionStart, value } = textarea;
-    const lines = value.split('\n');
-    const contentBeforeCursor = value.substring(0, selectionStart);
-    const currentLineIndex = contentBeforeCursor.split('\n').length - 1;
-    const currentLine = lines[currentLineIndex];
+    const { selectionStart: start, selectionEnd: end, value } = textarea;
 
-    const numMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)/);
-    const alphaMatch = currentLine.match(/^(\s*)([a-z])\.\s(.*)/);
-    const romanMatch = currentLine.match(/^(\s*)([ivx]+)\.\s(.*)/);
-    const bulletMatch = currentLine.match(/^(\s*)([-•*])\s(.*)/);
+    // A) ENTER - Auto List Generation
+    if (e.key === 'Enter' && !e.shiftKey && start === end) {
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = value.substring(lineStart, start);
+      const listInfo = getListInfo(currentLine);
 
-    // 1. Enter Key: List continuation or Exit
-    if (e.key === 'Enter') {
-      const match = numMatch || alphaMatch || romanMatch || bulletMatch;
-      if (match) {
-        const [full, indent, marker, content] = match;
-        
-        // Exit behavior: if current item is empty, delete marker and exit list
-        if (!content.trim()) {
-          e.preventDefault();
-          lines[currentLineIndex] = '';
-          const newValue = lines.join('\n');
-          updateBlock(blockId, newValue);
-          setTimeout(() => {
-            const beforeLines = lines.slice(0, currentLineIndex);
-            const newPos = beforeLines.join('\n').length + (beforeLines.length > 0 ? 1 : 0);
-            textarea.setSelectionRange(newPos, newPos);
-          }, 0);
-          return;
-        }
-
-        // Continuation: generate ONLY the next item
+      if (listInfo) {
         e.preventDefault();
-        let nextMarker = '';
-        if (numMatch) nextMarker = `${indent}${parseInt(marker) + 1}. `;
-        else if (alphaMatch) nextMarker = `${indent}${getNextAlpha(marker)}. `;
-        else if (romanMatch) nextMarker = `${indent}${getNextRoman(marker)}. `;
-        else if (bulletMatch) nextMarker = `${indent}${marker} `;
-
-        const before = value.substring(0, selectionStart);
-        const after = value.substring(selectionStart);
-        const newValue = before + '\n' + nextMarker + after;
         
-        updateBlock(blockId, newValue);
-        setTimeout(() => {
-          const newPos = before.length + 1 + nextMarker.length;
-          textarea.setSelectionRange(newPos, newPos);
-        }, 0);
+        if (listInfo.content.trim() === "") {
+          // Rule: If line has only marker, Enter removes marker and ends list
+          const newValue = value.substring(0, lineStart) + "\n" + value.substring(start);
+          setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
+          setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = lineStart + 1; }, 0);
+        } else {
+          // Rule: Auto-increment marker
+          const nextMarker = getNextMarker(listInfo.marker, listInfo.type);
+          const insertion = `\n${listInfo.indent}${nextMarker} `;
+          const newValue = value.substring(0, start) + insertion + value.substring(start);
+          setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
+          setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = start + insertion.length; }, 0);
+        }
+        if (onDirty) onDirty(true);
+        return;
       }
     }
 
-    // 2. Tab Key: Multi-level progressive nesting (1. -> a. -> i.)
+    // B) TAB / SHIFT+TAB - Indent & Marker Conversion
     if (e.key === 'Tab') {
-      const match = numMatch || alphaMatch || romanMatch || bulletMatch;
-      if (match) {
-        e.preventDefault();
-        const [full, indent, marker, content] = match;
-        let newLine = currentLine;
-        const indentStep = "  ";
+      e.preventDefault();
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = value.substring(lineStart, start);
+      const listInfo = getListInfo(currentLine);
+      const isShift = e.shiftKey;
 
-        if (e.shiftKey) { // Dedent
-          if (indent.length >= indentStep.length) {
-            const newIndent = indent.substring(indentStep.length);
-            // Reverse cycling: Roman -> Alpha -> Numeric
-            if (romanMatch) newLine = `${newIndent}a. ${content}`;
-            else if (alphaMatch) newLine = `${newIndent}1. ${content}`;
-            else if (numMatch) newLine = `${newIndent}1. ${content}`; // Stay numeric at top
-            else newLine = `${newIndent}${marker} ${content}`;
+      if (listInfo) {
+        let newIndent = listInfo.indent;
+        let newMarker = listInfo.marker;
+        let nextType = listInfo.type;
+
+        if (isShift) {
+          // Outdent
+          if (newIndent.length >= 2) {
+            newIndent = newIndent.substring(2);
+            // Change marker type back
+            if (newIndent.length === 0) newMarker = "1.";
+            else if (newIndent.length === 2) newMarker = "a.";
+          } else {
+            return; // No change
           }
-        } else { // Indent
-          const newIndent = indent + indentStep;
-          // Forward cycling: Numeric -> Alpha -> Roman
-          if (numMatch) newLine = `${newIndent}a. ${content}`;
-          else if (alphaMatch) newLine = `${newIndent}i. ${content}`;
-          else if (romanMatch) newLine = `${newIndent}i. ${content}`; // Stay roman at deep level
-          else newLine = `${newIndent}${marker} ${content}`;
+        } else {
+          // Indent
+          newIndent += "  ";
+          // Change marker type forward
+          if (newIndent.length === 2) newMarker = "a.";
+          else if (newIndent.length === 4) newMarker = "i.";
         }
 
-        lines[currentLineIndex] = newLine;
-        const newValue = lines.join('\n');
-        updateBlock(blockId, newValue);
-
-        // Keep block as 'list' if it has markers
-        const isList = /^(\s*)([-•*]|\d+\.|[a-z]\.|[ivx]+\.)\s/.test(newLine);
-        if (isList) {
-          setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, type: 'list' } : b));
-        }
-
-        setTimeout(() => {
-          const beforeLines = lines.slice(0, currentLineIndex);
-          const newPos = beforeLines.join('\n').length + (beforeLines.length > 0 ? 1 : 0) + newLine.length;
-          textarea.setSelectionRange(newPos, newPos);
-        }, 0);
+        const newValue = value.substring(0, lineStart) + newIndent + newMarker + " " + value.substring(start);
+        setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
+        const newPos = lineStart + newIndent.length + newMarker.length + 1;
+        setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = newPos; }, 0);
+      } else {
+        // Standard Tab Indent for non-list lines
+        const insertion = isShift ? "" : "  ";
+        const newValue = value.substring(0, start) + insertion + value.substring(end);
+        setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
+        setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = start + insertion.length; }, 0);
       }
+      if (onDirty) onDirty(true);
     }
-  };
-
-  const handleTextareaChange = (blockId: string, newValue: string) => {
-    const lines = newValue.split('\n');
-    const firstLine = lines[0].trim();
-    // Support more markers for auto-conversion
-    const isList = /^([-•*]|\d+\.|[a-z]\.|[ivx]+\.)\s/.test(firstLine);
-    
-    setBlocks(prev => prev.map(b => {
-      if (b.id === blockId) {
-        const newType = (b.type === 'paragraph' && isList) ? 'list' : b.type;
-        return { ...b, value: newValue, type: newType };
-      }
-      return b;
-    }));
-    if (onDirty) onDirty(true);
   };
 
   const handleSave = () => {
     const contentLines: string[] = [];
+    const listItems: string[] = [];
     let imagePlaceholder = '';
-    let link = '';
+    let linkUrl = '';
+    let linkTitleText = '';
     let disclaimer = '';
+    let firstLinkFound = false;
+
+    console.log('Saving blocks types:', blocks.map(b => b.type));
 
     blocks.forEach(block => {
-      if (!block.value.trim() && block.type !== 'media' && block.type !== 'divider') return;
-
       switch (block.type) {
         case 'heading': contentLines.push(`### ${block.value}`); break;
         case 'paragraph': contentLines.push(block.value); break;
-        case 'list': contentLines.push(block.value); break;
-        case 'quote': contentLines.push(`> ${block.value}`); break;
+        case 'list': 
+            const items = block.value.split('\n').map(l => l.trim()).filter(l => l !== '');
+            items.forEach(item => {
+                listItems.push(item);
+                contentLines.push(item);
+            });
+            break;
+        case 'quote': contentLines.push(`> ${block.value.replace(/\n/g, '\n> ')}`); break;
         case 'code': contentLines.push('```\n' + block.value + '\n```'); break;
         case 'table': contentLines.push(block.value); break;
         case 'divider': contentLines.push('---'); break;
         case 'media': imagePlaceholder = block.value; break;
-        case 'link': link = block.value; break;
+        case 'link': 
+            contentLines.push(`[${block.value2 || 'Link'}](${block.value})`);
+            if (!firstLinkFound) { linkUrl = block.value; linkTitleText = block.value2 || ''; firstLinkFound = true; }
+            break;
         case 'disclaimer': disclaimer = block.value; break;
       }
     });
 
     onSave({
-      uuid: initialData?.uuid || generateId(),
+      uuid: initialData?.uuid || generateUUID(),
       slug: slug.trim() || undefined,
       title,
       content: contentLines,
+      items: listItems.length > 0 ? listItems : undefined,
       imagePlaceholder: imagePlaceholder.trim() || undefined,
-      link: link.trim() || undefined,
+      link: linkUrl.trim() || undefined,
+      linkTitle: linkTitleText.trim() || undefined,
       disclaimer: disclaimer.trim() || undefined,
-      keywords: title.split(' ')
+      codeBlock: isArchive ? JSON.stringify(archiveData) : initialData?.codeBlock,
+      keywords: title.split(' '),
+      blocks: blocks
     });
-    
     onDirty?.(false);
     onClose();
   };
 
-  const updateTableCell = (blockId: string, rowIndex: number, colIndex: number, newValue: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const grid = parseTableMd(block.value);
-    grid[rowIndex][colIndex] = newValue;
-    updateBlock(blockId, stringifyTableMd(grid));
-  };
-
-  const addTableRow = (blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const grid = parseTableMd(block.value);
-    grid.push(new Array(grid[0].length).fill(''));
-    updateBlock(blockId, stringifyTableMd(grid));
-  };
-
-  const removeTableRow = (blockId: string, rowIndex: number) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block || rowIndex === 0) return;
-    const grid = parseTableMd(block.value);
-    if (grid.length <= 2) return;
-    grid.splice(rowIndex, 1);
-    updateBlock(blockId, stringifyTableMd(grid));
-  };
-
-  const addTableCol = (blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const grid = parseTableMd(block.value);
-    grid.forEach(row => row.push(''));
-    updateBlock(blockId, stringifyTableMd(grid));
-  };
-
-  const removeTableCol = (blockId: string, colIndex: number) => {
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) return;
-    const grid = parseTableMd(block.value);
-    if (grid[0].length <= 1) return;
-    grid.forEach(row => row.splice(colIndex, 1));
-    updateBlock(blockId, stringifyTableMd(grid));
-  };
-
   if (!isOpen) return null;
   const isValid = title.trim().length > 0 && slug.trim().length > 0;
+  const currentEntry = archiveData[activeYear]?.[activeMonth] || { title: '', winner: '', imageUrl: '', description: '' };
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div onClick={() => { onDirty?.(false); onClose(); }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)' }} />
-      <div className="animate-enter" style={{ position: 'relative', background: '#121212', border: '1px solid #333', borderRadius: '16px', width: '100%', maxWidth: '850px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+      <div className="animate-enter" style={{ position: 'relative', background: '#121212', border: '1px solid #333', borderRadius: '16px', width: '100%', maxWidth: '850px', maxHeight: '95vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         
-        {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 700 }}>{initialData ? '콘텐츠 블록 수정' : '새 콘텐츠 블록 추가'}</h3>
           <button onClick={() => { onDirty?.(false); onClose(); }} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
         </div>
 
-        {/* Scrollable Content Area */}
-        <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          {/* Metadata Section */}
+        <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', color: '#888', marginBottom: '4px', fontSize: '0.85rem' }}>제목</label>
-              <input type="text" value={title} onChange={(e) => handleInputChange(setTitle, e.target.value)} onBlur={() => { if (!slug.trim() && title.trim()) handleInputChange(setSlug, title.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')); }} placeholder="섹션 제목 입력" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none' }} />
+              <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); if (onDirty) onDirty(true); }} placeholder="섹션 제목 입력" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff', outline: 'none' }} />
             </div>
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E70012', marginBottom: '4px', fontSize: '0.85rem' }}><Hash size={14} /> URL 슬러그 (영문/숫자)</label>
-              <input type="text" value={slug} onChange={(e) => handleInputChange(setSlug, e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="e.g. it-setup" style={{ width: '100%', padding: '12px', background: 'rgba(231,0,18,0.05)', border: '1px solid #E70012', borderRadius: '8px', color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E70012', marginBottom: '4px', fontSize: '0.85rem' }}><Hash size={14} /> URL 슬러그</label>
+              <input type="text" value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); if (onDirty) onDirty(true); }} placeholder="e.g. it-setup" style={{ width: '100%', padding: '12px', background: 'rgba(231,0,18,0.05)', border: '1px solid #E70012', borderRadius: '8px', color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
             </div>
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid #222' }} />
 
-          {/* Block Editor Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {blocks.map((block, index) => (
-              <div key={block.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px' }}>
-                  <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} style={{ color: index === 0 ? '#222' : '#555', background: 'none', border: 'none', cursor: index === 0 ? 'default' : 'pointer' }}><ChevronUp size={16}/></button>
-                  <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} style={{ color: index === blocks.length - 1 ? '#222' : '#555', background: 'none', border: 'none', cursor: index === blocks.length - 1 ? 'default' : 'pointer' }}><ChevronDown size={16}/></button>
-                </div>
-
-                <div style={{ flex: 1, background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '16px', position: 'relative' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                      {block.type === 'heading' && <><Heading3 size={14}/> 소제목</>}
-                      {block.type === 'paragraph' && <><AlignLeft size={14}/> 본문 내용</>}
-                      {block.type === 'list' && <><List size={14}/> 글머리 목록</>}
-                      {block.type === 'quote' && <><Quote size={14}/> 인용구</>}
-                      {block.type === 'code' && <><Terminal size={14}/> 코드 박스</>}
-                      {block.type === 'table' && <><TableIcon size={14}/> 표 (데이터 그리드)</>}
-                      {block.type === 'divider' && <><Minus size={14}/> 구분선</>}
-                      {block.type === 'media' && <><ImageIcon size={14} color="#E70012"/> 이미지 URL</>}
-                      {block.type === 'link' && <><LinkIcon size={14} color="#E70012"/> 외부 링크</>}
-                      {block.type === 'disclaimer' && <><AlertTriangle size={14} color="#ffaa00"/> 주의사항</>}
-                    </div>
-                    <button onClick={() => removeBlock(block.id)} style={{ color: '#444', background: 'none', border: 'none', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.color = '#ff5555'} onMouseLeave={e => e.currentTarget.style.color = '#444'}><Trash2 size={16}/></button>
-                  </div>
-
-                  {/* Dynamic Inputs based on Block Type */}
-                  {block.type === 'heading' && (
-                    <input type="text" value={block.value} onChange={e => updateBlock(block.id, e.target.value)} placeholder="소제목 내용을 입력하세요..." style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid #333', color: '#fff', fontSize: '1.1rem', fontWeight: 700, outline: 'none', padding: '4px 0' }} />
-                  )}
-                  {block.type === 'table' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ overflowX: 'auto', maxWidth: '100%', paddingBottom: '8px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
-                          <thead>
-                            <tr>
-                              {parseTableMd(block.value)[0].map((cell, colIdx) => (
-                                <th key={colIdx} style={{ padding: '4px' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <input type="text" value={cell} onChange={e => updateTableCell(block.id, 0, colIdx, e.target.value)} placeholder="헤더" style={{ width: '100%', background: '#222', border: '1px solid #444', color: '#fff', padding: '6px', fontSize: '0.8rem', borderRadius: '4px', textAlign: 'center' }} />
-                                    <button onClick={() => removeTableCol(block.id, colIdx)} style={{ color: '#555', fontSize: '0.6rem', background: 'none', border: 'none', cursor: 'pointer' }}>삭제</button>
-                                  </div>
-                                </th>
-                              ))}
-                              <th style={{ width: '40px' }}><button onClick={() => addTableCol(block.id)} style={{ color: '#E70012', background: 'none', border: 'none', cursor: 'pointer' }}><PlusCircle size={16}/></button></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {parseTableMd(block.value).slice(1).map((row, rowIdx) => (
-                              <tr key={rowIdx}>
-                                {row.map((cell, colIdx) => (
-                                  <td key={colIdx} style={{ padding: '4px' }}>
-                                    <input type="text" value={cell} onChange={e => updateTableCell(block.id, rowIdx + 1, colIdx, e.target.value)} style={{ width: '100%', background: 'transparent', border: '1px solid #222', color: '#ccc', padding: '6px', fontSize: '0.85rem', borderRadius: '4px' }} />
-                                  </td>
-                                ))}
-                                <td><button onClick={() => removeTableRow(block.id, rowIdx + 1)} style={{ color: '#444', background: 'none', border: 'none', cursor: 'pointer' }}><MinusCircle size={14}/></button></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <button onClick={() => addTableRow(block.id)} style={{ alignSelf: 'flex-start', color: '#888', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}>+ 행 추가</button>
-                    </div>
-                  )}
-                  {block.type === 'divider' && (
-                    <div style={{ padding: '20px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ flex: 1, height: '1px', background: '#333' }} />
-                      <span style={{ fontSize: '0.7rem', color: '#444', textTransform: 'uppercase', letterSpacing: '0.1em' }}>구분선</span>
-                      <div style={{ flex: 1, height: '1px', background: '#333' }} />
-                    </div>
-                  )}
-                  {(block.type === 'paragraph' || block.type === 'code' || block.type === 'quote' || block.type === 'list' || block.type === 'disclaimer') && (
-                    <textarea 
-                      value={block.value} 
-                      onChange={e => handleTextareaChange(block.id, e.target.value)}
-                      onKeyDown={e => handleSmartTyping(e, block.id)}
-                      rows={block.type === 'paragraph' ? 3 : 2} 
-                      placeholder={block.type === 'code' ? '코드를 입력하세요...' : block.type === 'list' ? '1. 첫 번째 항목\n2. 두 번째 항목' : '내용을 입력하세요...'} 
-                      style={{ 
-                        width: '100%', 
-                        background: block.type === 'disclaimer' ? 'rgba(255,100,100,0.05)' : 'transparent', 
-                        border: block.type === 'disclaimer' ? '1px dashed rgba(255,100,100,0.2)' : 'none', 
-                        color: block.type === 'disclaimer' ? '#ffaaaa' : '#ccc', 
-                        fontSize: '0.95rem', 
-                        outline: 'none', 
-                        resize: 'vertical', 
-                        fontFamily: block.type === 'code' ? 'monospace' : 'inherit',
-                        padding: block.type === 'disclaimer' ? '12px' : '0',
-                        borderRadius: block.type === 'disclaimer' ? '8px' : '0'
-                      }} 
-                    />
-                  )}
-                  {block.type === 'media' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <input type="text" value={block.value} onChange={e => updateBlock(block.id, e.target.value)} placeholder="이미지 또는 비디오 URL 입력" style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #333', borderRadius: '6px', color: '#fff', padding: '8px 12px', fontSize: '0.85rem', outline: 'none' }} />
-                      {block.value && <img src={block.value} style={{ maxWidth: '100px', borderRadius: '4px', opacity: 0.5 }} alt="Preview" onError={e => e.currentTarget.style.display = 'none'} />}
-                    </div>
-                  )}
-                  {block.type === 'link' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <input type="text" value={block.value2} onChange={e => updateBlock(block.id, block.value, e.target.value)} placeholder="링크 제목 (예: 가이드 문서)" style={{ padding: '8px 12px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.85rem' }} />
-                      <input type="text" value={block.value} onChange={e => updateBlock(block.id, e.target.value, block.value2)} placeholder="URL 주소 (https://...)" style={{ padding: '8px 12px', background: '#111', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.85rem' }} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Add Block Toolset */}
-          <div style={{ border: '2px dashed #222', borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
-            <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '16px' }}>추가하고 싶은 요소를 선택하세요</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
-              <AddBlockBtn icon={Heading3} label="소제목" onClick={() => addBlock('heading')} />
-              <AddBlockBtn icon={AlignLeft} label="본문" onClick={() => addBlock('paragraph')} />
-              <AddBlockBtn icon={List} label="목록" onClick={() => addBlock('list')} />
-              <AddBlockBtn icon={Quote} label="인용" onClick={() => addBlock('quote')} />
-              <AddBlockBtn icon={Terminal} label="코드" onClick={() => addBlock('code')} />
-              <AddBlockBtn icon={TableIcon} label="표" onClick={() => addBlock('table')} />
-              <AddBlockBtn icon={Minus} label="구분선" onClick={() => addBlock('divider')} />
-              <div style={{ width: '1px', height: '24px', background: '#333', margin: '0 8px' }} />
-              <AddBlockBtn icon={ImageIcon} label="이미지" onClick={() => addBlock('media')} color="#E70012" />
-              <AddBlockBtn icon={LinkIcon} label="링크" onClick={() => addBlock('link')} color="#E70012" />
-              <AddBlockBtn icon={AlertTriangle} label="주의사항" onClick={() => addBlock('disclaimer')} color="#ffaa00" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={18} color="#E70012" />
+                <p style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>콘텐츠 블록 구성</p>
             </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {blocks.map((block, index) => {
+                  const BlockIcon = BLOCK_TYPES.find(t => t.type === block.type)?.icon || AlignLeft;
+                  return (
+                    <div key={block.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px' }}>
+                          <button onClick={() => { const b = [...blocks]; [b[index-1], b[index]] = [b[index], b[index-1]]; setBlocks(b); if(onDirty) onDirty(true); }} disabled={index === 0} style={{ color: index === 0 ? '#222' : '#555', background: 'none', border: 'none', cursor: 'pointer' }}><ChevronUp size={16}/></button>
+                          <button onClick={() => { const b = [...blocks]; [b[index+1], b[index]] = [b[index], b[index+1]]; setBlocks(b); if(onDirty) onDirty(true); }} disabled={index === blocks.length - 1} style={{ color: index === blocks.length - 1 ? '#222' : '#555', background: 'none', border: 'none', cursor: 'pointer' }}><ChevronDown size={16}/></button>
+                        </div>
+                        <div style={{ flex: 1, background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E70012', fontSize: '0.75rem', fontWeight: 700 }}><BlockIcon size={14} />{block.type.toUpperCase()}</div>
+                              <button onClick={() => { setBlocks(blocks.filter(b => b.id !== block.id)); if(onDirty) onDirty(true); }} style={{ color: '#444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                          </div>
+                          
+                          {block.type === 'table' ? (
+                            <TableEditor value={block.value} onChange={val => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value: val} : b)); if(onDirty) onDirty(true); }} />
+                          ) : block.type === 'link' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <input type="text" value={block.value2 || ''} onChange={e => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value2: e.target.value} : b)); if(onDirty) onDirty(true); }} placeholder="링크 제목" style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', padding: '8px 12px', borderRadius: '6px', color: '#fff' }} />
+                                <input type="text" value={block.value} onChange={e => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value: e.target.value} : b)); if(onDirty) onDirty(true); }} placeholder="URL (https://...)" style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', padding: '8px 12px', borderRadius: '6px', color: '#aaa' }} />
+                            </div>
+                          ) : (
+                            <textarea 
+                              value={block.value} 
+                              onChange={e => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value: e.target.value} : b)); if(onDirty) onDirty(true); }} 
+                              onKeyDown={e => handleEditorKeyDown(e, block.id)}
+                              placeholder={`${block.type} 내용 입력 (Tab/Enter 자동 리스트 지원)...`} 
+                              style={{ width: '100%', background: 'transparent', border: 'none', color: '#ccc', fontSize: '0.95rem', outline: 'none', resize: 'vertical', minHeight: '60px', lineHeight: '1.6' }} 
+                            />
+                          )}
+                        </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <button onClick={() => setShowTypeSelector(!showTypeSelector)} style={{ width: '100%', padding: '16px', border: '1px dashed #333', borderRadius: '12px', background: 'transparent', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
+                <Plus size={20} /> 블록 추가하기
+            </button>
+            {showTypeSelector && (
+              <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                {BLOCK_TYPES.map(bt => (
+                  <button key={bt.type} onClick={() => addBlock(bt.type)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '12px 8px', background: '#222', border: '1px solid #333', borderRadius: '8px', color: '#ccc', cursor: 'pointer' }}>
+                    <bt.icon size={18} /><span style={{ fontSize: '0.7rem' }}>{bt.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {isArchive && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+               <hr style={{ border: 'none', borderTop: '1px solid #222' }} />
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={18} color="#E70012" /><span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>아카이브 데이터 관리</span></div>
+               <div style={{ background: '#111', padding: '24px', borderRadius: '12px', border: '1px solid #333' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {[2025, 2026, 2027].map(year => (
+                      <button key={year} onClick={() => setActiveYear(year)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid', borderColor: activeYear === year ? '#E70012' : '#333', background: activeYear === year ? 'rgba(231,0,18,0.1)' : '#1a1a1a', color: '#fff', cursor: 'pointer' }}>{year}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginBottom: '20px' }}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                      <button key={month} onClick={() => setActiveMonth(month)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid', borderColor: activeMonth === month ? '#E70012' : '#222', background: activeMonth === month ? 'rgba(231,0,18,0.1)' : '#0d0d0d', color: '#fff', cursor: 'pointer' }}>{month}월</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <input type="text" value={currentEntry.title} onChange={e => updateArchiveEntry('title', e.target.value)} placeholder="활동명" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    <input type="text" value={currentEntry.imageUrl || ''} onChange={e => updateArchiveEntry('imageUrl', e.target.value)} placeholder="이미지 URL" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    <textarea rows={4} value={currentEntry.description || ''} onChange={e => updateArchiveEntry('description', e.target.value)} placeholder="설명 (Markdown)" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                  </div>
+               </div>
+            </div>
+          )}
         </div>
 
-        {/* Footer Actions */}
-        <div style={{ padding: '20px 24px', borderTop: '1px solid #333', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: '#0a0a0a', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-          <button onClick={() => { onDirty?.(false); onClose(); }} style={{ padding: '10px 20px', borderRadius: '8px', color: '#ccc', background: 'none', border: 'none', cursor: 'pointer' }}>취소</button>
-          <button onClick={handleSave} disabled={!isValid} style={{ padding: '10px 24px', borderRadius: '8px', background: isValid ? '#E70012' : '#333', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', cursor: isValid ? 'pointer' : 'not-allowed', boxShadow: isValid ? '0 4px 15px rgba(231,0,18,0.3)' : 'none' }}><Save size={18} /> 저장하기</button>
+        <div style={{ padding: '20px 24px', borderTop: '1px solid #333', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button onClick={() => { onDirty?.(false); onClose(); }} style={{ padding: '10px 20px', color: '#ccc', background: 'none', border: 'none', cursor: 'pointer' }}>취소</button>
+          <button onClick={handleSave} disabled={!isValid} style={{ padding: '10px 24px', borderRadius: '8px', background: isValid ? '#E70012' : '#333', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>저장하기</button>
         </div>
       </div>
     </div>,
     document.body
   );
 };
-
-const AddBlockBtn = ({ icon: Icon, label, onClick, color = '#aaa' }: { icon: any, label: string, onClick: () => void, color?: string }) => (
-  <button onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '10px', minWidth: '70px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = color; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; }}>
-    <Icon size={18} color={color} />
-    <span style={{ fontSize: '0.7rem', color: '#888' }}>{label}</span>
-  </button>
-);

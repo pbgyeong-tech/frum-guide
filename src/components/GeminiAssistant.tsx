@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, Sparkles, Bot, ChevronDown } from 'lucide-react';
-import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
+import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { HANDBOOK_CONTENT, COMPANY_NAME } from '../constants';
 import { ChatMessage } from '../types';
 
@@ -42,7 +42,6 @@ export const GeminiAssistant: React.FC = () => {
     }
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatSessionRef = useRef<Chat | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,26 +51,8 @@ export const GeminiAssistant: React.FC = () => {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Initialize chat session
-  useEffect(() => {
-    const initChat = () => {
-      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        // Correcting model name to 'gemini-3-flash-preview' for basic text tasks
-        chatSessionRef.current = ai.chats.create({
-          model: 'gemini-3-flash-preview',
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-          }
-        });
-      } catch (error) {
-        console.error("Failed to initialize chat:", error);
-      }
-    };
-
-    initChat();
-  }, []);
-
+  // FIX: Removed initialization on component mount to comply with "Do not create GoogleGenAI when the component is first rendered" guideline.
+  
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -88,18 +69,26 @@ export const GeminiAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (!chatSessionRef.current) {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        // Correcting model name to 'gemini-3-flash-preview' for basic text tasks
-        chatSessionRef.current = ai.chats.create({
-          model: 'gemini-3-flash-preview',
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-          }
-        });
-      }
+      // FIX: Re-initialize GoogleGenAI and create a fresh chat session right before making the API call to ensure use of the most up-to-date API key.
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
+      // Map existing messages to history format required by the Chat API, excluding the static welcome message.
+      const history = messages
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({
+          role: m.role as 'user' | 'model',
+          parts: [{ text: m.text }]
+        }));
 
-      const response: GenerateContentResponse = await chatSessionRef.current.sendMessage({
+      const chat = ai.chats.create({
+        model: 'gemini-3-flash-preview',
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+        },
+        history
+      });
+
+      const response: GenerateContentResponse = await chat.sendMessage({
         message: userText
       });
 
@@ -120,9 +109,6 @@ export const GeminiAssistant: React.FC = () => {
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMsg]);
-      
-      // Reset chat session on error to be safe
-      chatSessionRef.current = null;
     } finally {
       setIsLoading(false);
     }

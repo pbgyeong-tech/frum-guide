@@ -1,10 +1,9 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { SubSection } from '../types';
+import { SubSection, EditorBlock } from '../types';
 import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
-// --- Constants (Synchronized with ContentRenderer) ---
+// --- Constants ---
 const LINE_HEIGHT = 1.75;
 const MARKER_WIDTH = 30;
 const ITEM_GAP = 10;
@@ -49,7 +48,6 @@ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
 };
 
 // --- Helper Components ---
-
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string, marginLeft?: number }> = ({ number, children, marginBottom = LIST_ITEM_SPACING, marginLeft = 0 }) => (
   <div style={{ display: 'flex', gap: `${ITEM_GAP}px`, marginBottom: marginBottom, marginLeft: `${marginLeft}px`, alignItems: 'flex-start' }}>
     <div style={{ flexShrink: 0, width: `${MARKER_WIDTH}px`, display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
@@ -228,17 +226,22 @@ interface MarkdownOptions {
 }
 
 const renderMarkdownContent = (content: string | string[], options: MarkdownOptions = {}) => {
-  const lines = Array.isArray(content) ? content : content.split('\n');
+  const lines = (Array.isArray(content) ? content : [content])
+    .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
+    
   const elements: React.ReactNode[] = [];
   let i = 0;
+
+  const listRegex = /^(\s*(\d+|[a-zA-Z]|[ivxIVX]+)\.\s+)/;
+  const bulletRegex = /^(\s*(\-|•|\*)\s+)/;
+  const hrRegex = /^\s*-{3,}\s*$/;
 
   while (i < lines.length) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    // Preserve Empty Lines
     if (rawLine === '' || line === '') {
-        elements.push(<div key={`gap-${i}`} style={{ height: '1.2em' }} />);
+        elements.push(<div key={`gap-${i}`} style={{ height: '0.8em' }} />);
         i++; continue;
     }
 
@@ -251,7 +254,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
     if (line.startsWith('```')) {
       const codeLines = []; i++;
-      while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
+      while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
     }
@@ -269,24 +272,28 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
-    const isUnordered = /^(\-|•|\*)\s/.test(line);
-    const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
+    const isUnordered = bulletRegex.test(rawLine);
+    const isOrdered = listRegex.test(rawLine);
     if (isOrdered || isUnordered) {
         const indentMatch = rawLine.match(/^(\s*)/);
         const level = Math.floor((indentMatch ? indentMatch[1].length : 0) / 2);
-        const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
-        const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
+        
+        const matchRoman = line.match(/^([ivxIVX]+)\.\s+(.*)/);
+        const matchAlpha = line.match(/^([a-zA-Z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
         const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
+        
         let renderedItem = null;
         if (isUnordered && matchUn) renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
         else if (matchNum) renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
-        else if (matchRoman && level >= 2) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
+        else if (matchRoman && level >= 1) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
         else if (matchAlpha) renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
+        else renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
+
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
-    if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
+    if (hrRegex.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
@@ -296,15 +303,49 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     const paragraphLines: string[] = [line];
     let j = i + 1;
     while (j < lines.length) {
-         const nextLine = lines[j].trim();
-         if (nextLine === '' || /^(#{1,6})\s/.test(nextLine) || nextLine.startsWith('```') || nextLine.startsWith('|') || nextLine.match(/!\[(.*?)\]\((.*?)\)/) || nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine) || /^-{3,}$/.test(nextLine) || nextLine.startsWith('>')) break;
+         const nextRawLine = lines[j];
+         const nextLine = nextRawLine.trim();
+         if (nextLine === '' || /^(#{1,6})\s/.test(nextLine) || nextLine.startsWith('```') || nextLine.startsWith('|') || nextLine.match(/!\[(.*?)\]\((.*?)\)/) || nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || listRegex.test(nextRawLine) || bulletRegex.test(nextRawLine) || hrRegex.test(nextLine) || nextLine.startsWith('>')) break;
          paragraphLines.push(nextLine);
          j++;
     }
-    elements.push(<p key={i} style={{ marginBottom: options.margin ?? BLOCK_SPACING, color: options.color || '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: options.fontSize || '1.05rem' }}>{paragraphLines.map((l, idx) => <React.Fragment key={idx}>{parseInlineMarkdown(l)}{idx < paragraphLines.length - 1 && <br />}</React.Fragment>)}</p>);
+    elements.push(<p key={i} style={{ marginBottom: BLOCK_SPACING, color: options.color || '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: options.fontSize || '1.05rem' }}>{paragraphLines.map((l, idx) => <React.Fragment key={idx}>{parseInlineMarkdown(l)}{idx < paragraphLines.length - 1 && <br />}</React.Fragment>)}</p>);
     i = j;
   }
   return elements;
+};
+
+const renderBlocks = (blocks: EditorBlock[]) => {
+  return blocks.map((block, idx) => {
+    switch (block.type) {
+      case 'heading':
+        return <div key={block.id} style={{ fontSize: '1.2rem', fontWeight: 600, color: '#e0e0e0', marginTop: idx === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(block.value)}</div>;
+      case 'paragraph':
+        return <div key={block.id}>{renderMarkdownContent(block.value)}</div>;
+      case 'list':
+        return <div key={block.id}>{renderMarkdownContent(block.value, { margin: '0' })}</div>;
+      case 'quote':
+        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>;
+      case 'code':
+        return <CodeBlock key={block.id} text={block.value} />;
+      case 'table':
+        return <TableBlock key={block.id} text={block.value} />;
+      case 'divider':
+        return <hr key={block.id} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />;
+      case 'media':
+        return (
+          <div key={block.id} style={{ margin: `28px 0` }}>
+            <img src={block.value} alt="Visual Content" referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #333' }} />
+          </div>
+        );
+      case 'link':
+        return <LinkCardBlock key={block.id} text={block.value2 || 'Link'} url={block.value} />;
+      case 'disclaimer':
+        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>;
+      default:
+        return null;
+    }
+  });
 };
 
 interface ArchiveData {
@@ -398,9 +439,14 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             )}
         </div>
         <div style={{ color: '#ccc', lineHeight: '1.6', fontSize: '1rem' }}>
-          {renderMarkdownContent(data.content)}
+          {data.blocks && data.blocks.length > 0 ? (
+            renderBlocks(data.blocks)
+          ) : (
+            data.items && data.items.length > 0 ? renderMarkdownContent(data.items) : renderMarkdownContent(data.content)
+          )}
         </div>
-        {data.disclaimer && (
+        {/* Legacy Fallback for isolated disclaimer field */}
+        {!data.blocks && data.disclaimer && (
             <InfoBlock>{renderMarkdownContent(data.disclaimer)}</InfoBlock>
         )}
       </div>

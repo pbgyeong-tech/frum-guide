@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SectionData, ContentType, SubSection, ContentSnapshot } from '../types';
+import { SectionData, ContentType, SubSection, ContentSnapshot, EditorBlock } from '../types';
 import { HANDBOOK_CONTENT } from '../constants';
 import { Edit3, Plus, Trash2, ArrowUp, ArrowDown, Link as LinkIcon, ArrowRight, Lightbulb, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { FaqSearch } from './FaqSearch';
@@ -9,15 +8,15 @@ import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { ContestArchiveCard } from './ContestArchiveCard';
 import { trackAnchorView, trackEvent } from '../utils/firebase';
-import { addEditLog } from '../utils/db';
+import { addEditLog, generateUUID } from '../utils/db';
 
-// --- Layout Constants (Fine-tuned for Slack-like readability) ---
+// --- Layout Constants ---
 const LINE_HEIGHT = 1.75; 
-const MARKER_WIDTH = 30; // Fixed width for all list markers
-const ITEM_GAP = 10; // Gap between marker and text
-const INDENT_STEP = MARKER_WIDTH + ITEM_GAP; // 40px: Level 1 marker aligns with Level 0 text
-const BLOCK_SPACING = '14px'; // Tight paragraph margin for labeling groups
-const LIST_ITEM_SPACING = '6px'; // Vertical space between list items
+const MARKER_WIDTH = 30; 
+const ITEM_GAP = 10; 
+const INDENT_STEP = MARKER_WIDTH + ITEM_GAP; 
+const BLOCK_SPACING = '14px'; 
+const LIST_ITEM_SPACING = '6px'; 
 
 const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
 
@@ -48,7 +47,6 @@ const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
 };
 
 // --- List Block Helpers ---
-
 const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string, marginLeft?: number }> = ({ number, children, marginBottom = LIST_ITEM_SPACING, marginLeft = 0 }) => (
   <div style={{ display: 'flex', gap: `${ITEM_GAP}px`, marginBottom, marginLeft: `${marginLeft}px`, alignItems: 'flex-start' }}>
     <div style={{ flexShrink: 0, width: `${MARKER_WIDTH}px`, display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
@@ -180,24 +178,22 @@ interface MarkdownOptions {
 }
 
 const renderMarkdownContent = (content: string | string[], options: MarkdownOptions = {}) => {
-  // CRITICAL: Ensure we have a flat array of single lines by splitting any internal \n
   const lines = (Array.isArray(content) ? content : [content])
     .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
     
   const elements: React.ReactNode[] = [];
   let i = 0;
 
-  // Re-usable regex for block triggers
-  const listRegex = /^(\d+|[a-zA-Z]|[ivxIVX]+)\.\s/;
-  const bulletRegex = /^(\-|•|\*)\s/;
+  const listRegex = /^(\s*(\d+|[a-zA-Z]|[ivxIVX]+)\.\s+)/;
+  const bulletRegex = /^(\s*(\-|•|\*)\s+)/;
+  const hrRegex = /^\s*-{3,}\s*$/;
 
   while (i < lines.length) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    // Preserve Empty Lines
     if (rawLine === '' || line === '') {
-        elements.push(<div key={`gap-${i}`} style={{ height: '1.2em' }} />);
+        elements.push(<div key={`gap-${i}`} style={{ height: '0.8em' }} />);
         i++; continue;
     }
 
@@ -222,15 +218,15 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
     if (line.startsWith('![') && line.endsWith(')') && line.match(/!\[(.*?)\]\((.*?)\)/)) {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
-       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #222' }} /></div>); i++; continue; }
+       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', borderRadius: '8px', margin: '24px 0', border: '1px solid #333' }} /></div>); i++; continue; }
     }
     if (line.startsWith('[') && line.endsWith(')') && !line.includes('!') && line.match(/^\[(.*?)\]\((.*?)\)$/)) {
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
 
-    const isUnordered = bulletRegex.test(line);
-    const isOrdered = listRegex.test(line);
+    const isUnordered = bulletRegex.test(rawLine);
+    const isOrdered = listRegex.test(rawLine);
 
     if (isOrdered || isUnordered) {
         const indentMatch = rawLine.match(/^(\s*)/);
@@ -246,18 +242,17 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
           renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
         } else if (matchNum) {
           renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
-        } else if (matchRoman && level >= 2) {
+        } else if (matchRoman && level >= 1) {
           renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
         } else if (matchAlpha) {
           renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
         } else {
-          // Fallback if regex matched isOrdered but specific sub-match failed
           renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
         }
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
-    if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
+    if (hrRegex.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
@@ -265,25 +260,12 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
         continue;
     }
     
-    // Standard Paragraph Gathering
     const paragraphLines: string[] = [line];
     let j = i + 1;
     while (j < lines.length) {
          const nextRawLine = lines[j];
          const nextLine = nextRawLine.trim();
-         
-         // Break if we hit any other block trigger
-         if (nextLine === '' || 
-             /^(#{1,6})\s/.test(nextLine) || 
-             nextLine.startsWith('```') || 
-             nextLine.startsWith('|') || 
-             nextLine.match(/!\[(.*?)\]\((.*?)\)/) || 
-             nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || 
-             listRegex.test(nextLine) || 
-             bulletRegex.test(nextLine) || 
-             /^-{3,}$/.test(nextLine) || 
-             nextLine.startsWith('>')) break;
-             
+         if (nextLine === '' || /^(#{1,6})\s/.test(nextLine) || nextLine.startsWith('```') || nextLine.startsWith('|') || nextLine.match(/!\[(.*?)\]\((.*?)\)/) || nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || listRegex.test(nextRawLine) || bulletRegex.test(nextRawLine) || hrRegex.test(nextLine) || nextLine.startsWith('>')) break;
          paragraphLines.push(nextLine);
          j++;
     }
@@ -291,6 +273,40 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     i = j;
   }
   return elements;
+};
+
+const renderBlocks = (blocks: EditorBlock[]) => {
+  return blocks.map((block, idx) => {
+    switch (block.type) {
+      case 'heading':
+        return <div key={block.id} style={{ fontSize: '1.2rem', fontWeight: 600, color: '#e0e0e0', marginTop: idx === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(block.value)}</div>;
+      case 'paragraph':
+        // FIX: Paragraph 블록을 일반 텍스트가 아닌 마크다운 컨테이너로 취급하여 모든 문법 지원
+        return <div key={block.id}>{renderMarkdownContent(block.value)}</div>;
+      case 'list':
+        return <div key={block.id}>{renderMarkdownContent(block.value, { margin: '0' })}</div>;
+      case 'quote':
+        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>;
+      case 'code':
+        return <CodeBlock key={block.id} text={block.value} />;
+      case 'table':
+        return <TableBlock key={block.id} text={block.value} />;
+      case 'divider':
+        return <hr key={block.id} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />;
+      case 'media':
+        return (
+          <div key={block.id} style={{ margin: `28px 0` }}>
+            <img src={block.value} alt="Visual Content" referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #333' }} />
+          </div>
+        );
+      case 'link':
+        return <LinkCardBlock key={block.id} text={block.value2 || 'Link'} url={block.value} />;
+      case 'disclaimer':
+        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>;
+      default:
+        return null;
+    }
+  });
 };
 
 export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
@@ -323,21 +339,43 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
   const handleSaveModal = (newData: SubSection) => {
     let newSubSections = [...safeSubSections];
-    const newUuid = newData.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
+    const targetUuid = editingItemId || newData.uuid || generateUUID();
     
     if (user && user.email) {
         newData.lastEditedBy = user.email;
         newData.lastEditedAt = Date.now();
-        addEditLog({ timestamp: Date.now(), userEmail: user.email, sectionId: data.id, subSectionTitle: newData.title, action: editingItemId ? 'update' : 'create', details: { after: { slug: newData.slug || '', title: newData.title, body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content, media: newData.imagePlaceholder || '', external_link: newData.link || '', disclaimer_note: newData.disclaimer || '' } } });
+        addEditLog({ 
+          timestamp: Date.now(), 
+          userEmail: user.email, 
+          sectionId: data.id, 
+          subSectionTitle: newData.title, 
+          action: editingItemId ? 'update' : 'create', 
+          details: { 
+            after: { 
+              slug: newData.slug || '', 
+              title: newData.title, 
+              body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content, 
+              media: newData.imagePlaceholder || '', 
+              external_link: newData.link || '', 
+              disclaimer_note: newData.disclaimer || '' 
+            } 
+          } 
+        });
     }
 
     if (editingItemId) {
       const index = newSubSections.findIndex(sub => sub.uuid === editingItemId);
-      if (index !== -1) newSubSections[index] = { ...newData, uuid: editingItemId };
+      if (index !== -1) {
+        newSubSections[index] = { ...newData, uuid: editingItemId };
+      } else {
+        newSubSections.push({ ...newData, uuid: targetUuid });
+      }
     } else {
-      newSubSections.push({ ...newData, uuid: newUuid });
+      newSubSections.push({ ...newData, uuid: targetUuid });
     }
+
     onUpdateContent(data.id, newSubSections);
+    setEditingItemId(null);
   };
 
   const executeDelete = async () => {
@@ -441,14 +479,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
       <div className="grid-layout">
         {safeSubSections.map((sub, index) => {
           const sectionId = sub.slug || sub.uuid || `section-${index}`;
-          
-          // Re-calculate full-width based on actual line count after splitting
-          const allLines = (Array.isArray(sub.content) ? sub.content : [sub.content])
-            .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
-          const totalLength = allLines.join('').length;
-          const isFullWidth = isComplexLayout || allLines.length > 5 || totalLength > 300;
-          
-          const isArchive = ARCHIVE_SLUGS.includes(sub.slug || '');
 
           const adminControls = isAdmin && isEditMode && (
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -458,13 +488,14 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 </div>
                 <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* FIX: Removed duplicate 'cursor' property and fixed its invalid value */}
                     <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}><Edit3 size={16} /></button>
                     <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer' }}><Trash2 size={16} /></button>
                 </div>
             </div>
           );
 
-          if (isArchive) {
+          if (ARCHIVE_SLUGS.includes(sub.slug || '')) {
             return (
               <ContestArchiveCard 
                 key={sub.uuid || index}
@@ -476,22 +507,30 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
           }
 
           return (
-             <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item ${isFullWidth ? 'full-width' : ''}`} style={{ animationDelay: `${index * 100}ms` }}>
+             <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item full-width`} style={{ animationDelay: `${index * 100}ms` }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
                  {adminControls}
                </div>
-               {sub.imagePlaceholder && (<div style={{ marginBottom: '20px' }}><img src={sub.imagePlaceholder} alt="Visual" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
-               <div style={{ color: '#ccc', lineHeight: '1.75' }}>{renderMarkdownContent(sub.content)}</div>
-               {sub.codeBlock && (<div style={{ position: 'relative', marginTop: '16px' }}><CodeBlock text={sub.codeBlock} /><button onClick={() => navigator.clipboard.writeText(sub.codeBlock!)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }} title="Copy"><Copy size={14} /></button></div>)}
-               {sub.link && (<a href={sub.link} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick('Link', sub.link!)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}><LinkIcon size={16} /> Link</a>)}
-               {sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>)}
+               
+               <div style={{ color: '#ccc', lineHeight: '1.75' }}>
+                 {sub.blocks && sub.blocks.length > 0 ? (
+                   renderBlocks(sub.blocks)
+                 ) : (
+                   sub.items && sub.items.length > 0 ? renderMarkdownContent(sub.items) : renderMarkdownContent(sub.content)
+                 )}
+               </div>
+               
+               {!sub.blocks && sub.imagePlaceholder && (<div style={{ margin: '20px 0' }}><img src={sub.imagePlaceholder} alt="Visual Content" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
+               {!sub.blocks && sub.codeBlock && (<div style={{ position: 'relative', marginTop: '16px' }}><CodeBlock text={sub.codeBlock} /><button onClick={() => navigator.clipboard.writeText(sub.codeBlock!)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }} title="Copy"><Copy size={14} /></button></div>)}
+               {!sub.blocks && sub.link && (<a href={sub.link} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick('Link', sub.link!)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}><LinkIcon size={16} /> Link</a>)}
+               {!sub.blocks && sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>)}
              </div>
           );
         })}
         {isAdmin && isEditMode && (<button onClick={handleAddNew} className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', borderStyle: 'dashed', borderColor: '#333', background: 'transparent', cursor: 'pointer', color: '#666', gap: '12px' }}><div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={24} /></div><span style={{ fontWeight: 600 }}>Add Content Block</span></button>)}
       </div>
-      <EditModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
+      <EditModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItemId(null); }} onSave={handleSaveModal} initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
       <ConfirmModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={executeDelete} />
     </div>
   );
