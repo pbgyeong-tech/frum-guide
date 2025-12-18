@@ -4,13 +4,13 @@ import { SubSection } from '../types';
 import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
-// --- Constants (Matching ContentRenderer) ---
+// --- Constants (Synchronized with ContentRenderer) ---
 const LINE_HEIGHT = 1.75;
-const INDENT_STEP = 24; 
-const ITEM_GAP = '12px';
-const BLOCK_SPACING = '28px';
-const LIST_ITEM_SPACING = '8px';
-const LIST_INTRO_SPACING = '12px';
+const MARKER_WIDTH = 30;
+const ITEM_GAP = 10;
+const INDENT_STEP = MARKER_WIDTH + ITEM_GAP;
+const BLOCK_SPACING = '14px';
+const LIST_ITEM_SPACING = '6px';
 
 // --- Badge Style Logic ---
 const getBadgeStyle = (text: string) => {
@@ -41,7 +41,6 @@ const handleContentOutboundClick = (name: string, url: string) => {
   trackEvent('click_outbound', { link_name: name, link_url: url, location: 'content' });
 };
 
-// 1. Spotlight Helper
 const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
   const { currentTarget, clientX, clientY } = e;
   const { left, top } = currentTarget.getBoundingClientRect();
@@ -51,27 +50,25 @@ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
 
 // --- Helper Components ---
 
-const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string }> = ({ number, children, marginBottom = LIST_ITEM_SPACING }) => (
-  <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom: marginBottom, alignItems: 'flex-start' }}>
-    <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
+const StepBlock: React.FC<{ number: string, children: React.ReactNode, marginBottom?: string, marginLeft?: number }> = ({ number, children, marginBottom = LIST_ITEM_SPACING, marginLeft = 0 }) => (
+  <div style={{ display: 'flex', gap: `${ITEM_GAP}px`, marginBottom: marginBottom, marginLeft: `${marginLeft}px`, alignItems: 'flex-start' }}>
+    <div style={{ flexShrink: 0, width: `${MARKER_WIDTH}px`, display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
       <div className="font-mono" style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.5)', color: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '12px' }}>{number}</div>
     </div>
     <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#b0b0b0' }}>{children}</div>
   </div>
 );
 
-// Level 1: Alpha (a., b.) - Fixed width for alignment, Right aligned
-const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = LIST_ITEM_SPACING }) => (
-    <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom, marginLeft, alignItems: 'baseline' }}>
-        <span className="font-mono" style={{ color: '#888', fontWeight: 500, width: '24px', textAlign: 'right', flexShrink: 0, fontSize: '0.95rem' }}>{marker}.</span>
+const AlphaBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: number, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = LIST_ITEM_SPACING }) => (
+    <div style={{ display: 'flex', gap: `${ITEM_GAP}px`, marginBottom, marginLeft: `${marginLeft}px`, alignItems: 'baseline' }}>
+        <span className="font-mono" style={{ color: '#888', fontWeight: 500, width: `${MARKER_WIDTH}px`, textAlign: 'right', flexShrink: 0, fontSize: '0.95rem' }}>{marker}.</span>
         <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
 
-// Level 2: Roman (i., ii., viii.) - Fixed width, Right aligned
-const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: string, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = LIST_ITEM_SPACING }) => (
-    <div style={{ display: 'flex', gap: ITEM_GAP, marginBottom, marginLeft, alignItems: 'baseline' }}>
-        <span className="font-mono" style={{ color: '#666', fontStyle: 'italic', width: '32px', textAlign: 'right', flexShrink: 0, fontSize: '0.9rem' }}>{marker}.</span>
+const RomanBlock: React.FC<{ marker: string, children: React.ReactNode, marginLeft: number, marginBottom?: string }> = ({ marker, children, marginLeft, marginBottom = LIST_ITEM_SPACING }) => (
+    <div style={{ display: 'flex', gap: `${ITEM_GAP}px`, marginBottom, marginLeft: `${marginLeft}px`, alignItems: 'baseline' }}>
+        <span className="font-mono" style={{ color: '#666', fontStyle: 'italic', width: `${MARKER_WIDTH}px`, textAlign: 'right', flexShrink: 0, fontSize: '0.9rem' }}>{marker}.</span>
         <div style={{ flex: 1, lineHeight: LINE_HEIGHT, color: '#a0a0a0' }}>{children}</div>
     </div>
 );
@@ -87,7 +84,7 @@ const AccordionItem: React.FC<{ title: string, children: React.ReactNode, defaul
 };
 
 const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) => (
-  <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px 24px', margin: `${BLOCK_SPACING} 0`, textDecoration: 'none', cursor: 'pointer', transition: 'border 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E70012'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}>
+  <a href={url} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick(text, url)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px 24px', margin: `28px 0`, textDecoration: 'none', cursor: 'pointer', transition: 'border 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#E70012'} onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LinkIcon size={20} color="#fff" /></div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{text}</span><span className="font-mono" style={{ color: '#666', fontSize: '0.8rem' }}>{new URL(url).hostname}</span></div>
@@ -97,22 +94,21 @@ const LinkCardBlock: React.FC<{ text: string, url: string }> = ({ text, url }) =
 );
 
 const CodeBlock: React.FC<{ text: string }> = ({ text }) => (
-  <div className="font-mono" style={{ background: '#090909', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontSize: '0.85rem', color: '#E0E0E0', margin: `${BLOCK_SPACING} 0`, overflowX: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+  <div className="font-mono" style={{ background: '#090909', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '16px', fontSize: '0.85rem', color: '#E0E0E0', margin: `28px 0`, overflowX: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
     {text}
   </div>
 );
 
-// Updated InfoBlock (Disclaimer)
 const InfoBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{ 
-    background: 'rgba(231,0,18,0.04)', // Subtle background
+    background: 'rgba(231,0,18,0.04)', 
     borderLeft: '3px solid #E70012', 
     padding: '16px 20px', 
     borderRadius: '4px', 
-    marginTop: BLOCK_SPACING, 
-    marginBottom: BLOCK_SPACING, 
-    fontSize: '0.95rem', // Smaller text
-    color: '#ccc', // Dimmer text color
+    marginTop: '28px', 
+    marginBottom: '28px', 
+    fontSize: '0.95rem', 
+    color: '#ccc', 
     display: 'flex', 
     gap: '14px', 
     alignItems: 'flex-start',
@@ -156,9 +152,9 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   const renderCell = (cell: string, header: string) => {
     if (header.includes('직급') || header.toLowerCase().includes('type') || header.includes('한도금액') || header.includes('조장')) {
       const style = getBadgeStyle(cell);
-      return <span className="font-mono" style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{cell}</span>;
+      return <span className="font-mono" style={{ backgroundColor: style.bg, color: style.color, border: style.border, padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>{cell}</span>;
     }
-    if (header.includes('이메일')) return <a href={`mailto:${cell}`} className="font-mono" style={{ color: '#aaa', fontSize: '0.85rem' }}>{cell}</a>;
+    if (header.includes('이메일')) return <a href={`mailto:${cell}`} className="font-mono" style={{ color: '#aaa', fontSize: '0.85rem', textDecoration: 'none' }}>{cell}</a>;
     return parseInlineMarkdown(cell);
   };
 
@@ -173,7 +169,7 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
     });
     const displayHeaders = headers.filter((_, i) => i !== groupColumnIndex);
     return (
-      <div style={{ margin: `${BLOCK_SPACING} 0` }}>
+      <div style={{ margin: `28px 0` }}>
         {Object.entries(grouped).map(([groupName, groupRows], i) => (
           <AccordionItem key={i} title={groupName} defaultOpen={i === 0}>
             <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
@@ -181,34 +177,19 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
                 <thead>
                   <tr style={{ background: 'rgba(255, 255, 255, 0.04)' }}>
                     {displayHeaders.map((h, k) => {
-                       let width = 'auto';
-                       if (h.includes('이름')) width = '25%';
-                       else if (h.includes('직급')) width = '15%';
-                       
+                       let width = h.includes('이름') ? '25%' : (h.includes('직급') ? '15%' : 'auto');
                        return (
                          <th key={k} style={{ 
-                           textAlign: 'left', 
-                           padding: '14px 12px', 
-                           color: 'rgba(255,255,255,0.7)', 
-                           fontSize: '11px', 
-                           whiteSpace: 'nowrap', 
-                           width,
-                           textTransform: 'uppercase', 
-                           letterSpacing: '0.05em', 
-                           fontWeight: 600,
+                           textAlign: 'left', padding: '14px 12px', color: 'rgba(255,255,255,0.7)', fontSize: '11px', 
+                           whiteSpace: 'nowrap', width, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600,
                            borderBottom: '1px solid rgba(255,255,255,0.05)'
-                         }}>
-                           {h}
-                         </th>
+                         }}>{h}</th>
                        );
                     })}
                   </tr>
                 </thead>
                 <tbody>
-                  {groupRows.map((rowCells, rIdx) => {
-                    const displayCells = rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex);
-                    return <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{displayCells.map((cell, cIdx) => <td key={cIdx} style={{ padding: '14px 12px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>;
-                  })}
+                  {groupRows.map((rowCells, rIdx) => <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{rowCells.filter((_, cIdx) => cIdx !== groupColumnIndex).map((cell, cIdx) => <td key={cIdx} style={{ padding: '14px 12px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{renderCell(cell, displayHeaders[cIdx])}</td>)}</tr>)}
                 </tbody>
               </table>
             </div>
@@ -219,31 +200,21 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   }
   
   return (
-    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: `${BLOCK_SPACING} 0`, border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: `28px 0`, border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <thead>
           <tr style={{ background: 'rgba(255, 255, 255, 0.04)' }}>
             {headers.map((h, i) => (
               <th key={i} style={{ 
-                padding: '14px 12px', 
-                textAlign: 'left', 
-                color: 'rgba(255,255,255,0.7)', 
-                borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                whiteSpace: 'nowrap', 
-                fontSize: '11px', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.05em', 
-                fontWeight: 600
+                padding: '14px 12px', textAlign: 'left', color: 'rgba(255,255,255,0.7)', 
+                borderBottom: '1px solid rgba(255,255,255,0.05)', whiteSpace: 'nowrap', fontSize: '11px', 
+                textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600
               }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {bodyRows.map((row, i) => {
-            const cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
-            while (cells.length < headers.length) cells.push('');
-            return <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{cells.map((cell, j) => <td key={j} style={{ padding: '14px 12px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>;
-          })}
+          {bodyRows.map((row, i) => <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>{row.split('|').map(c => c.trim()).filter(c => c !== '').map((cell, j) => <td key={j} style={{ padding: '14px 12px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>{renderCell(cell, headers[j] || '')}</td>)}</tr>)}
         </tbody>
       </table>
     </div>
@@ -265,235 +236,76 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    // Headers Support (#, ##, ###)
+    // Preserve Empty Lines
+    if (rawLine === '' || line === '') {
+        elements.push(<div key={`gap-${i}`} style={{ height: '1.2em' }} />);
+        i++; continue;
+    }
+
     const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
     if (headerMatch) {
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        
-        let fontSize = '1.1rem';
-        let marginTop = '32px';
-        let marginBottom = '16px';
-        let letterSpacing = '-0.01em';
-        let fontWeight = 600;
-        let color = '#fff';
-
-        if (level === 1) {
-            fontSize = '2rem'; 
-            marginTop = i === 0 ? '0' : '48px'; 
-            marginBottom = '24px'; 
-            letterSpacing = '-0.02em';
-            fontWeight = 700;
-        } else if (level === 2) {
-            fontSize = '1.5rem';
-            marginTop = i === 0 ? '0' : '40px';
-            marginBottom = '20px';
-            letterSpacing = '-0.015em';
-            fontWeight = 700;
-        } else if (level === 3) {
-            fontSize = '1.2rem';
-            marginTop = i === 0 ? '0' : '32px';
-            marginBottom = '16px';
-            letterSpacing = '-0.01em';
-            fontWeight = 600;
-            color = '#e0e0e0';
-        }
-        
-        elements.push(
-            <div key={`header-${i}`} style={{
-                fontSize,
-                fontWeight,
-                color,
-                marginTop,
-                marginBottom,
-                lineHeight: 1.3,
-                letterSpacing
-            }}>
-                {parseInlineMarkdown(text)}
-            </div>
-        );
-        i++;
-        continue;
+        elements.push(<div key={`header-${i}`} style={{ fontSize: level === 1 ? '2rem' : (level === 2 ? '1.5rem' : '1.2rem'), fontWeight: level <= 2 ? 700 : 600, color: level === 3 ? '#e0e0e0' : '#fff', marginTop: i === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(text)}</div>);
+        i++; continue;
     }
-
     if (line.startsWith('```')) {
       const codeLines = []; i++;
       while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++; }
       elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
       i++; continue;
     }
-    
     if (line.startsWith('|')) {
       const tableLines = [];
       while (i < lines.length && lines[i].trim().startsWith('|')) { tableLines.push(lines[i]); i++; }
       elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />);
       continue;
     }
-    
-    // Standalone Image
     if (line.startsWith('![') && line.endsWith(')') && line.match(/!\[(.*?)\]\((.*?)\)/)) {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
-       if (imgMatch) {
-          elements.push(<div key={i} style={{ margin: `${BLOCK_SPACING} 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #222' }} /></div>);
-          i++; continue;
-       }
+       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #222' }} /></div>); i++; continue; }
     }
-
-    // Link Card
     if (line.startsWith('[') && line.endsWith(')') && !line.includes('!') && line.match(/^\[(.*?)\]\((.*?)\)$/)) {
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
        if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
     }
-
-    // List Logic with Hierarchy (Numeric, Alpha, Roman, Unordered)
     const isUnordered = /^(\-|•|\*)\s/.test(line);
     const isOrdered = /^(\d+|[a-z]|[ivx]+)\.\s/.test(line);
-
-    // Indent check for disambiguation
-    const indentMatch = rawLine.match(/^(\s*)/);
-    const spaces = indentMatch ? indentMatch[1].length : 0;
-    const level = Math.floor(spaces / 2);
-    const marginLeft = `${level * INDENT_STEP}px`;
-
     if (isOrdered || isUnordered) {
-        // Look ahead to check if the NEXT line is also a list item
-        const nextLineIndex = i + 1;
-        const nextLine = nextLineIndex < lines.length ? lines[nextLineIndex].trim() : '';
-        const nextIsItem = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine);
-        
-        const marginBottom = nextIsItem ? LIST_ITEM_SPACING : BLOCK_SPACING;
-        
-        let renderedItem = null;
-
+        const indentMatch = rawLine.match(/^(\s*)/);
+        const level = Math.floor((indentMatch ? indentMatch[1].length : 0) / 2);
         const matchRoman = line.match(/^([ivx]+)\.\s+(.*)/);
         const matchAlpha = line.match(/^([a-z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
         const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
-
-        if (isUnordered && matchUn) {
-             renderedItem = (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: ITEM_GAP, marginBottom, marginLeft }}>
-                    <span style={{ 
-                        color: '#666', 
-                        lineHeight: LINE_HEIGHT, 
-                        fontSize: '1.2rem', 
-                        width: '16px', // Compact bullet
-                        textAlign: 'center', 
-                        flexShrink: 0,
-                        marginTop: '-4px'
-                    }}>•</span>
-                    <span style={{ color: '#b0b0b0', lineHeight: LINE_HEIGHT, fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span>
-                </div>
-             );
-        } 
-        else if (matchNum) {
-            renderedItem = (
-                <div style={{ marginLeft }}>
-                    <StepBlock number={matchNum[1]} marginBottom={marginBottom}>
-                        {parseInlineMarkdown(matchNum[2])}
-                    </StepBlock>
-                </div>
-            );
-        }
-        else if (matchRoman && level >= 2) {
-             renderedItem = (
-                 <RomanBlock marker={matchRoman[1]} marginLeft={marginLeft} marginBottom={marginBottom}>
-                     {parseInlineMarkdown(matchRoman[2])}
-                 </RomanBlock>
-             );
-        }
-        else if (matchAlpha) {
-             renderedItem = (
-                 <AlphaBlock marker={matchAlpha[1]} marginLeft={marginLeft} marginBottom={marginBottom}>
-                     {parseInlineMarkdown(matchAlpha[2])}
-                 </AlphaBlock>
-             );
-        }
-        else {
-            // Fallback
-            renderedItem = <div key={i}>{line}</div>;
-        }
-
+        let renderedItem = null;
+        if (isUnordered && matchUn) renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
+        else if (matchNum) renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
+        else if (matchRoman && level >= 2) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
+        else if (matchAlpha) renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
-
     if (/^-{3,}$/.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
-    
     if (line.startsWith('>')) {
         const quoteLines: string[] = [];
         while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
-        elements.push(
-          <InfoBlock key={`quote-${i}`}>
-            {renderMarkdownContent(quoteLines.join('\n'), {
-              fontSize: '0.95rem',
-              color: '#bbb',
-              margin: '0'
-            })}
-          </InfoBlock>
-        );
+        elements.push(<InfoBlock key={`quote-${i}`}>{renderMarkdownContent(quoteLines.join('\n'), { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>);
         continue;
     }
-    
-    if (line === '') {
-        i++; continue;
-    }
-
-    // Paragraph Grouping Logic
     const paragraphLines: string[] = [line];
-    const pIndentMatch = rawLine.match(/^(\s*)/);
-    const pSpaces = pIndentMatch ? pIndentMatch[1].length : 0;
-    const pLevel = Math.floor(pSpaces / 2);
-    const pMarginLeft = `${pLevel * INDENT_STEP}px`;
-
     let j = i + 1;
     while (j < lines.length) {
          const nextLine = lines[j].trim();
-         if (nextLine === '') break;
-         if (/^(#{1,6})\s/.test(nextLine)) break;
-         if (nextLine.startsWith('```')) break;
-         if (nextLine.startsWith('|')) break;
-         if (nextLine.startsWith('![') && nextLine.endsWith(')') && nextLine.match(/!\[(.*?)\]\((.*?)\)/)) break;
-         if (nextLine.startsWith('[') && nextLine.endsWith(')') && !nextLine.includes('!') && nextLine.match(/^\[(.*?)\]\((.*?)\)$/)) break;
-         if (/^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine)) break;
-         if (/^-{3,}$/.test(nextLine)) break;
-         if (nextLine.startsWith('>')) break;
-         
+         if (nextLine === '' || /^(#{1,6})\s/.test(nextLine) || nextLine.startsWith('```') || nextLine.startsWith('|') || nextLine.match(/!\[(.*?)\]\((.*?)\)/) || nextLine.match(/^\[(.*?)\]\((.*?)\)$/) || /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLine) || /^(\-|•|\*)\s/.test(nextLine) || /^-{3,}$/.test(nextLine) || nextLine.startsWith('>')) break;
          paragraphLines.push(nextLine);
          j++;
     }
-
-    let nextIsList = false;
-    if (j < lines.length) {
-        const nextLineCheck = lines[j].trim();
-        nextIsList = /^(\d+|[a-z]|[ivx]+)\.\s/.test(nextLineCheck) || /^(\-|•|\*)\s/.test(nextLineCheck);
-    }
-    
-    const pMb = nextIsList ? LIST_INTRO_SPACING : (options.margin !== undefined ? options.margin : BLOCK_SPACING);
-
-    elements.push(
-        <p key={i} style={{ 
-            marginBottom: pMb, 
-            marginLeft: pMarginLeft,
-            color: options.color || '#a0a0a0', 
-            lineHeight: LINE_HEIGHT, 
-            fontSize: options.fontSize || '1.05rem', 
-            fontWeight: 400 
-        }}>
-            {paragraphLines.map((l, idx) => (
-                <React.Fragment key={idx}>
-                    {parseInlineMarkdown(l)}
-                    {idx < paragraphLines.length - 1 && <br />}
-                </React.Fragment>
-            ))}
-        </p>
-    );
+    elements.push(<p key={i} style={{ marginBottom: options.margin ?? BLOCK_SPACING, color: options.color || '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: options.fontSize || '1.05rem' }}>{paragraphLines.map((l, idx) => <React.Fragment key={idx}>{parseInlineMarkdown(l)}{idx < paragraphLines.length - 1 && <br />}</React.Fragment>)}</p>);
     i = j;
   }
   return elements;
 };
-
-// ... Rest of ContestArchiveCard (Logic unchanged, mostly display updates) ...
 
 interface ArchiveData {
   [year: number]: {
@@ -550,22 +362,29 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const [selectedYear, setSelectedYear] = useState<number>(latest.year);
   const [selectedMonth, setSelectedMonth] = useState<number>(latest.month);
   
+  // Update selected month to the latest available month when the year changes
   useEffect(() => {
-    setSelectedYear(latest.year);
-    setSelectedMonth(latest.month);
-  }, [latest]);
+    const yearData = archiveData[selectedYear];
+    if (yearData) {
+      const monthsWithContent = Object.keys(yearData)
+        .map(Number)
+        .filter(m => hasContent(yearData[m]))
+        .sort((a, b) => b - a); // Highest month first (most recent)
+
+      if (monthsWithContent.length > 0) {
+        setSelectedMonth(monthsWithContent[0]);
+      }
+    }
+  }, [selectedYear, archiveData]);
 
   const currentData = archiveData[selectedYear]?.[selectedMonth];
   const HeaderIcon = isDining ? Utensils : (isCoffee ? Coffee : Trophy);
 
-  // Years for tabs
   const years = [2025, 2026, 2027];
   const activeYearIndex = years.indexOf(selectedYear);
 
   return (
-    // 1. Spotlight Effect
     <div id={id} onMouseMove={handleMouseMove} className="bento-card full-width stagger-item" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* 1. Header Section */}
       <div style={{ padding: '32px 32px 24px 32px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -586,9 +405,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
         )}
       </div>
 
-      {/* 2. Modern Tab Interface */}
       <div style={{ background: '#0a0a0a' }}>
-        {/* 7. Tab Transition Animation (Year Selector) */}
         <div style={{ padding: '20px 32px 0 32px' }}>
             <div style={{ 
                 position: 'relative',
@@ -599,7 +416,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                 border: '1px solid rgba(255,255,255,0.05)',
                 isolation: 'isolate'
             }}>
-                {/* Sliding Background */}
                 <div style={{
                     position: 'absolute',
                     top: '4px',
@@ -617,19 +433,19 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                     <button
                     key={year}
                     onClick={() => setSelectedYear(year)}
-                    className={selectedYear === year ? 'font-mono' : 'font-mono'}
                     style={{
                         flex: 1,
                         padding: '10px 16px',
                         borderRadius: '8px',
-                        background: 'transparent', // Background handled by sliding div
+                        background: 'transparent',
                         border: 'none',
                         color: selectedYear === year ? '#fff' : '#666',
                         fontSize: '0.9rem',
                         fontWeight: selectedYear === year ? 700 : 500,
                         cursor: 'pointer',
                         transition: 'color 0.2s',
-                        zIndex: 2
+                        zIndex: 2,
+                        fontFamily: 'inherit'
                     }}
                     >
                     {year} Season
@@ -638,7 +454,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             </div>
         </div>
 
-        {/* Month Grid */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(6, 1fr)', 
@@ -656,7 +471,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
               <button
                 key={month}
                 onClick={() => setSelectedMonth(month)}
-                className="font-mono"
                 style={{
                   position: 'relative',
                   padding: '12px 8px',
@@ -668,7 +482,8 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                   fontWeight: isSelected ? 700 : 400,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  fontFamily: 'var(--font-mono)'
                 }}
               >
                 {isSelected && (
@@ -684,7 +499,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
         </div>
       </div>
 
-      {/* 3. Content Display Section */}
       <div style={{ padding: '32px', minHeight: '300px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', color: '#666', fontSize: '0.9rem', fontWeight: 600 }}>
           <Calendar size={16} />
@@ -735,4 +549,3 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
     </div>
   );
 };
-    

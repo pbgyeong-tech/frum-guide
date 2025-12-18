@@ -45,7 +45,6 @@ const MainLayout: React.FC<{
   }
 
   const currentId = sectionId as ContentType;
-  // DB에서 불러온 최신 contentData에서 현재 섹션 데이터를 찾음
   const activeData = findSection(contentData, currentId) || contentData[0];
 
   useEffect(() => {
@@ -55,11 +54,9 @@ const MainLayout: React.FC<{
   }, [activeData, currentId]);
 
   const handleContentUpdate = (id: ContentType, newSubSections: SubSection[]) => {
-    console.log(`[MainLayout] Requesting update for ${id}`, newSubSections);
     onUpdateContent(id, newSubSections);
   };
 
-  // 현재 URL 생성 (HashRouter 고려)
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   return (
@@ -71,7 +68,7 @@ const MainLayout: React.FC<{
         url={currentUrl}
       />
       <ContentRenderer
-        key={`${currentId}-${activeData.subSections?.length || 0}`} // 강제 리렌더링을 위해 키 조합 변경
+        key={`${currentId}-${contentData.find(s => s.id === currentId)?.subSections?.length || 0}-${user?.uid || 'guest'}`}
         data={activeData}
         allContent={contentData}
         onNavigate={onNavigate}
@@ -124,12 +121,11 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. DB Load (Initial Seed/Fetch)
+  // 2. DB Load
   useEffect(() => {
     const loadData = async () => {
       try {
         const mergedData = await seedDB();
-        console.log("[App] Data loaded from DB:", mergedData);
         setContentData(mergedData);
       } catch (e) {
         console.error("DB Load Error", e);
@@ -151,7 +147,7 @@ const App: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  // 4. Scroll Reset on Navigation
+  // 4. Scroll Reset
   useEffect(() => {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: 'auto' });
@@ -186,48 +182,37 @@ const App: React.FC = () => {
     }
   };
 
-  // [Update & Save Logic]
   const handleUpdateContent = async (id: ContentType, newSubSections: SubSection[]) => {
     if (!isAdmin) {
       alert("편집 권한이 없습니다.");
       return;
     }
 
-    console.log(`[App] Updating content for ${id}. Item count: ${newSubSections.length}`);
-
-    // 1. Update Local State immediately (Optimistic UI)
-    // Deep clone to ensure React detects state change
-    const updatedContent = contentData.map(section => {
-      if (section.id === id) {
-        return { 
-            ...section, 
-            subSections: [...newSubSections] // Create new array reference
-        };
+    // Update Local State with fresh array reference
+    setContentData(prevData => {
+      const updated = prevData.map(section => {
+        if (section.id === id) {
+          return { ...section, subSections: [...newSubSections] };
+        }
+        return section;
+      });
+      
+      // Persist the specific section to DB
+      const target = updated.find(s => s.id === id);
+      if (target) {
+        saveContent(target).then(() => {
+          setIsDirty(false);
+        }).catch(err => {
+          console.error("Save Error", err);
+          alert("저장에 실패했습니다.");
+        });
       }
-      return section;
+      return updated;
     });
-    
-    setContentData(updatedContent);
-
-    // 2. Persist to Firestore
-    const sectionToUpdate = updatedContent.find(s => s.id === id);
-    if (sectionToUpdate) {
-      try {
-        await saveContent(sectionToUpdate);
-        setIsDirty(false);
-        console.log(`[App] DB Saved successfully: ${id}`);
-      } catch (e) {
-        console.error("Failed to save to DB:", e);
-        alert("저장에 실패했습니다. 네트워크를 확인해주세요.");
-      }
-    } else {
-      console.error("Critical Error: Section to save not found in state", id);
-    }
   };
 
   return (
     <div className="app-container">
-      {/* Scroll Progress Bar */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -261,7 +246,6 @@ const App: React.FC = () => {
           @media (min-width: 769px) { .mobile-header { display: none !important; } }
         `}</style>
         
-        {/* Mobile Header */}
         <div className="mobile-header" style={{
           position: 'sticky',
           top: 0,
@@ -298,10 +282,7 @@ const App: React.FC = () => {
         </div>
 
         <Routes>
-          {/* 1. Root/Welcome routes */}
           <Route path="/" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
-          
-          {/* 2. Main content route */}
           <Route path="/:sectionId" element={
             <MainLayout 
               contentData={contentData}
@@ -312,8 +293,6 @@ const App: React.FC = () => {
               onNavigate={handleNavigate}
             />
           } />
-
-          {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to={`/${ContentType.WELCOME}`} replace />} />
         </Routes>
 
@@ -324,4 +303,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-    

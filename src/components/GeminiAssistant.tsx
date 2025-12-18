@@ -57,8 +57,9 @@ export const GeminiAssistant: React.FC = () => {
     const initChat = () => {
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // Correcting model name to 'gemini-3-flash-preview' for basic text tasks
         chatSessionRef.current = ai.chats.create({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3-flash-preview',
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
           }
@@ -89,8 +90,9 @@ export const GeminiAssistant: React.FC = () => {
     try {
       if (!chatSessionRef.current) {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // Correcting model name to 'gemini-3-flash-preview' for basic text tasks
         chatSessionRef.current = ai.chats.create({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3-flash-preview',
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
           }
