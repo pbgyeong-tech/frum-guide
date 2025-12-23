@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { SubSection, EditorBlock } from '../types';
-import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Check } from 'lucide-react';
+import { SubSection, EditorBlock, GroupMember, Group } from '../types';
+import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Copy, Crown, Users } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
 // --- Constants ---
@@ -219,6 +220,42 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+interface ArchiveData {
+  [year: number]: {
+    [month: number]: {
+      title: string;
+      winner?: string;
+      imageUrl?: string;
+      description?: string;
+      groups?: Group[];
+    };
+  };
+}
+
+interface ContestArchiveCardProps {
+  data: SubSection;
+  adminControls?: React.ReactNode;
+  id?: string;
+}
+
+const hasContent = (data: any) => {
+  return !!(data && (data.title || data.imageUrl || data.winner || data.groups?.length > 0 || (data.description && data.description.trim().length > 0)));
+};
+
+const getLatestDate = (archive: ArchiveData) => {
+  const years = Object.keys(archive).map(Number).sort((a, b) => b - a);
+  for (const year of years) {
+    const months = Object.keys(archive[year]).map(Number).sort((a, b) => b - a);
+    for (const month of months) {
+      if (hasContent(archive[year][month])) {
+        return { year, month };
+      }
+    }
+  }
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+};
+
 interface MarkdownOptions {
   fontSize?: string;
   color?: string;
@@ -277,19 +314,16 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     if (isOrdered || isUnordered) {
         const indentMatch = rawLine.match(/^(\s*)/);
         const level = Math.floor((indentMatch ? indentMatch[1].length : 0) / 2);
-        
         const matchRoman = line.match(/^([ivxIVX]+)\.\s+(.*)/);
         const matchAlpha = line.match(/^([a-zA-Z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
         const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
-        
         let renderedItem = null;
         if (isUnordered && matchUn) renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
         else if (matchNum) renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
         else if (matchRoman && level >= 1) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
         else if (matchAlpha) renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
         else renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
-
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
@@ -348,41 +382,6 @@ const renderBlocks = (blocks: EditorBlock[]) => {
   });
 };
 
-interface ArchiveData {
-  [year: number]: {
-    [month: number]: {
-      title: string;
-      winner?: string;
-      imageUrl?: string;
-      description?: string;
-    };
-  };
-}
-
-interface ContestArchiveCardProps {
-  data: SubSection;
-  adminControls?: React.ReactNode;
-  id?: string;
-}
-
-const hasContent = (data: any) => {
-  return !!(data && (data.title || data.imageUrl || data.winner || (data.description && data.description.trim().length > 0)));
-};
-
-const getLatestDate = (archive: ArchiveData) => {
-  const years = Object.keys(archive).map(Number).sort((a, b) => b - a);
-  for (const year of years) {
-    const months = Object.keys(archive[year]).map(Number).sort((a, b) => b - a);
-    for (const month of months) {
-      if (hasContent(archive[year][month])) {
-        return { year, month };
-      }
-    }
-  }
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
-};
-
 export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
   const isContest = data.slug === 'aicontest';
   const isDining = data.slug === 'frum-dining';
@@ -403,15 +402,13 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const [selectedYear, setSelectedYear] = useState<number>(latest.year);
   const [selectedMonth, setSelectedMonth] = useState<number>(latest.month);
   
-  // Update selected month to the latest available month when the year changes
   useEffect(() => {
     const yearData = archiveData[selectedYear];
     if (yearData) {
       const monthsWithContent = Object.keys(yearData)
         .map(Number)
         .filter(m => hasContent(yearData[m]))
-        .sort((a, b) => b - a); // Highest month first (most recent)
-
+        .sort((a, b) => b - a);
       if (monthsWithContent.length > 0) {
         setSelectedMonth(monthsWithContent[0]);
       }
@@ -420,7 +417,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
 
   const currentData = archiveData[selectedYear]?.[selectedMonth];
   const HeaderIcon = isDining ? Utensils : (isCoffee ? Coffee : Trophy);
-
   const years = [2025, 2026, 2027];
   const activeYearIndex = years.indexOf(selectedYear);
 
@@ -445,10 +441,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             data.items && data.items.length > 0 ? renderMarkdownContent(data.items) : renderMarkdownContent(data.content)
           )}
         </div>
-        {/* Legacy Fallback for isolated disclaimer field */}
-        {!data.blocks && data.disclaimer && (
-            <InfoBlock>{renderMarkdownContent(data.disclaimer)}</InfoBlock>
-        )}
       </div>
 
       <div style={{ background: '#0a0a0a' }}>
@@ -508,11 +500,10 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
           borderBottom: '1px solid rgba(255,255,255,0.08)' 
         }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-             const data = archiveData[selectedYear]?.[month];
-             const hasData = hasContent(data);
+             const d = archiveData[selectedYear]?.[month];
+             const hasData = hasContent(d);
              if (!hasData) return null;
              const isSelected = selectedMonth === month;
-             
              return (
               <button
                 key={month}
@@ -553,7 +544,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
 
         {currentData && hasContent(currentData) ? (
           <div className="animate-fade">
-            {currentData.imageUrl ? (
+            {currentData.imageUrl && (
                 <div style={{ 
                   width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden', 
                   border: '1px solid rgba(255,255,255,0.1)', marginBottom: '24px', position: 'relative'
@@ -569,17 +560,65 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                     </div>
                   )}
                 </div>
-            ) : null}
-            <h4 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px', color: '#fff', letterSpacing: '-0.02em' }}>{currentData.title}</h4>
-            {isContest && currentData.winner && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-                    <span style={{ fontSize: '0.95rem', color: '#888' }}>Winner</span>
-                    <span style={{ fontSize: '0.95rem', color: '#fff', fontWeight: 600, background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: '6px' }}>{currentData.winner}</span>
+            )}
+            <h4 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '24px', color: '#fff', letterSpacing: '-0.02em' }}>{currentData.title}</h4>
+            
+            {currentData.groups && currentData.groups.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', marginTop: '32px' }}>
+                    {currentData.groups.map((group, gIdx) => {
+                        const leaders = group.members.filter(m => m.isLeader);
+                        const members = group.members.filter(m => !m.isLeader);
+
+                        return (
+                            <div key={group.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ background: 'rgba(231,0,18,0.05)', padding: '16px 20px', borderBottom: '1px solid rgba(231,0,18,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>{group.name}</span>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {leaders.map((_, i) => <Crown key={i} size={14} color="#E70012" />)}
+                                    </div>
+                                </div>
+                                
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {leaders.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                            {leaders.map((leader, i) => (
+                                                <div key={i} style={{ flex: 1, minWidth: '100px', background: 'rgba(231,0,18,0.08)', border: '1px solid rgba(231,0,18,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Crown size={16} color="#fff" /></div>
+                                                    <div>
+                                                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{leader.name}</div>
+                                                        <div className="font-mono" style={{ color: 'rgba(231,0,18,0.8)', fontSize: '0.7rem' }}>Leader</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {members.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                            {members.map((member, i) => {
+                                                const style = getBadgeStyle(member.role);
+                                                return (
+                                                    <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}><Users size={14} /></div>
+                                                        <div style={{ overflow: 'hidden' }}>
+                                                            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}>{member.name}</div>
+                                                            <div className="font-mono" style={{ color: style.color, fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.role}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div style={{ color: '#ccc', lineHeight: '1.75', fontSize: '1rem', marginTop: '20px' }}>
+                    {renderMarkdownContent(currentData.description || '')}
                 </div>
             )}
-            <div style={{ color: '#ccc', lineHeight: '1.75', fontSize: '1rem', marginTop: '20px' }}>
-              {renderMarkdownContent(currentData.description || '')}
-            </div>
           </div>
         ) : (
           <div style={{ 

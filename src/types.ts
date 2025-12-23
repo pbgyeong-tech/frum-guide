@@ -1,3 +1,4 @@
+
 import { LucideIcon } from 'lucide-react';
 
 export enum ContentType {
@@ -22,11 +23,24 @@ export interface EditorBlock {
   value2?: string; 
 }
 
+export interface GroupMember {
+  name: string;
+  role: string;
+  isLeader: boolean;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  members: GroupMember[];
+}
+
 export interface ArchiveEntry {
   title: string;
   winner?: string;
   imageUrl?: string;
   description?: string;
+  groups?: Group[]; // 다수 조 지원을 위한 배열 구조
 }
 
 export interface ArchiveData {

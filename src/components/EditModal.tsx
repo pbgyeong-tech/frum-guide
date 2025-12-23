@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  X, Save, Hash, Plus, Trash2, 
+  X, Hash, Plus, Trash2, 
   ChevronUp, ChevronDown, Heading3, AlignLeft, 
   List, Quote, Terminal, Image as ImageIcon, 
   Link as LinkIcon, AlertTriangle, 
   Table as TableIcon, Minus, Calendar, Trophy, Layers,
-  PlusCircle, MinusCircle
+  PlusCircle, MinusCircle, Users, Crown, Check, Grid
 } from 'lucide-react';
-import { SubSection, ArchiveData, ArchiveEntry, EditorBlock, BlockType } from '../types';
+import { SubSection, ArchiveData, ArchiveEntry, EditorBlock, BlockType, ContentType, SectionData, GroupMember, Group } from '../types';
 import { generateUUID } from '../utils/db';
+import { HANDBOOK_CONTENT } from '../constants';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -36,16 +38,34 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: any }[] = [
 
 const ROMAN_LIST = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'];
 
-/**
- * Table Editor Component for cell-based editing
- */
+const extractEmployees = (): { name: string; role: string }[] => {
+  const companySection = HANDBOOK_CONTENT.find(s => s.id === ContentType.COMPANY);
+  if (!companySection) return [];
+  
+  const memberSub = companySection.subSections.find(sub => sub.title.includes('구성원'));
+  if (!memberSub || typeof memberSub.content !== 'string') return [];
+
+  const lines = memberSub.content.split('\n');
+  const employees: { name: string; role: string }[] = [];
+
+  lines.forEach(line => {
+    if (line.includes('|') && !line.includes('사업부') && !line.includes('---')) {
+      const cells = line.split('|').map(c => c.trim()).filter(c => c !== '');
+      if (cells.length >= 3) {
+        employees.push({ name: cells[1], role: cells[2] });
+      }
+    }
+  });
+
+  return employees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+};
+
 const TableEditor: React.FC<{ value: string, onChange: (val: string) => void }> = ({ value, onChange }) => {
   const parseTable = useCallback((md: string) => {
     const lines = md.trim().split('\n').filter(l => l.trim() !== '' && !/^[\s\|\-:]+$/.test(l));
     if (lines.length === 0) return [['', ''], ['', '']];
     return lines.map(line => {
       const cells = line.split('|').map(c => c.trim());
-      // Handle edge pipes
       return cells.filter((_, i) => i > 0 && i < cells.length - 1);
     });
   }, []);
@@ -152,8 +172,10 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   const [blocks, setBlocks] = useState<EditorBlock[]>([]);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [archiveData, setArchiveData] = useState<ArchiveData>({});
-  const [activeYear, setActiveYear] = useState<number>(2025);
+  const [activeYear, setActiveYear] = useState<number>(new Date().getFullYear());
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1);
+
+  const employees = useMemo(() => extractEmployees(), []);
 
   useEffect(() => {
     if (isOpen) {
@@ -266,14 +288,68 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   }, [isOpen, initialData]);
 
   const isArchive = ARCHIVE_SLUGS.includes(slug);
+  const isGroupBased = ['frum-dining', 'coffee-chat'].includes(slug);
 
-  const updateArchiveEntry = (field: keyof ArchiveEntry, value: string) => {
+  const updateArchiveEntry = (field: keyof ArchiveEntry, value: any) => {
     setArchiveData(prev => {
       const yearData = prev[activeYear] || {};
       const monthData = yearData[activeMonth] || { title: '' };
       return { ...prev, [activeYear]: { ...yearData, [activeMonth]: { ...monthData, [field]: value } } };
     });
     if (onDirty) onDirty(true);
+  };
+
+  const addGroup = () => {
+    const entry = archiveData[activeYear]?.[activeMonth] || { title: '', groups: [] };
+    const groups = entry.groups || [];
+    const nextLabel = String.fromCharCode(65 + groups.length); // A, B, C...
+    const newGroups = [...groups, { id: generateUUID(), name: `${nextLabel}조`, members: [] }];
+    updateArchiveEntry('groups', newGroups);
+  };
+
+  const removeGroup = (groupId: string) => {
+    const entry = archiveData[activeYear]?.[activeMonth];
+    if (!entry || !entry.groups) return;
+    const newGroups = entry.groups.filter(g => g.id !== groupId);
+    updateArchiveEntry('groups', newGroups);
+  };
+
+  const updateGroupName = (groupId: string, name: string) => {
+    const entry = archiveData[activeYear]?.[activeMonth];
+    if (!entry || !entry.groups) return;
+    const newGroups = entry.groups.map(g => g.id === groupId ? { ...g, name } : g);
+    updateArchiveEntry('groups', newGroups);
+  };
+
+  const toggleGroupMember = (groupId: string, emp: { name: string; role: string }) => {
+    const entry = archiveData[activeYear]?.[activeMonth];
+    if (!entry || !entry.groups) return;
+    
+    const newGroups = entry.groups.map(g => {
+      if (g.id !== groupId) return g;
+      const isAlreadyMember = g.members.some(m => m.name === emp.name);
+      return {
+        ...g,
+        members: isAlreadyMember 
+          ? g.members.filter(m => m.name !== emp.name)
+          : [...g.members, { name: emp.name, role: emp.role, isLeader: false }]
+      };
+    });
+    updateArchiveEntry('groups', newGroups);
+  };
+
+  const toggleLeader = (groupId: string, name: string) => {
+    const entry = archiveData[activeYear]?.[activeMonth];
+    if (!entry || !entry.groups) return;
+    
+    const newGroups = entry.groups.map(g => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        members: g.members.map(m => m.name === name ? { ...m, isLeader: !m.isLeader } : m)
+      };
+    });
+    updateArchiveEntry('groups', newGroups);
   };
 
   const addBlock = (type: BlockType) => {
@@ -284,7 +360,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     if (onDirty) onDirty(true);
   };
 
-  // Helper for List Item analysis
   const getListInfo = (line: string) => {
     const numericMatch = line.match(/^(\s*)(\d+)\.\s(.*)$/);
     if (numericMatch) return { indent: numericMatch[1], marker: numericMatch[2], content: numericMatch[3], type: 'numeric' as const };
@@ -292,14 +367,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
     if (alphaMatch) return { indent: alphaMatch[1], marker: alphaMatch[2], content: alphaMatch[3], type: 'alpha' as const };
     const romanMatch = line.match(/^(\s*)(i|ii|iii|iv|v|vi|vii|viii|ix|x)\.\s(.*)$/);
     if (romanMatch) return { indent: romanMatch[1], marker: romanMatch[2], content: romanMatch[3], type: 'roman' as const };
-    
-    const numericEmpty = line.match(/^(\s*)(\d+)\.\s*$/);
-    if (numericEmpty) return { indent: numericEmpty[1], marker: numericEmpty[2], content: "", type: 'numeric' as const };
-    const alphaEmpty = line.match(/^(\s*)([a-z])\.\s*$/);
-    if (alphaEmpty) return { indent: alphaEmpty[1], marker: alphaEmpty[2], content: "", type: 'alpha' as const };
-    const romanEmpty = line.match(/^(\s*)(i|ii|iii|iv|v|vi|vii|viii|ix|x)\.\s*$/);
-    if (romanEmpty) return { indent: romanEmpty[1], marker: romanEmpty[2], content: "", type: 'roman' as const };
-
     return null;
   };
 
@@ -316,23 +383,17 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
   const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, blockId: string) => {
     const textarea = e.currentTarget;
     const { selectionStart: start, selectionEnd: end, value } = textarea;
-
-    // A) ENTER - Auto List Generation
     if (e.key === 'Enter' && !e.shiftKey && start === end) {
       const lineStart = value.lastIndexOf('\n', start - 1) + 1;
       const currentLine = value.substring(lineStart, start);
       const listInfo = getListInfo(currentLine);
-
       if (listInfo) {
         e.preventDefault();
-        
         if (listInfo.content.trim() === "") {
-          // Rule: If line has only marker, Enter removes marker and ends list
           const newValue = value.substring(0, lineStart) + "\n" + value.substring(start);
           setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
           setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = lineStart + 1; }, 0);
         } else {
-          // Rule: Auto-increment marker
           const nextMarker = getNextMarker(listInfo.marker, listInfo.type);
           const insertion = `\n${listInfo.indent}${nextMarker} `;
           const newValue = value.substring(0, start) + insertion + value.substring(start);
@@ -343,44 +404,31 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
         return;
       }
     }
-
-    // B) TAB / SHIFT+TAB - Indent & Marker Conversion
     if (e.key === 'Tab') {
       e.preventDefault();
       const lineStart = value.lastIndexOf('\n', start - 1) + 1;
       const currentLine = value.substring(lineStart, start);
       const listInfo = getListInfo(currentLine);
       const isShift = e.shiftKey;
-
       if (listInfo) {
         let newIndent = listInfo.indent;
         let newMarker = listInfo.marker;
-        let nextType = listInfo.type;
-
         if (isShift) {
-          // Outdent
           if (newIndent.length >= 2) {
             newIndent = newIndent.substring(2);
-            // Change marker type back
             if (newIndent.length === 0) newMarker = "1.";
             else if (newIndent.length === 2) newMarker = "a.";
-          } else {
-            return; // No change
-          }
+          } else return;
         } else {
-          // Indent
           newIndent += "  ";
-          // Change marker type forward
           if (newIndent.length === 2) newMarker = "a.";
           else if (newIndent.length === 4) newMarker = "i.";
         }
-
-        const newValue = value.substring(0, lineStart) + newIndent + newMarker + " " + value.substring(start);
+        const newValue = value.substring(0, lineStart) + newIndent + newMarker + " " + listInfo.content + value.substring(start + currentLine.length - listInfo.indent.length - listInfo.marker.length - 1);
         setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
-        const newPos = lineStart + newIndent.length + newMarker.length + 1;
+        const newPos = lineStart + newIndent.length + newMarker.length + 1 + listInfo.content.length;
         setTimeout(() => { textarea.selectionStart = textarea.selectionEnd = newPos; }, 0);
       } else {
-        // Standard Tab Indent for non-list lines
         const insertion = isShift ? "" : "  ";
         const newValue = value.substring(0, start) + insertion + value.substring(end);
         setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, value: newValue } : b));
@@ -392,26 +440,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   const handleSave = () => {
     const contentLines: string[] = [];
-    const listItems: string[] = [];
     let imagePlaceholder = '';
     let linkUrl = '';
     let linkTitleText = '';
-    let disclaimer = '';
     let firstLinkFound = false;
-
-    console.log('Saving blocks types:', blocks.map(b => b.type));
 
     blocks.forEach(block => {
       switch (block.type) {
         case 'heading': contentLines.push(`### ${block.value}`); break;
         case 'paragraph': contentLines.push(block.value); break;
-        case 'list': 
-            const items = block.value.split('\n').map(l => l.trim()).filter(l => l !== '');
-            items.forEach(item => {
-                listItems.push(item);
-                contentLines.push(item);
-            });
-            break;
+        case 'list': contentLines.push(block.value); break;
         case 'quote': contentLines.push(`> ${block.value.replace(/\n/g, '\n> ')}`); break;
         case 'code': contentLines.push('```\n' + block.value + '\n```'); break;
         case 'table': contentLines.push(block.value); break;
@@ -421,7 +459,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
             contentLines.push(`[${block.value2 || 'Link'}](${block.value})`);
             if (!firstLinkFound) { linkUrl = block.value; linkTitleText = block.value2 || ''; firstLinkFound = true; }
             break;
-        case 'disclaimer': disclaimer = block.value; break;
+        case 'disclaimer': break;
       }
     });
 
@@ -430,11 +468,9 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
       slug: slug.trim() || undefined,
       title,
       content: contentLines,
-      items: listItems.length > 0 ? listItems : undefined,
       imagePlaceholder: imagePlaceholder.trim() || undefined,
       link: linkUrl.trim() || undefined,
       linkTitle: linkTitleText.trim() || undefined,
-      disclaimer: disclaimer.trim() || undefined,
       codeBlock: isArchive ? JSON.stringify(archiveData) : initialData?.codeBlock,
       keywords: title.split(' '),
       blocks: blocks
@@ -445,18 +481,16 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
 
   if (!isOpen) return null;
   const isValid = title.trim().length > 0 && slug.trim().length > 0;
-  const currentEntry = archiveData[activeYear]?.[activeMonth] || { title: '', winner: '', imageUrl: '', description: '' };
+  const currentEntry = archiveData[activeYear]?.[activeMonth] || { title: '', winner: '', imageUrl: '', description: '', groups: [] };
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div onClick={() => { onDirty?.(false); onClose(); }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)' }} />
       <div className="animate-enter" style={{ position: 'relative', background: '#121212', border: '1px solid #333', borderRadius: '16px', width: '100%', maxWidth: '850px', maxHeight: '95vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-        
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 700 }}>{initialData ? '콘텐츠 블록 수정' : '새 콘텐츠 블록 추가'}</h3>
           <button onClick={() => { onDirty?.(false); onClose(); }} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
         </div>
-
         <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
@@ -468,15 +502,12 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
               <input type="text" value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); if (onDirty) onDirty(true); }} placeholder="e.g. it-setup" style={{ width: '100%', padding: '12px', background: 'rgba(231,0,18,0.05)', border: '1px solid #E70012', borderRadius: '8px', color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
             </div>
           </div>
-
           <hr style={{ border: 'none', borderTop: '1px solid #222' }} />
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Layers size={18} color="#E70012" />
                 <p style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>콘텐츠 블록 구성</p>
             </div>
-            
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {blocks.map((block, index) => {
                   const BlockIcon = BLOCK_TYPES.find(t => t.type === block.type)?.icon || AlignLeft;
@@ -491,7 +522,6 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E70012', fontSize: '0.75rem', fontWeight: 700 }}><BlockIcon size={14} />{block.type.toUpperCase()}</div>
                               <button onClick={() => { setBlocks(blocks.filter(b => b.id !== block.id)); if(onDirty) onDirty(true); }} style={{ color: '#444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16}/></button>
                           </div>
-                          
                           {block.type === 'table' ? (
                             <TableEditor value={block.value} onChange={val => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value: val} : b)); if(onDirty) onDirty(true); }} />
                           ) : block.type === 'link' ? (
@@ -504,7 +534,7 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                               value={block.value} 
                               onChange={e => { setBlocks(blocks.map(b => b.id === block.id ? {...b, value: e.target.value} : b)); if(onDirty) onDirty(true); }} 
                               onKeyDown={e => handleEditorKeyDown(e, block.id)}
-                              placeholder={`${block.type} 내용 입력 (Tab/Enter 자동 리스트 지원)...`} 
+                              placeholder={`${block.type} 내용 입력...`} 
                               style={{ width: '100%', background: 'transparent', border: 'none', color: '#ccc', fontSize: '0.95rem', outline: 'none', resize: 'vertical', minHeight: '60px', lineHeight: '1.6' }} 
                             />
                           )}
@@ -513,16 +543,11 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                   );
                 })}
             </div>
-
-            <button onClick={() => setShowTypeSelector(!showTypeSelector)} style={{ width: '100%', padding: '16px', border: '1px dashed #333', borderRadius: '12px', background: 'transparent', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
-                <Plus size={20} /> 블록 추가하기
-            </button>
+            <button onClick={() => setShowTypeSelector(!showTypeSelector)} style={{ width: '100%', padding: '16px', border: '1px dashed #333', borderRadius: '12px', background: 'transparent', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}><Plus size={20} /> 블록 추가하기</button>
             {showTypeSelector && (
               <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {BLOCK_TYPES.map(bt => (
-                  <button key={bt.type} onClick={() => addBlock(bt.type)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '12px 8px', background: '#222', border: '1px solid #333', borderRadius: '8px', color: '#ccc', cursor: 'pointer' }}>
-                    <bt.icon size={18} /><span style={{ fontSize: '0.7rem' }}>{bt.label}</span>
-                  </button>
+                  <button key={bt.type} onClick={() => addBlock(bt.type)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '12px 8px', background: '#222', border: '1px solid #333', borderRadius: '8px', color: '#ccc', cursor: 'pointer' }}><bt.icon size={18} /><span style={{ fontSize: '0.7rem' }}>{bt.label}</span></button>
                 ))}
               </div>
             )}
@@ -544,15 +569,76 @@ export const EditModal: React.FC<EditModalProps> = ({ isOpen, onClose, onSave, i
                     ))}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <input type="text" value={currentEntry.title} onChange={e => updateArchiveEntry('title', e.target.value)} placeholder="활동명" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    <input type="text" value={currentEntry.title} onChange={e => updateArchiveEntry('title', e.target.value)} placeholder="활동명 (예: 3월의 조 편성)" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
                     <input type="text" value={currentEntry.imageUrl || ''} onChange={e => updateArchiveEntry('imageUrl', e.target.value)} placeholder="이미지 URL" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
-                    <textarea rows={4} value={currentEntry.description || ''} onChange={e => updateArchiveEntry('description', e.target.value)} placeholder="설명 (Markdown)" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    
+                    {isGroupBased ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '0.85rem' }}><Users size={14} /> 조 편성 (Groups)</div>
+                          <button onClick={addGroup} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', background: 'rgba(231,0,18,0.1)', border: '1px solid #E70012', color: '#fff', fontSize: '0.75rem', cursor: 'pointer' }}><Plus size={14} /> 조 추가</button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {(currentEntry.groups || []).map((group, gIdx) => (
+                            <div key={group.id} style={{ background: '#090909', borderRadius: '12px', border: '1px solid #222', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input 
+                                  type="text" 
+                                  value={group.name} 
+                                  onChange={e => updateGroupName(group.id, e.target.value)} 
+                                  style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', fontWeight: 700, outline: 'none', width: '80px' }}
+                                />
+                                <div style={{ flex: 1, height: '1px', background: '#222' }} />
+                                <button onClick={() => removeGroup(group.id)} style={{ color: '#444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))', gap: '6px' }}>
+                                {employees.map((emp, i) => {
+                                  const member = group.members.find(m => m.name === emp.name);
+                                  const isSelected = !!member;
+                                  const isLeader = member?.isLeader;
+                                  
+                                  return (
+                                    <button
+                                      key={i}
+                                      onClick={() => toggleGroupMember(group.id, emp)}
+                                      title={emp.role}
+                                      style={{
+                                        position: 'relative', padding: '8px 4px', borderRadius: '6px', border: '1px solid', 
+                                        borderColor: isSelected ? '#E70012' : '#333',
+                                        background: isSelected ? 'rgba(231,0,18,0.1)' : 'transparent',
+                                        color: isSelected ? '#fff' : '#666', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s'
+                                      }}
+                                    >
+                                      {emp.name}
+                                      {isSelected && (
+                                        <div 
+                                          onClick={(e) => { e.stopPropagation(); toggleLeader(group.id, emp.name); }} 
+                                          style={{ position: 'absolute', top: '-6px', right: '-6px', background: isLeader ? '#E70012' : '#333', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
+                                        >
+                                          <Crown size={10} color={isLeader ? '#fff' : '#666'} />
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {currentEntry.groups && currentEntry.groups.length > 0 && (
+                          <div style={{ fontSize: '0.75rem', color: '#E70012' }}>* 이름을 선택하면 조원으로 추가되고, 오른쪽 위 왕관 아이콘을 누르면 조장이 됩니다. 조장은 중복 선택이 가능합니다.</div>
+                        )}
+                      </div>
+                    ) : (
+                      <textarea rows={4} value={currentEntry.description || ''} onChange={e => updateArchiveEntry('description', e.target.value)} placeholder="설명 (Markdown)" style={{ width: '100%', padding: '12px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} />
+                    )}
                   </div>
                </div>
             </div>
           )}
         </div>
-
         <div style={{ padding: '20px 24px', borderTop: '1px solid #333', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button onClick={() => { onDirty?.(false); onClose(); }} style={{ padding: '10px 20px', color: '#ccc', background: 'none', border: 'none', cursor: 'pointer' }}>취소</button>
           <button onClick={handleSave} disabled={!isValid} style={{ padding: '10px 24px', borderRadius: '8px', background: isValid ? '#E70012' : '#333', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>저장하기</button>
