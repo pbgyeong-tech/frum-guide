@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection, ContentSnapshot, EditorBlock } from '../types';
@@ -25,7 +26,7 @@ const getBadgeStyle = (text: string) => {
   const t = text.trim();
   if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.15)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.4)' }; 
   if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.15)', color: '#e9d5ff', border: '1px solid rgba(126, 34, 206, 0.4)' }; 
-  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.15)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.4)' }; 
+  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.15)', color: '#fdba74', border: '1px solid rgba(194, 12, 12, 0.4)' }; 
   if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.15)', color: '#bfdbfe', border: '1px solid rgba(29, 78, 216, 0.4)' }; 
   if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.15)', color: '#a7f3d0', border: '1px solid rgba(4, 120, 87, 0.4)' }; 
   let hash = 0;
@@ -281,7 +282,6 @@ const renderBlocks = (blocks: EditorBlock[]) => {
       case 'heading':
         return <div key={block.id} style={{ fontSize: '1.2rem', fontWeight: 600, color: '#e0e0e0', marginTop: idx === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(block.value)}</div>;
       case 'paragraph':
-        // FIX: Paragraph 블록을 일반 텍스트가 아닌 마크다운 컨테이너로 취급하여 모든 문법 지원
         return <div key={block.id}>{renderMarkdownContent(block.value)}</div>;
       case 'list':
         return <div key={block.id}>{renderMarkdownContent(block.value, { margin: '0' })}</div>;
@@ -376,6 +376,11 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
 
     onUpdateContent(data.id, newSubSections);
     setEditingItemId(null);
+  };
+
+  const handleUpdateSubsection = (updatedSub: SubSection) => {
+    const newSubSections = safeSubSections.map(s => s.uuid === updatedSub.uuid ? updatedSub : s);
+    onUpdateContent(data.id, newSubSections);
   };
 
   const executeDelete = async () => {
@@ -488,7 +493,6 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 </div>
                 <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* FIX: Removed duplicate 'cursor' property and fixed its invalid value */}
                     <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}><Edit3 size={16} /></button>
                     <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer' }}><Trash2 size={16} /></button>
                 </div>
@@ -502,6 +506,7 @@ export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent,
                 data={sub}
                 id={sectionId}
                 adminControls={adminControls}
+                onUpdateSubsection={handleUpdateSubsection}
               />
             );
           }

@@ -33,6 +33,10 @@ export interface Group {
   id: string;
   name: string;
   members: GroupMember[];
+  reservation?: {
+    date: string;
+    restaurant: string;
+  };
 }
 
 export interface ArchiveEntry {

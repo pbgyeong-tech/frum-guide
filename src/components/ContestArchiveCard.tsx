@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { SubSection, EditorBlock, GroupMember, Group } from '../types';
-import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Copy, Crown, Users } from 'lucide-react';
+import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Copy, Crown, Users, MapPin, AlertCircle } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
 // --- Constants ---
@@ -19,7 +19,7 @@ const getBadgeStyle = (text: string) => {
   
   if (t.includes('대표') || t.includes('CEO')) return { bg: 'rgba(234, 179, 8, 0.2)', color: '#fde047', border: '1px solid rgba(161, 98, 7, 0.5)' }; 
   if (t.includes('이사')) return { bg: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(126, 34, 206, 0.5)' }; 
-  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 65, 12, 0.5)' }; 
+  if (t.includes('책임')) return { bg: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', border: '1px solid rgba(194, 12, 12, 0.5)' }; 
   if (t.includes('선임')) return { bg: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(29, 78, 216, 0.5)' }; 
   if (t.includes('사원')) return { bg: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(4, 120, 87, 0.5)' }; 
   
@@ -236,6 +236,7 @@ interface ContestArchiveCardProps {
   data: SubSection;
   adminControls?: React.ReactNode;
   id?: string;
+  onUpdateSubsection?: (updated: SubSection) => void;
 }
 
 const hasContent = (data: any) => {
@@ -382,7 +383,7 @@ const renderBlocks = (blocks: EditorBlock[]) => {
   });
 };
 
-export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id }) => {
+export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, adminControls, id, onUpdateSubsection }) => {
   const isContest = data.slug === 'aicontest';
   const isDining = data.slug === 'frum-dining';
   const isCoffee = data.slug === 'coffee-chat';
@@ -402,6 +403,11 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const [selectedYear, setSelectedYear] = useState<number>(latest.year);
   const [selectedMonth, setSelectedMonth] = useState<number>(latest.month);
   
+  // State for Dining Reservation
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [reserveDate, setReserveDate] = useState('');
+  const [reservePlace, setReservePlace] = useState('');
+
   useEffect(() => {
     const yearData = archiveData[selectedYear];
     if (yearData) {
@@ -419,6 +425,44 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const HeaderIcon = isDining ? Utensils : (isCoffee ? Coffee : Trophy);
   const years = [2025, 2026, 2027];
   const activeYearIndex = years.indexOf(selectedYear);
+
+  // Dining conflict detection
+  const reservationConflicts = useMemo(() => {
+    if (!isDining || !currentData?.groups) return new Set<string>();
+    const dateMap: Record<string, string[]> = {};
+    currentData.groups.forEach(g => {
+      if (g.reservation?.date) {
+        if (!dateMap[g.reservation.date]) dateMap[g.reservation.date] = [];
+        dateMap[g.reservation.date].push(g.name);
+      }
+    });
+    return new Set(Object.keys(dateMap).filter(d => dateMap[d].length > 1));
+  }, [isDining, currentData]);
+
+  const handleUpdateReservation = (groupId: string) => {
+    if (!onUpdateSubsection || !currentData?.groups) return;
+    
+    const updatedGroups = currentData.groups.map(g => {
+      if (g.id === groupId) {
+        return { ...g, reservation: { date: reserveDate, restaurant: reservePlace } };
+      }
+      return g;
+    });
+
+    const newArchiveData = {
+      ...archiveData,
+      [selectedYear]: {
+        ...archiveData[selectedYear],
+        [selectedMonth]: { ...currentData, groups: updatedGroups }
+      }
+    };
+
+    onUpdateSubsection({
+      ...data,
+      codeBlock: JSON.stringify(newArchiveData)
+    });
+    setEditingGroupId(null);
+  };
 
   return (
     <div id={id} onMouseMove={handleMouseMove} className="bento-card full-width stagger-item" style={{ padding: 0, overflow: 'hidden' }}>
@@ -568,6 +612,8 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                     {currentData.groups.map((group, gIdx) => {
                         const leaders = group.members.filter(m => m.isLeader);
                         const members = group.members.filter(m => !m.isLeader);
+                        const isConflicted = group.reservation?.date && reservationConflicts.has(group.reservation.date);
+                        const isEditing = editingGroupId === group.id;
 
                         return (
                             <div key={group.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -578,7 +624,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                     </div>
                                 </div>
                                 
-                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
                                     {leaders.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {leaders.map((leader, i) => (
@@ -608,6 +654,40 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                                 );
                                             })}
                                         </div>
+                                    )}
+
+                                    {/* Dining Reservation UI */}
+                                    {isDining && (
+                                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', marginTop: 'auto' }}>
+                                        {isEditing ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <input type="date" value={reserveDate} onChange={e => setReserveDate(e.target.value)} style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }} />
+                                            <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="방문 예정 식당" style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }} />
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                              <button onClick={() => handleUpdateReservation(group.id)} style={{ flex: 1, padding: '8px', background: '#E70012', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>저장</button>
+                                              <button onClick={() => setEditingGroupId(null)} style={{ flex: 1, padding: '8px', background: '#333', color: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>취소</button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: group.reservation ? '#fff' : '#555' }}>
+                                              <MapPin size={16} color={group.reservation ? '#E70012' : '#333'} />
+                                              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{group.reservation ? `${group.reservation.date} @ ${group.reservation.restaurant}` : "미등록 일정"}</span>
+                                            </div>
+                                            {isConflicted && (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
+                                                <AlertCircle size={12} /> 타 조와 일정이 겹칩니다 (비상카드 확인)
+                                              </div>
+                                            )}
+                                            {adminControls && (
+                                              <button 
+                                                onClick={() => { setEditingGroupId(group.id); setReserveDate(group.reservation?.date || ''); setReservePlace(group.reservation?.restaurant || ''); }} 
+                                                style={{ marginTop: '8px', alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '6px', color: '#888', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                                              >일정 업데이트</button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     )}
                                 </div>
                             </div>
