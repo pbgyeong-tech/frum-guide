@@ -406,7 +406,6 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   
   // State for Dining Reservation
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [reserveDate, setReserveDate] = useState('');
   const [reservePlace, setReservePlace] = useState('');
 
   useEffect(() => {
@@ -427,14 +426,15 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const years = [2025, 2026, 2027];
   const activeYearIndex = years.indexOf(selectedYear);
 
-  // Dining conflict detection
+  // Dining conflict detection (Uses restaurant name as key if date is not available)
   const reservationConflicts = useMemo(() => {
     if (!isDining || !currentData?.groups) return new Set<string>();
     const dateMap: Record<string, string[]> = {};
     currentData.groups.forEach(g => {
-      if (g.reservation?.date) {
-        if (!dateMap[g.reservation.date]) dateMap[g.reservation.date] = [];
-        dateMap[g.reservation.date].push(g.name);
+      const key = (g.reservation?.date || '') + (g.reservation?.restaurant || '');
+      if (key) {
+        if (!dateMap[key]) dateMap[key] = [];
+        dateMap[key].push(g.name);
       }
     });
     return new Set(Object.keys(dateMap).filter(d => dateMap[d].length > 1));
@@ -445,7 +445,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
     
     const updatedGroups = currentData.groups.map(g => {
       if (g.id === groupId) {
-        return { ...g, reservation: { date: reserveDate, restaurant: reservePlace } };
+        return { ...g, reservation: { date: '', restaurant: reservePlace } };
       }
       return g;
     });
@@ -613,7 +613,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                     {currentData.groups.map((group, gIdx) => {
                         const leaders = group.members.filter(m => m.isLeader);
                         const members = group.members.filter(m => !m.isLeader);
-                        const isConflicted = group.reservation?.date && reservationConflicts.has(group.reservation.date);
+                        const isConflicted = (group.reservation?.date || group.reservation?.restaurant) && reservationConflicts.has((group.reservation?.date || '') + (group.reservation?.restaurant || ''));
                         const isEditing = editingGroupId === group.id;
 
                         if (isCompact) {
@@ -650,10 +650,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                       <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                                         {isEditing ? (
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                              <input type="date" value={reserveDate} onChange={e => setReserveDate(e.target.value)} style={{ flex: 1, padding: '6px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }} />
-                                              <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="식당명" style={{ flex: 1.5, padding: '6px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }} />
-                                            </div>
+                                            <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="일정 및 장소 입력 (예: 1/20 빕스)" style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }} />
                                             <div style={{ display: 'flex', gap: '6px' }}>
                                               <button onClick={() => handleUpdateReservation(group.id)} style={{ flex: 1, padding: '6px', background: '#E70012', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}>저장</button>
                                               <button onClick={() => setEditingGroupId(null)} style={{ flex: 1, padding: '6px', background: '#333', color: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
@@ -662,9 +659,9 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                         ) : (
                                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: group.reservation ? 'rgba(255,255,255,0.5)' : '#333' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: (group.reservation?.date || group.reservation?.restaurant) ? 'rgba(255,255,255,0.5)' : '#333' }}>
                                                 <span className="font-mono" style={{ fontSize: '0.7rem', fontWeight: 500 }}>
-                                                  {group.reservation ? `${group.reservation.date} @ ${group.reservation.restaurant}` : "미등록 일정"}
+                                                  {group.reservation?.restaurant || group.reservation?.date || "미등록 일정"}
                                                 </span>
                                               </div>
                                               {isConflicted && (
@@ -675,7 +672,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                             </div>
                                             {adminControls && (
                                               <button 
-                                                onClick={() => { setEditingGroupId(group.id); setReserveDate(group.reservation?.date || ''); setReservePlace(group.reservation?.restaurant || ''); }} 
+                                                onClick={() => { setEditingGroupId(group.id); setReservePlace(group.reservation?.restaurant || group.reservation?.date || ''); }} 
                                                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '4px', color: '#555', fontSize: '0.7rem', cursor: 'pointer' }}
                                               >
                                                 <Edit2 size={12} />
@@ -730,8 +727,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                       <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', marginTop: 'auto' }}>
                                         {isEditing ? (
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            <input type="date" value={reserveDate} onChange={e => setReserveDate(e.target.value)} style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }} />
-                                            <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="방문 예정 식당" style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }} />
+                                            <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="일정 및 장소 입력 (예: 1/20 빕스)" style={{ width: '100%', padding: '8px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '6px', fontSize: '0.85rem' }} />
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                               <button onClick={() => handleUpdateReservation(group.id)} style={{ flex: 1, padding: '8px', background: '#E70012', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>저장</button>
                                               <button onClick={() => setEditingGroupId(null)} style={{ flex: 1, padding: '8px', background: '#333', color: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>취소</button>
@@ -739,9 +735,9 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                           </div>
                                         ) : (
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: group.reservation ? '#fff' : '#555' }}>
-                                              <MapPin size={16} color={group.reservation ? '#E70012' : '#333'} />
-                                              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{group.reservation ? `${group.reservation.date} @ ${group.reservation.restaurant}` : "미등록 일정"}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: (group.reservation?.date || group.reservation?.restaurant) ? '#fff' : '#555' }}>
+                                              <MapPin size={16} color={(group.reservation?.date || group.reservation?.restaurant) ? '#E70012' : '#333'} />
+                                              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{group.reservation?.restaurant || group.reservation?.date || "미등록 일정"}</span>
                                             </div>
                                             {isConflicted && (
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '0.7rem', marginTop: '4px' }}>
@@ -750,7 +746,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                             )}
                                             {adminControls && (
                                               <button 
-                                                onClick={() => { setEditingGroupId(group.id); setReserveDate(group.reservation?.date || ''); setReservePlace(group.reservation?.restaurant || ''); }} 
+                                                onClick={() => { setEditingGroupId(group.id); setReservePlace(group.reservation?.restaurant || group.reservation?.date || ''); }} 
                                                 style={{ marginTop: '8px', alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '6px', color: '#888', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
                                               >일정 업데이트</button>
                                             )}
