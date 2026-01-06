@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { SubSection, EditorBlock, GroupMember, Group } from '../types';
-import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Copy, Crown, Users, MapPin, AlertCircle } from 'lucide-react';
+import { Trophy, Calendar, Image as ImageIcon, Link as LinkIcon, ArrowRight, Lightbulb, Utensils, Coffee, ChevronDown, ChevronRight, Copy, Crown, Users, MapPin, AlertCircle, Edit2 } from 'lucide-react';
 import { trackEvent } from '../utils/firebase';
 
 // --- Constants ---
@@ -304,7 +304,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
     }
     if (line.startsWith('![') && line.endsWith(')') && line.match(/!\[(.*?)\]\((.*?)\)/)) {
        const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
-       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #222' }} /></div>); i++; continue; }
+       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', borderRadius: '12px', border: '1px solid #333' }} /></div>); i++; continue; }
     }
     if (line.startsWith('[') && line.endsWith(')') && !line.includes('!') && line.match(/^\[(.*?)\]\((.*?)\)$/)) {
        const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
@@ -387,6 +387,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
   const isContest = data.slug === 'aicontest';
   const isDining = data.slug === 'frum-dining';
   const isCoffee = data.slug === 'coffee-chat';
+  const isCompact = isDining || isCoffee;
 
   const archiveData = useMemo(() => {
     if (data.codeBlock) {
@@ -605,15 +606,97 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                   )}
                 </div>
             )}
-            <h4 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '24px', color: '#fff', letterSpacing: '-0.02em' }}>{currentData.title}</h4>
+            <h4 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: isCompact ? '12px' : '24px', color: '#fff', letterSpacing: '-0.02em' }}>{currentData.title}</h4>
             
             {currentData.groups && currentData.groups.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px', marginTop: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: isCompact ? '16px' : '24px', marginTop: isCompact ? '16px' : '32px' }}>
                     {currentData.groups.map((group, gIdx) => {
                         const leaders = group.members.filter(m => m.isLeader);
                         const members = group.members.filter(m => !m.isLeader);
                         const isConflicted = group.reservation?.date && reservationConflicts.has(group.reservation.date);
                         const isEditing = editingGroupId === group.id;
+
+                        if (isCompact) {
+                          return (
+                            <div key={group.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ background: 'rgba(231,0,18,0.04)', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{group.name}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                      {leaders.map((leader, i) => (
+                                        <div key={i} style={{ 
+                                          padding: '4px 10px', background: 'rgba(231,0,18,0.2)', border: '1px solid rgba(231,0,18,0.4)', 
+                                          borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' 
+                                        }}>
+                                          <Crown size={12} color="#E70012" />
+                                          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.8rem' }}>{leader.name}</span>
+                                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{leader.role}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                </div>
+                                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                        {members.map((member, i) => {
+                                          const style = getBadgeStyle(member.role);
+                                          return (
+                                            <div key={i} style={{ 
+                                              padding: '4px 10px', background: style.bg, border: style.border, 
+                                              borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' 
+                                            }}>
+                                              <span style={{ color: '#fff', fontWeight: 500, fontSize: '0.8rem' }}>{member.name}</span>
+                                              <span style={{ color: style.color, fontSize: '0.65rem', opacity: 0.8 }}>{member.role}</span>
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+
+                                    {isDining && (
+                                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px' }}>
+                                        {isEditing ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                              <input type="date" value={reserveDate} onChange={e => setReserveDate(e.target.value)} style={{ flex: 1, padding: '6px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }} />
+                                              <input type="text" value={reservePlace} onChange={e => setReservePlace(e.target.value)} placeholder="식당명" style={{ flex: 1.5, padding: '6px', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }} />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                              <button onClick={() => handleUpdateReservation(group.id)} style={{ flex: 1, padding: '6px', background: '#E70012', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}>저장</button>
+                                              <button onClick={() => setEditingGroupId(null)} style={{ flex: 1, padding: '6px', background: '#333', color: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>취소</button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: group.reservation ? '#fff' : '#444' }}>
+                                                <MapPin size={14} color={group.reservation ? '#E70012' : '#222'} />
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                                                  {group.reservation ? `${group.reservation.date} @ ${group.reservation.restaurant}` : "미등록 일정"}
+                                                </span>
+                                              </div>
+                                              {isConflicted && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '0.65rem', marginTop: '2px' }}>
+                                                  <AlertCircle size={10} /> 일정 중복 주의
+                                                </div>
+                                              )}
+                                            </div>
+                                            {adminControls && (
+                                              <button 
+                                                onClick={() => { setEditingGroupId(group.id); setReserveDate(group.reservation?.date || ''); setReservePlace(group.reservation?.restaurant || ''); }} 
+                                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px', color: '#666', fontSize: '0.7rem', cursor: 'pointer' }}
+                                                title="일정 수정"
+                                              >
+                                                <Edit2 size={12} />
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                </div>
+                            </div>
+                          );
+                        }
 
                         return (
                             <div key={group.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -656,7 +739,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                         </div>
                                     )}
 
-                                    {/* Dining Reservation UI */}
+                                    {/* Dining Reservation UI (Non-Compact fallback) */}
                                     {isDining && (
                                       <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', marginTop: 'auto' }}>
                                         {isEditing ? (
