@@ -12,7 +12,7 @@ const INDENT_STEP = MARKER_WIDTH + ITEM_GAP;
 const BLOCK_SPACING = '14px';
 const LIST_ITEM_SPACING = '6px';
 
-// --- Badge Style Logic ---
+// --- Badge Style Logic (Original for General Tables) ---
 const getBadgeStyle = (text: string) => {
   if (!text) return { bg: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid #444' };
   const t = text.trim();
@@ -609,7 +609,7 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
             <h4 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: isCompact ? '12px' : '24px', color: '#fff', letterSpacing: '-0.02em' }}>{currentData.title}</h4>
             
             {currentData.groups && currentData.groups.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: isCompact ? '16px' : '24px', marginTop: isCompact ? '16px' : '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: isCompact ? '20px' : '24px', marginTop: isCompact ? '16px' : '32px' }}>
                     {currentData.groups.map((group, gIdx) => {
                         const leaders = group.members.filter(m => m.isLeader);
                         const members = group.members.filter(m => !m.isLeader);
@@ -619,41 +619,35 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                         if (isCompact) {
                           return (
                             <div key={group.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ background: 'rgba(231,0,18,0.04)', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <span style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{group.name}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                      {leaders.map((leader, i) => (
-                                        <div key={i} style={{ 
-                                          padding: '4px 10px', background: 'rgba(231,0,18,0.2)', border: '1px solid rgba(231,0,18,0.4)', 
-                                          borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' 
-                                        }}>
-                                          <Crown size={12} color="#E70012" />
-                                          <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.8rem' }}>{leader.name}</span>
-                                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{leader.role}</span>
-                                        </div>
-                                      ))}
+                                {/* Flattened Header */}
+                                <div style={{ padding: '20px 20px 12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>{group.name}</span>
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                      {leaders.map((leader, i) => {
+                                        return (
+                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Crown size={12} color="#E70012" />
+                                            <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{leader.name}</span>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                 </div>
-                                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+
+                                <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {/* Borderless Text Flow Layout for Members (Only Names) */}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '8px', columnGap: '16px' }}>
                                         {members.map((member, i) => {
-                                          const style = getBadgeStyle(member.role);
                                           return (
-                                            <div key={i} style={{ 
-                                              padding: '4px 10px', background: style.bg, border: style.border, 
-                                              borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px' 
-                                            }}>
-                                              <span style={{ color: '#fff', fontWeight: 500, fontSize: '0.8rem' }}>{member.name}</span>
-                                              <span style={{ color: style.color, fontSize: '0.65rem', opacity: 0.8 }}>{member.role}</span>
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{member.name}</span>
                                             </div>
                                           );
                                         })}
                                     </div>
 
                                     {isDining && (
-                                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px' }}>
+                                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                                         {isEditing ? (
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             <div style={{ display: 'flex', gap: '6px' }}>
@@ -668,23 +662,21 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                         ) : (
                                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: group.reservation ? '#fff' : '#444' }}>
-                                                <MapPin size={14} color={group.reservation ? '#E70012' : '#222'} />
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: group.reservation ? 'rgba(255,255,255,0.5)' : '#333' }}>
+                                                <span className="font-mono" style={{ fontSize: '0.7rem', fontWeight: 500 }}>
                                                   {group.reservation ? `${group.reservation.date} @ ${group.reservation.restaurant}` : "미등록 일정"}
                                                 </span>
                                               </div>
                                               {isConflicted && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '0.65rem', marginTop: '2px' }}>
-                                                  <AlertCircle size={10} /> 일정 중복 주의
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontSize: '0.6rem', marginTop: '2px', fontWeight: 600 }}>
+                                                  <AlertCircle size={10} /> 일정 중복
                                                 </div>
                                               )}
                                             </div>
                                             {adminControls && (
                                               <button 
                                                 onClick={() => { setEditingGroupId(group.id); setReserveDate(group.reservation?.date || ''); setReservePlace(group.reservation?.restaurant || ''); }} 
-                                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px', color: '#666', fontSize: '0.7rem', cursor: 'pointer' }}
-                                                title="일정 수정"
+                                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '4px', color: '#555', fontSize: '0.7rem', cursor: 'pointer' }}
                                               >
                                                 <Edit2 size={12} />
                                               </button>
@@ -709,30 +701,24 @@ export const ContestArchiveCard: React.FC<ContestArchiveCardProps> = ({ data, ad
                                 
                                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
                                     {leaders.length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                            {leaders.map((leader, i) => (
-                                                <div key={i} style={{ flex: 1, minWidth: '100px', background: 'rgba(231,0,18,0.08)', border: '1px solid rgba(231,0,18,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E70012', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Crown size={16} color="#fff" /></div>
-                                                    <div>
-                                                        <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{leader.name}</div>
-                                                        <div className="font-mono" style={{ color: 'rgba(231,0,18,0.8)', fontSize: '0.7rem' }}>Leader</div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', rowGap: '8px' }}>
+                                            {leaders.map((leader, i) => {
+                                                return (
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Crown size={14} color="#E70012" />
+                                                        <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>{leader.name}</span>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
 
                                     {members.length > 0 && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', rowGap: '10px', columnGap: '20px' }}>
                                             {members.map((member, i) => {
-                                                const style = getBadgeStyle(member.role);
                                                 return (
-                                                    <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}><Users size={14} /></div>
-                                                        <div style={{ overflow: 'hidden' }}>
-                                                            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}>{member.name}</div>
-                                                            <div className="font-mono" style={{ color: style.color, fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.role}</div>
-                                                        </div>
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}>{member.name}</span>
                                                     </div>
                                                 );
                                             })}
