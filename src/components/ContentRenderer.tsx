@@ -21,6 +21,12 @@ const LIST_ITEM_SPACING = '6px';
 
 const ARCHIVE_SLUGS = ['aicontest', 'frum-dining', 'coffee-chat'];
 
+interface MarkdownOptions {
+  fontSize?: string;
+  color?: string;
+  margin?: string;
+}
+
 const getBadgeStyle = (text: string) => {
   if (!text) return { bg: 'rgba(255,255,255,0.05)', color: '#ccc', border: '1px solid #444' };
   const t = text.trim();
@@ -172,19 +178,10 @@ const TableBlock: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-interface MarkdownOptions {
-  fontSize?: string;
-  color?: string;
-  margin?: string;
-}
-
 const renderMarkdownContent = (content: string | string[], options: MarkdownOptions = {}) => {
-  const lines = (Array.isArray(content) ? content : [content])
-    .flatMap(c => typeof c === 'string' ? c.split('\n') : []);
-    
+  const lines = (Array.isArray(content) ? content : [content]).flatMap(c => typeof c === 'string' ? c.split('\n') : []);
   const elements: React.ReactNode[] = [];
   let i = 0;
-
   const listRegex = /^(\s*(\d+|[a-zA-Z]|[ivxIVX]+)\.\s+)/;
   const bulletRegex = /^(\s*(\-|•|\*)\s+)/;
   const hrRegex = /^\s*-{3,}\s*$/;
@@ -192,75 +189,31 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
   while (i < lines.length) {
     const rawLine = lines[i];
     const line = rawLine.trim();
-
-    if (rawLine === '' || line === '') {
-        elements.push(<div key={`gap-${i}`} style={{ height: '0.8em' }} />);
-        i++; continue;
-    }
-
+    if (rawLine === '' || line === '') { elements.push(<div key={`gap-${i}`} style={{ height: '0.8em' }} />); i++; continue; }
     const headerMatch = line.match(/^(#{1,6})\s+(.*)/);
-    if (headerMatch) {
-        const level = headerMatch[1].length;
-        const text = headerMatch[2];
-        elements.push(<div key={`header-${i}`} style={{ fontSize: level === 1 ? '2rem' : (level === 2 ? '1.5rem' : '1.2rem'), fontWeight: level <= 2 ? 700 : 600, color: level === 3 ? '#e0e0e0' : '#fff', marginTop: i === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(text)}</div>);
-        i++; continue;
-    }
-    if (line.startsWith('```')) {
-      const codeLines = []; i++;
-      while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; }
-      elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />);
-      i++; continue;
-    }
-    if (line.startsWith('|')) {
-      const tableLines = [];
-      while (i < lines.length && lines[i].trim().startsWith('|')) { tableLines.push(lines[i]); i++; }
-      elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />);
-      continue;
-    }
-    if (line.startsWith('![') && line.endsWith(')') && line.match(/!\[(.*?)\]\((.*?)\)/)) {
-       const imgMatch = line.match(/!\[(.*?)\]\((.*?)\)/);
-       if (imgMatch) { elements.push(<div key={i} style={{ margin: `28px 0` }}><img src={imgMatch[2]} alt={imgMatch[1]} referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', borderRadius: '8px', margin: '24px 0', border: '1px solid #333' }} /></div>); i++; continue; }
-    }
-    if (line.startsWith('[') && line.endsWith(')') && !line.includes('!') && line.match(/^\[(.*?)\]\((.*?)\)$/)) {
-       const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
-       if (linkMatch) { elements.push(<LinkCardBlock key={i} text={linkMatch[1]} url={linkMatch[2]} />); i++; continue; }
-    }
-
+    if (headerMatch) { const level = headerMatch[1].length; const text = headerMatch[2]; elements.push(<div key={`header-${i}`} style={{ fontSize: level === 1 ? '2.5rem' : (level === 2 ? '1.8rem' : '1.3rem'), fontWeight: 800, color: '#fff', marginTop: i === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.2 }}>{parseInlineMarkdown(text)}</div>); i++; continue; }
+    if (line.startsWith('```')) { const codeLines = []; i++; while (i < lines.length && !lines[i].trim().startsWith('```')) { codeLines.push(lines[i]); i++; } elements.push(<CodeBlock key={`code-${i}`} text={codeLines.join('\n')} />); i++; continue; }
+    if (line.startsWith('|')) { const tableLines = []; while (i < lines.length && lines[i].trim().startsWith('|')) { tableLines.push(lines[i]); i++; } elements.push(<TableBlock key={`table-${i}`} text={tableLines.join('\n')} />); continue; }
     const isUnordered = bulletRegex.test(rawLine);
     const isOrdered = listRegex.test(rawLine);
-
     if (isOrdered || isUnordered) {
         const indentMatch = rawLine.match(/^(\s*)/);
         const level = Math.floor((indentMatch ? indentMatch[1].length : 0) / 2);
-        
         const matchRoman = line.match(/^([ivxIVX]+)\.\s+(.*)/);
         const matchAlpha = line.match(/^([a-zA-Z])\.\s+(.*)/);
         const matchNum = line.match(/^(\d+)\.\s+(.*)/);
         const matchUn = line.match(/^(\-|•|\*)\s+(.*)/);
-        
         let renderedItem = null;
-        if (isUnordered && matchUn) {
-          renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
-        } else if (matchNum) {
-          renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
-        } else if (matchRoman && level >= 1) {
-          renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
-        } else if (matchAlpha) {
-          renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
-        } else {
-          renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
-        }
+        if (isUnordered && matchUn) renderedItem = <div style={{ display: 'flex', alignItems: 'flex-start', gap: `${ITEM_GAP}px`, marginBottom: LIST_ITEM_SPACING, marginLeft: `${level * INDENT_STEP}px` }}><span style={{ color: '#666', fontSize: '1.2rem', width: `${MARKER_WIDTH}px`, textAlign: 'center', flexShrink: 0, marginTop: '-4px' }}>•</span><span style={{ color: '#b0b0b0', fontSize: '1rem', flex: 1 }}>{parseInlineMarkdown(matchUn[2])}</span></div>;
+        else if (matchNum) renderedItem = <StepBlock number={matchNum[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchNum[2])}</StepBlock>;
+        else if (matchRoman && level >= 1) renderedItem = <RomanBlock marker={matchRoman[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchRoman[2])}</RomanBlock>;
+        else if (matchAlpha) renderedItem = <AlphaBlock marker={matchAlpha[1]} marginLeft={level * INDENT_STEP}>{parseInlineMarkdown(matchAlpha[2])}</AlphaBlock>;
+        else renderedItem = <p style={{ marginLeft: `${level * INDENT_STEP}px`, color: '#a0a0a0' }}>{parseInlineMarkdown(line)}</p>;
         elements.push(<div key={i}>{renderedItem}</div>);
         i++; continue;
     }
     if (hrRegex.test(line)) { elements.push(<hr key={i} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />); i++; continue; }
-    if (line.startsWith('>')) {
-        const quoteLines: string[] = [];
-        while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; }
-        elements.push(<InfoBlock key={`quote-${i}`}>{renderMarkdownContent(quoteLines.join('\n'), { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>);
-        continue;
-    }
-    
+    if (line.startsWith('>')) { const quoteLines: string[] = []; while (i < lines.length && lines[i].trim().startsWith('>')) { quoteLines.push(lines[i].trim().replace(/^>\s?/, '')); i++; } elements.push(<InfoBlock key={`quote-${i}`}>{renderMarkdownContent(quoteLines.join('\n'), { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>); continue; }
     const paragraphLines: string[] = [line];
     let j = i + 1;
     while (j < lines.length) {
@@ -270,7 +223,7 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
          paragraphLines.push(nextLine);
          j++;
     }
-    elements.push(<p key={i} style={{ marginBottom: options.margin ?? BLOCK_SPACING, color: options.color || '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: options.fontSize || '1.05rem' }}>{paragraphLines.map((l, idx) => <React.Fragment key={idx}>{parseInlineMarkdown(l)}{idx < paragraphLines.length - 1 && <br />}</React.Fragment>)}</p>);
+    elements.push(<p key={i} style={{ marginBottom: BLOCK_SPACING, color: options.color || '#a0a0a0', lineHeight: LINE_HEIGHT, fontSize: options.fontSize || '1.05rem' }}>{paragraphLines.map((l, idx) => <React.Fragment key={idx}>{parseInlineMarkdown(l)}{idx < paragraphLines.length - 1 && <br />}</React.Fragment>)}</p>);
     i = j;
   }
   return elements;
@@ -279,264 +232,185 @@ const renderMarkdownContent = (content: string | string[], options: MarkdownOpti
 const renderBlocks = (blocks: EditorBlock[]) => {
   return blocks.map((block, idx) => {
     switch (block.type) {
-      case 'heading':
-        return <div key={block.id} style={{ fontSize: '1.2rem', fontWeight: 600, color: '#e0e0e0', marginTop: idx === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.3 }}>{parseInlineMarkdown(block.value)}</div>;
-      case 'paragraph':
-        return <div key={block.id}>{renderMarkdownContent(block.value)}</div>;
-      case 'list':
-        return <div key={block.id}>{renderMarkdownContent(block.value, { margin: '0' })}</div>;
-      case 'quote':
-        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>;
-      case 'code':
-        return <CodeBlock key={block.id} text={block.value} />;
-      case 'table':
-        return <TableBlock key={block.id} text={block.value} />;
-      case 'divider':
-        return <hr key={block.id} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />;
-      case 'media':
-        return (
-          <div key={block.id} style={{ margin: `28px 0` }}>
-            <img src={block.value} alt="Visual Content" referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #333' }} />
-          </div>
-        );
-      case 'link':
-        return <LinkCardBlock key={block.id} text={block.value2 || 'Link'} url={block.value} />;
-      case 'disclaimer':
-        return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>;
-      default:
-        return null;
+      case 'heading': return <div key={block.id} style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginTop: idx === 0 ? '0' : '32px', marginBottom: '16px', lineHeight: 1.2 }}>{parseInlineMarkdown(block.value)}</div>;
+      case 'paragraph': return <div key={block.id}>{renderMarkdownContent(block.value)}</div>;
+      case 'list': return <div key={block.id}>{renderMarkdownContent(block.value, { margin: '0' })}</div>;
+      case 'quote': return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.95rem', color: '#bbb', margin: '0' })}</InfoBlock>;
+      case 'code': return <CodeBlock key={block.id} text={block.value} />;
+      case 'table': return <TableBlock key={block.id} text={block.value} />;
+      case 'divider': return <hr key={block.id} style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #333' }} />;
+      case 'media': return <div key={block.id} style={{ margin: `28px 0` }}><img src={block.value} alt="Visual" style={{ width: '100%', height: 'auto', borderRadius: '12px', border: '1px solid #333' }} /></div>;
+      case 'link': return <LinkCardBlock key={block.id} text={block.value2 || 'Link'} url={block.value} />;
+      case 'disclaimer': return <InfoBlock key={block.id}>{renderMarkdownContent(block.value, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>;
+      default: return null;
     }
   });
 };
 
-export const ContentRenderer: React.FC<any> = ({ data, isAdmin, onUpdateContent, onNavigate, allContent, setIsDirty, user }) => {
-  const isWelcome = data.id === ContentType.WELCOME;
-  const isFAQ = data.id === ContentType.FAQ;
-  const isComplexLayout = [ContentType.IT_SETUP, ContentType.WELFARE, ContentType.CULTURE, ContentType.COMMUTE, ContentType.COMPANY, ContentType.TOOLS, ContentType.OFFICE_GUIDE, ContentType.FAQ, ContentType.EXPENSE].includes(data.id);
-  
-  const [isEditMode, setIsEditMode] = useState(false);
+export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, onUpdateContent, setIsDirty, isAdmin, user }) => {
+  const [editingSub, setEditingSub] = useState<SubSection | undefined>(undefined);
+  const [deleteSub, setDeleteSub] = useState<SubSection | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [activeSectionId, setActiveSectionId] = useState<string>('');
-  const activeSectionIdRef = useRef<string>('');
+  const [activeAnchor, setActiveAnchor] = useState<string>('');
   
-  const navigate = useNavigate();
-  const location = useLocation();
+  const isWelcome = data.id === ContentType.WELCOME;
+  const isFaq = data.id === ContentType.FAQ;
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
-  const safeSubSections = Array.isArray(data.subSections) ? data.subSections : [];
-
-  const isFrumUser = !!user?.email?.endsWith('@frum.co.kr');
-  useEffect(() => {
-    if (isFrumUser) setIsEditMode(true);
-    else setIsEditMode(false);
-  }, [user, data.id]);
-
-  const handleEdit = (uuid: string) => { if (!uuid) return; setEditingItemId(uuid); setIsModalOpen(true); };
-  const handleAddNew = () => { setEditingItemId(null); setIsModalOpen(true); };
-  const handleDeleteTrigger = (uuid: string) => { if (!uuid) return; setDeleteTargetId(uuid); setDeleteModalOpen(true); };
-
-  const handleSaveModal = (newData: SubSection) => {
-    let newSubSections = [...safeSubSections];
-    const targetUuid = editingItemId || newData.uuid || generateUUID();
-    
-    if (user && user.email) {
-        newData.lastEditedBy = user.email;
-        newData.lastEditedAt = Date.now();
-        addEditLog({ 
-          timestamp: Date.now(), 
-          userEmail: user.email, 
-          sectionId: data.id, 
-          subSectionTitle: newData.title, 
-          action: editingItemId ? 'update' : 'create', 
-          details: { 
-            after: { 
-              slug: newData.slug || '', 
-              title: newData.title, 
-              body_content: Array.isArray(newData.content) ? newData.content.join('\n') : newData.content, 
-              media: newData.imagePlaceholder || '', 
-              external_link: newData.link || '', 
-              disclaimer_note: newData.disclaimer || '' 
-            } 
-          } 
-        });
-    }
-
-    if (editingItemId) {
-      const index = newSubSections.findIndex(sub => sub.uuid === editingItemId);
-      if (index !== -1) {
-        newSubSections[index] = { ...newData, uuid: editingItemId };
-      } else {
-        newSubSections.push({ ...newData, uuid: targetUuid });
-      }
-    } else {
-      newSubSections.push({ ...newData, uuid: targetUuid });
-    }
-
-    onUpdateContent(data.id, newSubSections);
-    setEditingItemId(null);
-  };
-
-  const handleUpdateSubsection = (updatedSub: SubSection) => {
-    const newSubSections = safeSubSections.map(s => s.uuid === updatedSub.uuid ? updatedSub : s);
-    onUpdateContent(data.id, newSubSections);
-  };
-
-  const executeDelete = async () => {
-    if (!deleteTargetId) return;
-    const targetItem = safeSubSections.find(s => s.uuid === deleteTargetId);
-    if (user && user.email && targetItem) {
-        addEditLog({ timestamp: Date.now(), userEmail: user.email, sectionId: data.id, subSectionTitle: targetItem.title, action: 'delete', details: { after: { slug: targetItem.slug || '', title: targetItem.title, body_content: Array.isArray(targetItem.content) ? targetItem.content.join('\n') : targetItem.content, media: targetItem.imagePlaceholder || '', external_link: targetItem.link || '', disclaimer_note: targetItem.disclaimer || '' } } });
-    }
-    const newSubSections = safeSubSections.filter(s => s.uuid && s.uuid !== deleteTargetId);
-    onUpdateContent(data.id, newSubSections);
-    setDeleteTargetId(null);
-    setDeleteModalOpen(false);
-  };
-
-  const handleMoveUp = (index: number) => {
-    if (index === 0) return;
-    const newSubSections = [...safeSubSections];
-    [newSubSections[index - 1], newSubSections[index]] = [newSubSections[index], newSubSections[index - 1]];
-    onUpdateContent(data.id, newSubSections);
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index === safeSubSections.length - 1) return;
-    const newSubSections = [...safeSubSections];
-    [newSubSections[index + 1], newSubSections[index]] = [newSubSections[index], newSubSections[index + 1]];
-    onUpdateContent(data.id, newSubSections);
-  };
-
-  const executeScroll = (id: string) => {
-    const element = document.getElementById(id);
-    const container = document.querySelector('.main-content');
-    if (element && container) {
-      const headerOffset = 80;
-      const elementRect = element.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const relativeTop = elementRect.top - containerRect.top;
-      container.scrollTo({ top: container.scrollTop + relativeTop - headerOffset, behavior: "smooth" });
-    } else if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
 
   useEffect(() => {
-    if (location.hash) {
-      const id = location.hash.replace('#', '');
-      setActiveSectionId(id); activeSectionIdRef.current = id;
-      trackAnchorView(data.id, id);
-      const attemptScroll = (retryCount: number) => {
-        const element = document.getElementById(id);
-        if (element) executeScroll(id);
-        else if (data.id === ContentType.COMPANY && retryCount < 15) setTimeout(() => attemptScroll(retryCount + 1), 100);
-      };
-      setTimeout(() => attemptScroll(0), 100);
-    }
-  }, [location.hash, data.id]);
-
-  useEffect(() => {
-    const container = document.querySelector('.main-content');
-    if (!container) return;
-    let timeoutId: any = null;
     const handleScroll = () => {
-      const headerOffset = 150; let newActiveId = '';
-      safeSubSections.forEach((sub, idx) => {
-          const id = sub.slug || sub.uuid || `section-${idx}`;
-          const element = document.getElementById(id);
-          if (element) {
-              const rect = element.getBoundingClientRect(); const containerRect = container.getBoundingClientRect();
-              if (rect.top - containerRect.top < headerOffset) newActiveId = id;
+      const anchors = data.subSections.map((sub: any) => sub.slug || sub.title.toLowerCase().replace(/\s/g, '-'));
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) return;
+      for (const anchor of anchors) {
+        const el = document.getElementById(anchor);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 150 && rect.bottom >= 150) {
+            if (activeAnchor !== anchor) { setActiveAnchor(anchor); trackAnchorView(data.id, anchor); }
+            break;
           }
-      });
-      if (newActiveId && newActiveId !== activeSectionIdRef.current) {
-        setActiveSectionId(newActiveId); activeSectionIdRef.current = newActiveId;
-        const newHash = `#${location.pathname}${location.search}#${newActiveId}`;
-        if (window.location.hash !== newHash) window.history.replaceState(null, '', newHash);
+        }
       }
     };
-    const throttledScroll = () => { if(!timeoutId) timeoutId = setTimeout(() => { handleScroll(); timeoutId = null; }, 100); }
-    container.addEventListener('scroll', throttledScroll);
-    return () => { container.removeEventListener('scroll', throttledScroll); if (timeoutId) clearTimeout(timeoutId); };
-  }, [safeSubSections, data.id, location]);
+    const mainContent = document.querySelector('.main-content');
+    mainContent?.addEventListener('scroll', handleScroll);
+    return () => mainContent?.removeEventListener('scroll', handleScroll);
+  }, [data.subSections, activeAnchor, data.id]);
 
-  const handleTocClick = (id: string) => { setActiveSectionId(id); activeSectionIdRef.current = id; trackEvent('click_toc', { anchor_id: id, section: data.title }); navigate(`#${id}`); executeScroll(id); };
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) { el.scrollIntoView({ behavior: 'smooth' }); setActiveAnchor(id); }
+  };
 
-  if (isFAQ && !isEditMode) return <div className="content-wrapper animate-enter"><header className="page-header" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}><div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}><h1 className="hero-title" style={{ marginBottom: 0 }}>{data.title}</h1><p className="hero-desc" style={{ marginLeft: '4px' }}>{data.description}</p></div>{isAdmin && !isFrumUser && <button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: 'transparent', color: '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} /> Edit Page</button>}</header><FaqSearch onNavigate={onNavigate} content={allContent} /></div>;
+  const handleAddNew = () => { setEditingSub(undefined); setIsModalOpen(true); };
+  const handleEdit = (sub: SubSection) => { setEditingSub(sub); setIsModalOpen(true); };
+  const handleDeleteConfirm = () => {
+    if (!deleteSub) return;
+    const newSubSections = data.subSections.filter((s: any) => s.uuid !== deleteSub.uuid);
+    onUpdateContent(data.id, newSubSections);
+    setDeleteSub(undefined);
+  };
+  const handleSave = (updatedSub: SubSection) => {
+    let newSubSections: SubSection[];
+    const isUpdate = editingSub !== undefined;
+    if (isUpdate) newSubSections = data.subSections.map((s: any) => s.uuid === updatedSub.uuid ? updatedSub : s);
+    else newSubSections = [...data.subSections, updatedSub];
+    onUpdateContent(data.id, newSubSections);
+  };
+  const handleReorder = (index: number, direction: 'up' | 'down') => {
+    const newSubSections = [...data.subSections];
+    const target = index + (direction === 'up' ? -1 : 1);
+    if (target < 0 || target >= newSubSections.length) return;
+    [newSubSections[index], newSubSections[target]] = [newSubSections[target], newSubSections[index]];
+    onUpdateContent(data.id, newSubSections);
+  };
 
-  if (isWelcome) return <div className="animate-enter"><div className="hero-full-width-container">{data.heroVideo ? <video src={data.heroVideo} className="hero-full-width-media" autoPlay loop muted playsInline /> : <img src={data.heroImage} className="hero-full-width-media" alt="Hero" />}<div className="hero-overlay-gradient" style={{ opacity: 0.4 }}></div><div className="hero-bottom-gradient"></div><div className="brand-slash-container"><div className="brand-slash-line"></div></div><div className="hero-text-container"><h1 className="hero-title" style={{ fontSize: 'clamp(3.5rem, 6vw, 6rem)', textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>{data.title}</h1></div></div><div className="content-wrapper with-hero">{safeSubSections.length > 0 && (<div className="animate-fade delay-4" style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto 80px', padding: '0 20px' }}><h2 style={{ fontSize: '1.5rem', marginBottom: '24px', color: '#fff', fontWeight: 700 }}>{safeSubSections[0].title}</h2><p style={{ fontSize: '1.2rem', lineHeight: '1.8', color: '#ccc', fontWeight: 400 }}>{safeSubSections[0].content}</p></div>)}<div className="grid-layout">{quickLinkSections.map((section, index) => { const SectionIcon = section.icon; return <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className="bento-card stagger-item" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', animationDelay: `${index * 100}ms` }}><div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}><SectionIcon size={24} color="#E70012" /><h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>{section.title}</h3></div><p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5', margin: 0 }}>{section.description}</p></button>; })}</div></div></div>;
-
-  return (
-    <div className="content-wrapper animate-enter">
-      <header className="page-header">
-        <div><h1 className="hero-title">{data.title}</h1>{data.description && <p className="hero-desc">{data.description}</p>}</div>
-        {isAdmin && !isFrumUser && (<button onClick={() => { trackEvent('click_edit', { page_name: data.title }); setIsEditMode(!isEditMode); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E70012', background: isEditMode ? '#E70012' : 'transparent', color: isEditMode ? '#fff' : '#E70012', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}><Edit3 size={16} />{isEditMode ? 'Done Editing' : 'Edit Page'}</button>)}
-      </header>
-      {!isWelcome && !isFAQ && safeSubSections.length > 0 && (
-        <div className="toc-sticky-bar" style={{ position: 'sticky', top: '0', zIndex: 40, background: 'rgba(9, 9, 9, 0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', gap: '8px', margin: '-20px -40px 40px -40px', padding: '16px 40px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
-          {safeSubSections.map((sub, idx) => {
-            const sectionId = sub.slug || sub.uuid || `section-${idx}`;
-            const isActive = activeSectionId === sectionId;
-            return <button key={`toc-${idx}`} onClick={() => handleTocClick(sectionId)} style={{ padding: '8px 16px', borderRadius: '20px', borderColor: isActive ? '#E70012' : 'rgba(255,255,255,0.1)', color: isActive ? '#fff' : '#ccc', background: isActive ? 'rgba(231,0,18,0.1)' : 'rgba(255,255,255,0.05)', borderWidth: '1px', borderStyle: 'solid', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 500 }}>{sub.title}</button>;
+  if (isWelcome) return (
+    <div className="animate-fade">
+      <div className="hero-full-width-container">
+        <div className="hero-overlay-gradient" />
+        <div className="brand-slash-container">
+          <div className="brand-slash-line" />
+        </div>
+        <div className="hero-bottom-gradient" />
+        <video autoPlay loop muted playsInline className="hero-full-width-media">
+          <source src={data.heroVideo} type="video/mp4" />
+        </video>
+        <div className="hero-text-container">
+          <h1 className="hero-title">{data.title}</h1>
+        </div>
+      </div>
+      <div className="content-wrapper with-hero">
+        <div className="grid-layout">
+          {quickLinkSections.map((section: any, idx: number) => {
+            const Icon = section.icon;
+            return (
+              <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className={`bento-card stagger-item delay-${Math.min(idx, 2)}`} style={{ textAlign: 'left', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <Icon size={24} color="#E70012" />
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>{section.title}</h3>
+                </div>
+                <p style={{ fontSize: '0.95rem', color: '#999', lineHeight: '1.5' }}>{section.description}</p>
+              </button>
+            );
           })}
         </div>
-      )}
-      <div className="grid-layout">
-        {safeSubSections.map((sub, index) => {
-          const sectionId = sub.slug || sub.uuid || `section-${index}`;
-
-          const adminControls = isAdmin && isEditMode && (
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                    <button onClick={() => handleMoveUp(index)} disabled={index === 0} title="Move Up" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === 0 ? 'transparent' : '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: index === 0 ? '#444' : '#ccc', cursor: index === 0 ? 'default' : 'pointer' }}><ArrowUp size={16} /></button>
-                    <button onClick={() => handleMoveDown(index)} disabled={index === safeSubSections.length - 1} title="Move Down" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: index === safeSubSections.length - 1 ? 'transparent' : '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: index === safeSubSections.length - 1 ? '#444' : '#ccc', cursor: index === safeSubSections.length - 1 ? 'default' : 'pointer' }}><ArrowDown size={16} /></button>
-                </div>
-                <div style={{ width: '1px', height: '16px', background: '#333', margin: '0 12px' }}></div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => handleEdit(sub.uuid || '')} title="Edit" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', cursor: 'pointer' }}><Edit3 size={16} /></button>
-                    <button onClick={() => handleDeleteTrigger(sub.uuid || '')} title="Delete" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(231,0,18,0.1)', border: '1px solid rgba(231,0,18,0.3)', borderRadius: '6px', color: '#ff5555', cursor: 'pointer' }}><Trash2 size={16} /></button>
-                </div>
-            </div>
-          );
-
-          if (ARCHIVE_SLUGS.includes(sub.slug || '')) {
-            return (
-              <ContestArchiveCard 
-                key={sub.uuid || index}
-                data={sub}
-                id={sectionId}
-                adminControls={adminControls}
-                onUpdateSubsection={handleUpdateSubsection}
-              />
-            );
-          }
-
-          return (
-             <div key={sub.uuid || index} id={sectionId} onMouseMove={handleMouseMove} className={`bento-card stagger-item full-width`} style={{ animationDelay: `${index * 100}ms` }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2, letterSpacing: '-0.03em' }}>{sub.title}</h3>{isAdmin && isEditMode && sub.slug && (<span className="font-mono" style={{ fontSize: '0.75rem', color: '#666' }}>#{sub.slug}</span>)}</div>
-                 {adminControls}
-               </div>
-               
-               <div style={{ color: '#ccc', lineHeight: '1.75' }}>
-                 {sub.blocks && sub.blocks.length > 0 ? (
-                   renderBlocks(sub.blocks)
-                 ) : (
-                   sub.items && sub.items.length > 0 ? renderMarkdownContent(sub.items) : renderMarkdownContent(sub.content)
-                 )}
-               </div>
-               
-               {!sub.blocks && sub.imagePlaceholder && (<div style={{ margin: '20px 0' }}><img src={sub.imagePlaceholder} alt="Visual Content" style={{ width: '100%', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} /></div>)}
-               {!sub.blocks && sub.codeBlock && (<div style={{ position: 'relative', marginTop: '16px' }}><CodeBlock text={sub.codeBlock} /><button onClick={() => navigator.clipboard.writeText(sub.codeBlock!)} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#fff' }} title="Copy"><Copy size={14} /></button></div>)}
-               {!sub.blocks && sub.link && (<a href={sub.link} target="_blank" rel="noreferrer" onClick={() => handleContentOutboundClick('Link', sub.link!)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px', color: '#E70012', fontWeight: 600, textDecoration: 'none' }}><LinkIcon size={16} /> Link</a>)}
-               {!sub.blocks && sub.disclaimer && (<InfoBlock>{renderMarkdownContent(sub.disclaimer, { fontSize: '0.9rem', color: '#888', margin: '0' })}</InfoBlock>)}
-             </div>
-          );
-        })}
-        {isAdmin && isEditMode && (<button onClick={handleAddNew} className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', borderStyle: 'dashed', borderColor: '#333', background: 'transparent', cursor: 'pointer', color: '#666', gap: '12px' }}><div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={24} /></div><span style={{ fontWeight: 600 }}>Add Content Block</span></button>)}
       </div>
-      <EditModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItemId(null); }} onSave={handleSaveModal} initialData={editingItemId ? safeSubSections.find(s => s.uuid === editingItemId) : undefined} onDirty={setIsDirty} />
-      <ConfirmModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={executeDelete} />
+    </div>
+  );
+
+  return (
+    <div className="animate-fade">
+      <div className="content-wrapper">
+        <header className="page-header stagger-item">
+          <div style={{ flex: 1 }}>
+              <h1 className="hero-title">{data.title}</h1>
+              <h2 className="hero-desc">{data.description}</h2>
+          </div>
+          {/* Edit toggle button removed, editing is now always active for admins */}
+        </header>
+
+        {!isFaq && data.subSections.length > 1 && (
+          <div className="toc-wrapper stagger-item delay-1">
+            <div className="toc-sticky-bar">
+              {data.subSections.map((sub: any, i: number) => {
+                const anchorId = sub.slug || sub.title.toLowerCase().replace(/\s/g, '-');
+                const isActive = activeAnchor === anchorId;
+                return (
+                  <button key={i} onClick={() => scrollToSection(anchorId)} style={{ padding: '8px 16px', borderRadius: '20px', background: isActive ? 'rgba(231,0,18,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid', borderColor: isActive ? '#E70012' : 'rgba(255,255,255,0.1)', color: isActive ? '#fff' : '#888', fontSize: '0.85rem', fontWeight: isActive ? 700 : 500, cursor: 'pointer', transition: 'all 0.2s' }}>
+                    {sub.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {isFaq ? <FaqSearch onNavigate={onNavigate} content={allContent} /> : (
+          <div className="grid-layout">
+            {data.subSections.map((sub: any, index: number) => {
+              const anchorId = sub.slug || sub.title.toLowerCase().replace(/\s/g, '-');
+              const isArchive = sub.slug && ARCHIVE_SLUGS.includes(sub.slug);
+              
+              const adminControls = isAdmin && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleReorder(index, 'up')} disabled={index === 0} style={{ color: index === 0 ? '#222' : '#444', background: 'none', border: 'none', cursor: 'pointer' }}><ArrowUp size={16}/></button>
+                  <button onClick={() => handleReorder(index, 'down')} disabled={index === data.subSections.length - 1} style={{ color: index === data.subSections.length - 1 ? '#222' : '#444', background: 'none', border: 'none', cursor: 'pointer' }}><ArrowDown size={16}/></button>
+                  <button onClick={() => handleEdit(sub)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer' }}><Edit3 size={18} /></button>
+                  <button onClick={() => setDeleteSub(sub)} style={{ color: '#E70012', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                </div>
+              );
+
+              if (isArchive) return (
+                <ContestArchiveCard key={sub.uuid || index} id={anchorId} data={sub} onUpdateSubsection={(updated: any) => { const newSubs = data.subSections.map((s: any) => s.uuid === updated.uuid ? updated : s); onUpdateContent(data.id, newSubs); }} adminControls={adminControls} />
+              );
+              return (
+                <section key={sub.uuid || index} id={anchorId} onMouseMove={handleMouseMove} className={`bento-card full-width stagger-item`}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>{sub.title}</h3>
+                    {adminControls}
+                  </div>
+                  <div style={{ color: '#ccc', lineHeight: '1.75' }}>
+                    {sub.blocks && sub.blocks.length > 0 ? renderBlocks(sub.blocks) : renderMarkdownContent(sub.content)}
+                  </div>
+                </section>
+              );
+            })}
+            
+            {isAdmin && (
+              <button onClick={handleAddNew} className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', borderStyle: 'dashed', borderColor: '#333', background: 'transparent', cursor: 'pointer', color: '#666', gap: '12px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={24} />
+                </div>
+                <span style={{ fontWeight: 600 }}>Add Content Block</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <EditModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setIsDirty(false); }} onSave={handleSave} initialData={editingSub} onDirty={setIsDirty} />
+      <ConfirmModal isOpen={!!deleteSub} onClose={() => setDeleteSub(undefined)} onConfirm={handleDeleteConfirm} />
     </div>
   );
 };
