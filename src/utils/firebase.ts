@@ -71,6 +71,32 @@ export const trackButtonClick = (buttonName: string, location: string) => {
   });
 };
 
+// New: FAQ Search Tracker
+export const trackFaqSearch = (searchTerm: string, resultCount: number) => {
+  trackEvent('faq_search', {
+    search_term: searchTerm,
+    result_count: resultCount
+  });
+};
+
+// New: Advanced Outbound Link Tracker
+export const trackOutboundLink = (url: string, linkName: string, location: string) => {
+  trackEvent('click_outbound_link', {
+    url: url,
+    link_name: linkName,
+    location: location
+  });
+};
+
+// New: Section Engagement (Dwell Time & Scroll Depth) Tracker
+export const trackSectionEngagement = (sectionId: string, durationSeconds: number, scrollDepth: number) => {
+  trackEvent('section_engagement', {
+    section_id: sectionId,
+    duration_seconds: durationSeconds,
+    scroll_depth: scrollDepth
+  });
+};
+
 // Helper to track menu clicks (Legacy wrapper, mapped to generic if needed, but kept for compatibility)
 export const trackMenuClick = (menuName: string) => {
   trackEvent('select_content', {

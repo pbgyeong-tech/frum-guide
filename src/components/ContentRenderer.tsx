@@ -7,7 +7,7 @@ import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { ContestArchiveCard } from './ContestArchiveCard';
-import { trackAnchorView, trackEvent, trackButtonClick } from '../utils/firebase';
+import { trackAnchorView, trackEvent, trackButtonClick, trackOutboundLink, trackSectionEngagement } from '../utils/firebase';
 import { addEditLog, generateUUID } from '../utils/db';
 
 // --- Layout Constants ---
@@ -42,7 +42,7 @@ const getBadgeStyle = (text: string) => {
 };
 
 const handleContentOutboundClick = (name: string, url: string) => {
-  trackEvent('click_outbound', { link_name: name, link_url: url, location: 'content' });
+  trackOutboundLink(url, name, 'content');
 };
 
 const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -255,6 +255,37 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
   const isWelcome = data.id === ContentType.WELCOME;
   const isFaq = data.id === ContentType.FAQ;
   const quickLinkSections = HANDBOOK_CONTENT.filter(s => s.id !== ContentType.WELCOME && s.id !== ContentType.FAQ);
+
+  // Section Engagement Tracking Logic
+  useEffect(() => {
+    const startTime = Date.now();
+    let maxScroll = 0;
+
+    const trackScrollProgress = () => {
+      const mainContent = document.querySelector('.main-content');
+      if (!mainContent) return;
+      const { scrollTop, scrollHeight, clientHeight } = mainContent;
+      const totalScrollable = scrollHeight - clientHeight;
+      const currentProgress = totalScrollable > 0 
+        ? Math.round((scrollTop / totalScrollable) * 100) 
+        : 0;
+      
+      if (currentProgress > maxScroll) {
+        maxScroll = currentProgress;
+      }
+    };
+
+    const mainContent = document.querySelector('.main-content');
+    mainContent?.addEventListener('scroll', trackScrollProgress);
+
+    return () => {
+      mainContent?.removeEventListener('scroll', trackScrollProgress);
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      if (duration > 0) {
+        trackSectionEngagement(data.id, duration, maxScroll);
+      }
+    };
+  }, [data.id]);
 
   useEffect(() => {
     const handleScroll = () => {

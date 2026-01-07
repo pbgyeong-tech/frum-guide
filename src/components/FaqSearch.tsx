@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronRight, ChevronDown, ArrowUpRight } from 'lucide-react';
 import { SectionData, ContentType } from '../types';
-import { trackMenuClick } from '../utils/firebase';
+import { trackMenuClick, trackFaqSearch } from '../utils/firebase';
 
 export interface FaqSearchProps {
   onNavigate: (id: ContentType) => void;
@@ -123,6 +122,17 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
     setResults(filtered);
     setOpenIndex(filtered.length > 0 ? 0 : null); 
   }, [query, searchIndex]);
+
+  // Search Analytics with Debouncing
+  useEffect(() => {
+    if (!query.trim()) return;
+    
+    const timer = setTimeout(() => {
+      trackFaqSearch(query, results.length);
+    }, 1200); // 1.2s delay to ensure user finished typing
+
+    return () => clearTimeout(timer);
+  }, [query, results.length]);
 
   const toggleItem = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
