@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SectionData, ContentType, SubSection, ContentSnapshot, EditorBlock } from '../types';
@@ -8,7 +7,7 @@ import { FaqSearch } from './FaqSearch';
 import { EditModal } from './EditModal';
 import { ConfirmModal } from './ConfirmModal';
 import { ContestArchiveCard } from './ContestArchiveCard';
-import { trackAnchorView, trackEvent } from '../utils/firebase';
+import { trackAnchorView, trackEvent, trackButtonClick } from '../utils/firebase';
 import { addEditLog, generateUUID } from '../utils/db';
 
 // --- Layout Constants ---
@@ -310,6 +309,7 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
     <div className="animate-fade">
       <div className="hero-full-width-container">
         <div className="hero-overlay-gradient" />
+        <div className="hero-dim-overlay" />
         <div className="brand-slash-container">
           <div className="brand-slash-line" />
         </div>
@@ -319,6 +319,19 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
         </video>
         <div className="hero-text-container">
           <h1 className="hero-title">{data.title}</h1>
+          <p style={{
+            fontSize: '1.2rem',
+            color: '#E0E0E0',
+            marginTop: '12px',
+            lineHeight: '1.6',
+            fontWeight: 500,
+            maxWidth: '600px',
+            textAlign: 'center',
+            textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)'
+          }}>
+            프러머 분들의 빠른 적응을 돕는 온보딩 가이드입니다.<br />
+            아래에서 궁금한 내용을 탐색해 보세요.
+          </p>
         </div>
       </div>
       <div className="content-wrapper with-hero">
@@ -326,7 +339,16 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
           {quickLinkSections.map((section: any, idx: number) => {
             const Icon = section.icon;
             return (
-              <button key={section.id} onClick={() => onNavigate(section.id)} onMouseMove={handleMouseMove} className={`bento-card stagger-item delay-${Math.min(idx, 2)}`} style={{ textAlign: 'left', cursor: 'pointer' }}>
+              <button 
+                key={section.id} 
+                onClick={() => {
+                  trackButtonClick(section.title, 'welcome_grid');
+                  onNavigate(section.id);
+                }} 
+                onMouseMove={handleMouseMove} 
+                className={`bento-card stagger-item delay-${Math.min(idx, 2)}`} 
+                style={{ textAlign: 'left', cursor: 'pointer' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <Icon size={24} color="#E70012" />
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>{section.title}</h3>

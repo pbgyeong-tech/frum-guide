@@ -1,4 +1,3 @@
-
 /* Root Variables & Reset moved from index.html */
 :root {
   --bg-main: #050505;
@@ -234,6 +233,7 @@ aside.sidebar-container {
   margin-bottom: 24px; 
   color: #fff; 
   letter-spacing: -0.05em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 .hero-desc { font-size: 1.25rem; color: #E0E0E0; border-left: 2px solid var(--accent-color); padding-left: 24px; }
 
@@ -264,8 +264,8 @@ aside.sidebar-container {
 /* Hero Full Width for Welcome Page */
 .hero-full-width-container {
   width: 100%;
-  height: 80vh;
-  min-height: 600px;
+  height: 65vh;
+  min-height: 450px;
   position: relative;
   overflow: hidden;
   background: #000;
@@ -288,6 +288,12 @@ aside.sidebar-container {
   position: absolute; inset: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.8) 100%);
   z-index: 5;
+}
+
+.hero-dim-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  z-index: 7;
 }
 
 .hero-bottom-gradient {
