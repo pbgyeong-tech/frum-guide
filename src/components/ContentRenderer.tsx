@@ -297,7 +297,19 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
         if (el) {
           const rect = el.getBoundingClientRect();
           if (rect.top <= 150 && rect.bottom >= 150) {
-            if (activeAnchor !== anchor) { setActiveAnchor(anchor); trackAnchorView(data.id, anchor); }
+            if (activeAnchor !== anchor) { 
+              setActiveAnchor(anchor); 
+              trackAnchorView(data.id, anchor); 
+              
+              // URL Hash Synchronization Logic
+              const basePath = window.location.hash.split('#')[1] || '';
+              const baseRoute = basePath.split('#')[0];
+              if (anchor) {
+                window.history.replaceState(null, '', `#${baseRoute}#${anchor}`);
+              } else {
+                window.history.replaceState(null, '', `#${baseRoute}`);
+              }
+            }
             break;
           }
         }
@@ -310,7 +322,15 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
-    if (el) { el.scrollIntoView({ behavior: 'smooth' }); setActiveAnchor(id); }
+    if (el) { 
+      el.scrollIntoView({ behavior: 'smooth' }); 
+      setActiveAnchor(id);
+      
+      // Update URL manually when clicking TOC
+      const basePath = window.location.hash.split('#')[1] || '';
+      const baseRoute = basePath.split('#')[0];
+      window.history.replaceState(null, '', `#${baseRoute}#${id}`);
+    }
   };
 
   const handleAddNew = () => { setEditingSub(undefined); setIsModalOpen(true); };
