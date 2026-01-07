@@ -34,48 +34,36 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  // 1. Build Search Index (Flattening the Handbook Content)
+  // 1. Build Search Index (Exclusively for FAQ Content)
   const searchIndex = useMemo(() => {
     const index: SearchResultItem[] = [];
 
-    const traverse = (sections: SectionData[]) => {
-      // Defensive check: Ensure sections is an array
-      if (!Array.isArray(sections)) return;
-
-      sections.forEach(section => {
-        // Defensive check: Ensure subSections is an array before iterating
-        if (Array.isArray(section.subSections)) {
-          section.subSections.forEach(sub => {
-            if (!sub) return; // Skip null/undefined items
-            index.push({
-              sectionId: section.id,
-              sectionTitle: section.title || "",
-              title: sub.title || "",
-              content: sub.content || "",
-              keywords: Array.isArray(sub.keywords) ? sub.keywords : [],
-              score: 0
-            });
-          });
-        }
-        
-        // Recurse if it has children and children is an array
-        if (section.children && Array.isArray(section.children)) {
-          traverse(section.children);
-        }
+    // FAQ 섹션만 찾아서 해당 섹션의 subSections만 인덱싱에 포함합니다.
+    const faqSection = content.find(s => s.id === ContentType.FAQ);
+    
+    if (faqSection && Array.isArray(faqSection.subSections)) {
+      faqSection.subSections.forEach(sub => {
+        if (!sub) return;
+        index.push({
+          sectionId: faqSection.id,
+          sectionTitle: faqSection.title || "",
+          title: sub.title || "",
+          content: sub.content || "",
+          keywords: Array.isArray(sub.keywords) ? sub.keywords : [],
+          score: 0
+        });
       });
-    };
+    }
 
-    traverse(content);
     return index;
   }, [content]);
 
   // 2. Search Algorithm
   useEffect(() => {
-    // If query is empty, show default FAQ items (ContentType.FAQ sections)
+    // If query is empty, show all items in the FAQ index
     if (!query.trim()) {
-      const defaultFaqItems = searchIndex.filter(item => item.sectionId === ContentType.FAQ);
-      setResults(defaultFaqItems);
-      setOpenIndex(null); // Collapse all by default when showing full list
+      setResults(searchIndex);
+      setOpenIndex(null);
       return;
     }
 
@@ -121,11 +109,6 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
         if (normContent.includes(token.origin) || normContent.includes(token.refined)) {
           score += 5;
         }
-        
-        // Section Title Match (Context)
-        if (normalize(item.sectionTitle).includes(token.origin)) {
-            score += 5;
-        }
       });
 
       return { ...item, score };
@@ -164,7 +147,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
         </div>
         <input
           type="text"
-          placeholder="무엇이든 물어보세요 (예: 와이파이, 휴가, 스펜딧)"
+          placeholder="FAQ 내에서 검색 (예: 와이파이, 휴가, 식대)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{
@@ -239,7 +222,6 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                     border: 'none'
                   }}
                 >
-                  {/* Badge Removed here */}
                   <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {item.title}
                   </span>
@@ -260,7 +242,7 @@ export const FaqSearch: React.FC<FaqSearchProps> = ({ onNavigate, content }) => 
                         {Array.isArray(item.content) ? item.content.join('\n') : item.content}
                     </div>
                     
-                    {/* Navigate Button - Only show if not already on that section */}
+                    {/* Navigate Button - Only show if from a different logical section if ever needed, but here it stays consistent with UI */}
                     {item.sectionId !== ContentType.FAQ && (
                       <button 
                           onClick={() => {
