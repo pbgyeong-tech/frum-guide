@@ -380,8 +380,8 @@ export const ContentRenderer: React.FC<any> = ({ data, allContent, onNavigate, o
             textAlign: 'center',
             textShadow: '0 1px 3px rgba(0, 0, 0, 0.5)'
           }}>
-            프러머 분들의 빠른 적응을 돕는 온보딩 가이드입니다.<br />
-            아래에서 궁금한 내용을 탐색해 보세요.
+            프럼 적응의 모든 것, 온보딩 가이드<br />
+            궁금한 내용을 아래에서 확인해 보세요.
           </p>
         </div>
       </div>
